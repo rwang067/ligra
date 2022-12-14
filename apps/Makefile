@@ -1,3 +1,5 @@
+export OPENMP := 1
+
 # ifdef LONG
 INTT = -DLONG
 # endif

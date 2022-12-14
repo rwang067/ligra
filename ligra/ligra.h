@@ -476,6 +476,7 @@ int parallel_main(int argc, char* argv[]) {
   bool compressed = P.getOptionValue("-c");
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
+  bool mapData = P.getOptionValue("-map");
   //cout << "mmap = " << mmap << endl;
   long rounds = P.getOptionLongValue("-rounds",3);
   if (compressed) {
@@ -515,11 +516,11 @@ int parallel_main(int argc, char* argv[]) {
   } else {
     if (symmetric) {
 #ifndef HYPER
-      graph<symmetricVertex> G =
-        readGraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); //symmetric graph
+      graph<symmetricVertex> G = 
+        readGraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap, mapData); 
 #else
       hypergraph<symmetricVertex> G =
-        readHypergraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); //symmetric graph
+        readHypergraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); 
 #endif
       Compute(G,P);
       for(int r=0;r<rounds;r++) {
@@ -530,18 +531,18 @@ int parallel_main(int argc, char* argv[]) {
       G.del();
     } else {
 #ifndef HYPER
-      graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
+      graph<asymmetricVertex> G = 
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap, mapData); 
 #else
       hypergraph<asymmetricVertex> G =
-        readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
+        readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); 
 #endif
       Compute(G,P);
       if(G.transposed) G.transpose();
       for(int r=0;r<rounds;r++) {
-        startTime();
+        // startTime();
         Compute(G,P);
-        nextTime("Running time");
+        // nextTime("Running time");
         if(G.transposed) G.transpose();
       }
       G.del();

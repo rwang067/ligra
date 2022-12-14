@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include "vertex.h"
 #include "compressedVertex.h"
 #include "parallel.h"
@@ -26,11 +27,24 @@ public:
   long n;
   long m;
   void* allocatedInplace, * inEdges;
+  bool mapData;
 
-  Uncompressed_Mem(vertex* VV, long nn, long mm, void* ai, void* _inEdges = NULL)
-  : V(VV), n(nn), m(mm), allocatedInplace(ai), inEdges(_inEdges) { }
+  Uncompressed_Mem(vertex* VV, long nn, long mm, void* ai, void* _inEdges = NULL, bool mapData = false)
+  : V(VV), n(nn), m(mm), allocatedInplace(ai), inEdges(_inEdges), mapData(mapData) { }
 
   void del() {
+    if(mapData)
+    {
+      if(munmap(allocatedInplace, m * sizeof(uint)) == -1) {
+        perror("edge: munmap");
+        exit(-1);
+      }
+      if(inEdges && munmap(inEdges, m * sizeof(uintE)) == -1) {
+        perror("inedge: munmap");
+        exit(-1);
+      }
+      return;
+    }
     if (allocatedInplace == NULL)
       for (long i=0; i < n; i++) V[i].del();
     else free(allocatedInplace);

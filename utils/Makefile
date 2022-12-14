@@ -25,9 +25,9 @@ PCC = g++
 PCFLAGS = -std=c++14 -O3 $(INTT) $(INTE)
 endif
 
-COMMON = utils.h parseCommandLine.h parallel.h quickSort.h blockRadixSort.h transpose.h
+COMMON = utils.h parseCommandLine.h parallel.h quickSort.h blockRadixSort.h transpose.h graph.h vertex.h vertexSubset.h index_map.h maybe.h compressedVertex.h byteRLE.h sequence.h
 LOCAL_COMMON = graphIO.h
-GENERATORS = rMatGraph gridGraph randLocalGraph SNAPtoAdj wghSNAPtoAdj adjGraphAddWeights adjToBinary communityToHyperAdj hyperAdjToBinary adjHypergraphAddWeights randHypergraph KONECTtoHyperAdj KONECTtoClique communityToClique communityToMESH KONECTtoMESH
+GENERATORS = rMatGraph gridGraph randLocalGraph SNAPtoAdj wghSNAPtoAdj adjGraphAddWeights adjToBinary communityToHyperAdj hyperAdjToBinary adjHypergraphAddWeights randHypergraph KONECTtoHyperAdj KONECTtoClique communityToClique communityToMESH KONECTtoMESH adjToMapData edgeToAdj
 
 .PHONY: all clean
 all: $(GENERATORS)
@@ -39,8 +39,11 @@ $(COMMON):
 	$(PCC) $(PCFLAGS) -o $@ $<
 
 clean :
-	rm -f *.o $(GENERATORS)
+	rm -f *.o $(GENERATORS) WadjToMapData
 
 cleansrc :
 	make -s clean
 	rm -f $(COMMON)
+
+WadjToMapData: adjToMapData.C $(COMMON) $(LOCAL_COMMON)
+	$(PCC) $(PCFLAGS) -DWEIGHTED -o WadjToMapData adjToMapData.C

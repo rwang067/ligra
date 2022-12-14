@@ -316,10 +316,10 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric, bool mmap) {
 }
 
 template <class vertex>
-graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
+graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric, bool mapData) {
   char* config = (char*) ".config";
-  char* adj = (char*) ".adj";
-  char* idx = (char*) ".idx";
+  char* adj = (char*) "-split_csr.0_0_of_1x1.bin";
+  char* idx = (char*) "-split_beg.0_0_of_1x1.bin";
   char configFile[strlen(iFile)+strlen(config)+1];
   char adjFile[strlen(iFile)+strlen(adj)+1];
   char idxFile[strlen(iFile)+strlen(idx)+1];
@@ -336,18 +336,28 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
   in >> n;
   in.close();
 
-  ifstream in2(adjFile,ifstream::in | ios::binary); //stored as uints
-  in2.seekg(0, ios::end);
-  long size = in2.tellg();
-  in2.seekg(0);
+  struct stat sb;
+  int fd = open(adjFile, O_RDONLY);
+  if (fd == -1) {
+    perror("edges: open");
+    exit(-1);
+  }
+  if (fstat(fd, &sb) == -1) {
+    perror("edges: fstat");
+    exit(-1);
+  }
+  long size = sb.st_size;
 #ifdef WEIGHTED
   long m = size/(2*sizeof(uint));
 #else
   long m = size/sizeof(uint);
 #endif
-  char* s = (char *) malloc(size);
-  in2.read(s,size);
-  in2.close();
+  char *s = static_cast<char*>(mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0));
+  if (s == MAP_FAILED) {
+    perror("edges: mmap");
+    exit(-1);
+  }
+  close(fd);
   uintE* edges = (uintE*) s;
 
   ifstream in3(idxFile,ifstream::in | ios::binary); //stored as longs
@@ -389,7 +399,29 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
     uintT* tOffsets = newA(uintT,n);
     {parallel_for(long i=0;i<n;i++) tOffsets[i] = INT_T_MAX;}
 #ifndef WEIGHTED
-    intPair* temp = newA(intPair,m);
+    char *suffix = (char*) "_temp_space"; 
+    char tempname[strlen(iFile)+strlen(suffix)+1];
+    *tempname = 0;
+    strcat(tempname, iFile);
+    strcat(tempname, suffix);
+    fd = open(tempname, O_RDWR | O_CREAT, 0666);
+    if (fd == -1) {
+      perror("temp: open");
+      exit(-1);
+    }
+    size = m * sizeof(intPair);
+    if(ftruncate(fd, size) == -1)
+    {
+      perror("temp: ftruncate");
+      exit(-1);
+    }
+    s = static_cast<char*>(mmap(0, size, PROT_WRITE, MAP_SHARED, fd, 0));
+    if ((long)s == -1) {
+      perror("temp: mmap");
+      exit(-1);
+    }
+    close(fd);
+    intPair* temp = (intPair*)s;
 #else
     intTriple* temp = newA(intTriple,m);
 #endif
@@ -419,7 +451,29 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 #endif
     tOffsets[temp[0].first] = 0;
 #ifndef WEIGHTED
-    uintE* inEdges = newA(uintE,m);
+    suffix = (char*) "_inedge_space"; 
+    char inEdgeName[strlen(iFile)+strlen(suffix)+1];
+    *inEdgeName = 0;
+    strcat(inEdgeName, iFile);
+    strcat(inEdgeName, suffix);
+    fd = open(inEdgeName, O_RDWR | O_CREAT, 0666);
+    if (fd == -1) {
+      perror("inedge: open");
+      exit(-1);
+    }
+    size = m * sizeof(uintE);
+    if(ftruncate(fd, size) == -1)
+    {
+      perror("inedge: ftruncate");
+      exit(-1);
+    }
+    s = static_cast<char*>(mmap(0, size, PROT_WRITE, MAP_SHARED, fd, 0));
+    if ((long)s == -1) {
+      perror("inedge: mmap");
+      exit(-1);
+    }
+    close(fd);
+    uintE* inEdges = (uintE*) s;
     inEdges[0] = temp[0].second;
 #else
     intE* inEdges = newA(intE,2*m);
@@ -437,7 +491,10 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 	tOffsets[temp[i].first] = i;
       }
       }}
-    free(temp);
+    if(munmap(temp, m * sizeof(intPair)) == -1) {
+      perror("temp: munmap");
+      exit(-1);
+    }
     //fill in offsets of degree 0 vertices by taking closest non-zero
     //offset to the right
     sequence::scanIBack(tOffsets,tOffsets,n,minF<uintT>(),(uintT)m);
@@ -471,8 +528,8 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 }
 
 template <class vertex>
-graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap) {
-  if(binary) return readGraphFromBinary<vertex>(iFile,symmetric);
+graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool mapData) {
+  if(binary || mapData) return readGraphFromBinary<vertex>(iFile,symmetric, mapData);
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
 }
 
@@ -559,3 +616,78 @@ graph<vertex> readCompressedGraph(char* fname, bool isSymmetric, bool mmap) {
   graph<vertex> G(V,n,m,mem);
   return G;
 }
+
+// template <class vertex>
+// graph<vertex> readMapData(char* fname) {
+//   struct stat sb;
+//   int fd = open(fname, O_RDONLY);
+//   if (fd == -1) {
+//     perror("open");
+//     exit(-1);
+//   }
+//   if (fstat(fd, &sb) == -1) {
+//     perror("fstat");
+//     exit(-1);
+//   }
+//   if (!S_ISREG (sb.st_mode)) {
+//     perror("not a file\n");
+//     exit(-1);
+//   }
+//   char *p = static_cast<char*>(mmap(0, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+//   if (p == MAP_FAILED) {
+//     perror("mmap");
+//     exit(-1);
+//   }
+//   if (close(fd) == -1) {
+//     perror("close");
+//     exit(-1);
+//   }
+
+//   size_t len = sb.st_size;
+//   char isSymmetric = *p;
+//   long n = *(long*)(p + 1), m = *(long*)(p + 1 + sizeof(long));
+// #ifndef WEIGHTED
+//   if (len != 1 + sizeof(long) * 2 + sizeof(vertex) * n + sizeof(uintE) * m * (isSymmetric ? 1 : 2)) {
+// #else
+//   if (len != 1 + sizeof(long) * 2 + sizeof(vertex) * n + sizeof(intE) * 2 * m * (isSymmetric ? 1 : 2)) {
+// #endif
+//     cout << "Bad input file, len = "  << len << endl;
+//     abort();
+//   }
+
+//   long fileOffset = 1 + sizeof(long) * 2;
+// #ifndef WEIGHTED
+//   uintE* edges = (uintE*)(p + fileOffset);
+//   fileOffset += sizeof(uintE) * m;
+// #else
+//   intE* edges = (intE*)(p + fileOffset);
+//   fileOffset += sizeof(intE) * 2 * m;
+// #endif
+
+//   // vertex* v = (vertex*)(p + fileOffset);
+//   vertex* v = newA(vertex, n);
+//   memcpy(v, p + fileOffset, sizeof(vertex) * n);
+//   fileOffset += sizeof(vertex) * n;
+
+//   Uncompressed_Mem<vertex>* mem;
+//   if(!isSymmetric)
+//   {
+// #ifndef WEIGHTED
+//     uintE* inEdges = (uintE*)(p + fileOffset);
+// #else
+//     intE* inEdges = (intE*)(p + fileOffset);
+// #endif
+//     parallel_for(long i=0;i<n;i++) {
+//       v[i].setInNeighbors(inEdges + (ulong)v[i].getInNeighbors());
+//       v[i].setOutNeighbors(edges + (ulong)v[i].getOutNeighbors());
+//     }
+//     mem = new Uncompressed_Mem<vertex>(v,n,m,edges,inEdges,p,len);
+//   }
+//   else { 
+//     parallel_for(long i=0;i<n;i++) {
+//       v[i].setOutNeighbors(edges + (ulong)v[i].getOutNeighbors());
+//     }
+//     mem = new Uncompressed_Mem<vertex>(v,n,m,edges,NULL,p,len);
+//   }
+//   return graph<vertex>(v,n,m,mem);
+// }
