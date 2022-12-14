@@ -354,7 +354,10 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
   in3.seekg(0, ios::end);
   size = in3.tellg();
   in3.seekg(0);
-  if(n != size/sizeof(intT)) { cout << "File size wrong\n"; abort(); }
+  if(n+1 != size/sizeof(intT)) { 
+    cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+    cout << "File size wrong\n"; abort(); 
+  }
 
   char* t = (char *) malloc(size);
   in3.read(t,size);
@@ -372,7 +375,8 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 #endif
   {parallel_for(long i=0;i<n;i++) {
     uintT o = offsets[i];
-    uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
+    uintT l = offsets[i+1]-offsets[i];
+    // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setOutDegree(l);
 #ifndef WEIGHTED
       v[i].setOutNeighbors((uintE*)edges+o);

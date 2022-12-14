@@ -1,6 +1,6 @@
-ifdef LONG
+# ifdef LONG
 INTT = -DLONG
-endif
+# endif
 
 ifdef EDGELONG
 INTE = -DEDGELONG
