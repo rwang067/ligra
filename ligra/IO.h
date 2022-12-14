@@ -510,7 +510,7 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric, bool mapData) {
       }}
     free(tOffsets);
 #ifndef WEIGHTED
-    Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges,inEdges);
+    Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges,inEdges,mapData);
     return graph<vertex>(v,n,m,mem);
 #else
     Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights,inEdges);
@@ -519,7 +519,7 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric, bool mapData) {
   }
   free(offsets);
 #ifndef WEIGHTED
-  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges,NULL, mapData);
   return graph<vertex>(v,n,m,mem);
 #else
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
