@@ -470,9 +470,140 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 #endif
 }
 
+
+class pvertex_t {
+public:
+    uintE out_deg;
+    uint64_t residue;
+}; 
 template <class vertex>
-graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap) {
-  if(binary) return readGraphFromBinary<vertex>(iFile,symmetric);
+graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
+  char* config = (char*) ".config";
+  char* vert = (char*) ".vertex";
+  char* adj_chunk4kb = (char*) ".adj.chunk4kb";
+  char* adj_sv = (char*) ".adj.sv";
+  char configFile[strlen(iFile)+strlen(config)+1];
+  char vertFile[strlen(iFile)+strlen(vert)+1];
+  char adjChunk4kbFile[strlen(iFile)+strlen(adj_chunk4kb)+1];
+  char adjSvFile[strlen(iFile)+strlen(adj_sv)+1];
+  *configFile = *vertFile = *adjChunk4kbFile = *adjSvFile = '\0';
+  strcat(configFile,iFile);
+  strcat(vertFile,iFile);
+  strcat(adjChunk4kbFile,iFile);
+  strcat(adjSvFile,iFile);
+  strcat(configFile,config);
+  strcat(vertFile,vert);
+  strcat(adjChunk4kbFile,adj_chunk4kb);
+  strcat(adjSvFile,adj_sv);
+
+  ifstream in(configFile, ifstream::in);
+  long n, m, level, nchunks;
+  in >> n >> m >> level >> nchunks;
+  in.close();
+  cout << "n = " << n << ", m = " << m << endl;
+  cout << "level = " << level << ", nchunks = " << nchunks << endl;
+
+  cout << adjChunk4kbFile << endl;
+  ifstream in2(adjChunk4kbFile,ifstream::in | ios::binary); //stored as uints
+  in2.seekg(0, ios::end);
+  long size = in2.tellg();
+  in2.seekg(0);
+  if(nchunks * 4096 != size){ 
+    cout << nchunks << " " << size << " " << nchunks * 4096 << std::endl;
+    cout << "adjChunk4kbFile size wrong\n"; abort(); 
+  }
+  char* s = (char *) malloc(size);
+  in2.read(s,size);
+  in2.close();
+  char* edges_chunks_4kb = s;
+
+  cout << adjSvFile << endl;
+  ifstream in3(adjSvFile,ifstream::in | ios::binary); //stored as uints
+  in3.seekg(0, ios::end);
+  size = in3.tellg();
+  in3.seekg(0);
+  char* t = (char *) malloc(size);
+  in3.read(t,size);
+  in3.close();
+  char* edges_sv = t;
+  cout << "adjSvFile: " << (void*)t << " " << (void*)edges_sv << " " << size << endl;
+  // for(int i = 0; i < 1; i++)
+  //   cout << edges_sv[i] << endl;
+
+  ifstream in4(vertFile,ifstream::in | ios::binary); //stored as longs
+  in4.seekg(0, ios::end);
+  size = in4.tellg();
+  in4.seekg(0);
+  if(n*2 != size/sizeof(pvertex_t)) { 
+    cout << n << " " << size << " " << size/sizeof(pvertex_t) << std::endl;
+    cout << "vertFile size wrong\n"; abort(); 
+  }
+  cout << n << " " << size << " " << size/sizeof(pvertex_t) << std::endl;
+
+  char* x = (char *) malloc(size);
+  in4.read(x,size);
+  in4.close();
+  pvertex_t* offsets = (pvertex_t*) x;
+  cout << "vertFile: " << (void*)x << " " << (void*)offsets << " " << size << endl;
+
+  vertex* v = newA(vertex,n);
+  {parallel_for(long i=0;i<n;i++) {
+    uintE d = offsets[i].out_deg;
+    uint64_t r = offsets[i].residue;
+      // cout << i << " " << d << " " << r << endl; // correct
+      v[i].setOutDegree(d);
+      if(d==0){
+        v[i].setOutNeighbors(0);
+      }else if(d<=2){
+        v[i].setOutNeighbors((uintE*)r);
+      }else if(d<=254){
+        uint32_t cid = (r >> 32);
+        uint32_t coff = r & 0xFFFFFFFF;
+        uint64_t foff = cid * 4096 + coff;
+        uintE* nebrs = (uintE*)(s+foff+8); // 8B for pblk header in HG
+        v[i].setOutNeighbors(nebrs);
+        // { //debug
+        // if(i == 1){
+        //   cout << "\t" << cid << " " << coff << " " << foff << endl;
+        //   cout << "i = " << i << ", d[i] = " << d << ", Nebrs[i] = " << endl;
+        //     for(int j = 0; j < d; j++)
+        //       cout << nebrs[j] << ", ";
+        //     cout << endl;
+        // }}
+      }else{
+        uintE* nebrs = (uintE*)(t+r+8); // 8B for pblk header in HG
+        v[i].setOutNeighbors(nebrs);
+      }
+    }}
+
+  if(!isSymmetric) {
+    {parallel_for(long i=0;i<n;i++) {
+    uintT d = offsets[n+i].out_deg;
+    uintT r = offsets[n+i].residue;
+      v[i].setInDegree(d);
+      if(d<=2){
+        v[i].setInNeighbors((uintE*)r);
+      }else if(d<=254){
+        uint32_t cid = (r >> 32);
+        uint32_t coff = r & 0xFFFFFFFF;
+        uint64_t foff = cid * 4096 + coff;
+        uintE* nebrs = (uintE*)(s+foff+8); // 8B for pblk header in HG
+        v[i].setInNeighbors(nebrs);
+      }else{
+        uintE* nebrs = (uintE*)(t+r+8); // 8B for pblk header in HG
+        v[i].setInNeighbors(nebrs);
+      }}}}
+  free(offsets);
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges_chunks_4kb,edges_sv);
+  return graph<vertex>(v,n,m,mem);
+}
+
+template <class vertex>
+graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0) {
+  if(binary){ 
+    if(chunk) return readGraphFromBinaryChunk<vertex>(iFile,symmetric);
+    return readGraphFromBinary<vertex>(iFile,symmetric);
+  }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
 }
 

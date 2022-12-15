@@ -476,6 +476,7 @@ int parallel_main(int argc, char* argv[]) {
   bool compressed = P.getOptionValue("-c");
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
+  bool chunk = P.getOptionValue("-chunk");
   //cout << "mmap = " << mmap << endl;
   long rounds = P.getOptionLongValue("-rounds",3);
   if (compressed) {
@@ -531,13 +532,32 @@ int parallel_main(int argc, char* argv[]) {
     } else {
 #ifndef HYPER
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk); //asymmetric graph
 #else
       hypergraph<asymmetricVertex> G =
         readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
 #endif
       // Compute(G,P);
       // if(G.transposed) G.transpose();
+
+      {//debug
+        int i = 1; // expect 20: 2~21 for FS
+        uint d = G.V[i].getOutDegree();
+        uintE* nebrs = G.V[i].getOutNeighbors();
+        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
+        for(int j = 0; j < d; j++)
+          cout << nebrs[j] << ", ";
+        cout << endl;
+
+        i = 2; // expect 196: 1 22 26 ... 850 for FS-sub
+        d = G.V[i].getInDegree();
+        nebrs = G.V[i].getInNeighbors();
+        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
+        for(int j = 0; j < d; j++)
+          cout << nebrs[j] << ", ";
+        cout << endl;
+      }
+   
       for(int r=0;r<rounds;r++) {
         startTime();
         Compute(G,P);
