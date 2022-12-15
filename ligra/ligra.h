@@ -556,6 +556,14 @@ int parallel_main(int argc, char* argv[]) {
         for(int j = 0; j < d; j++)
           cout << nebrs[j] << ", ";
         cout << endl;
+
+        i = 4; // expect 1: 1 for FS
+        d = G.V[i].getOutDegree();
+        nebrs = G.V[i].getOutNeighbors();
+        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
+        for(int j = 0; j < d; j++)
+          cout << nebrs[j] << ", ";
+        cout << endl;
       }
    
       for(int r=0;r<rounds;r++) {
