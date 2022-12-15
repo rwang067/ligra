@@ -471,13 +471,41 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 }
 
 
-class pvertex_t {
-public:
+struct pvertex_t {
     uintE out_deg;
     uint64_t residue;
 }; 
+char* getFileData(char filename[], size_t size = 0, bool isMmap = 0){
+  char* addr = 0;
+  if(!isMmap){
+    ifstream in(filename,ifstream::in | ios::binary); //stored as uints
+    in.seekg(0, ios::end);
+    long size1 = in.tellg();
+    in.seekg(0);
+    if(size1 != size){ 
+      cout << size1 << " " << size << std::endl;
+      cout << "filename size wrong\n"; abort(); 
+    }
+    addr = (char *) malloc(size);
+    in.read(addr,size);
+    in.close();
+  } else {
+    int fd = open(filename, O_RDWR|O_CREAT, 00777);
+    if(fd == -1){
+      std::cout << "Could not open file for :" << filename << " error: " << strerror(errno) << std::endl;
+      exit(1);
+    }
+    if(ftruncate(fd, size) == -1){
+      std::cout << "Could not ftruncate file for :" << filename << " error: " << strerror(errno) << std::endl;
+      close(fd);
+      exit(1);
+    }
+    addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+  }
+  return addr;
+}
 template <class vertex>
-graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
+graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric, bool isMmap) {
   char* config = (char*) ".config";
   char* vert = (char*) ".vertex";
   char* adj_chunk4kb = (char*) ".adj.chunk4kb";
@@ -497,38 +525,20 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
   strcat(adjSvFile,adj_sv);
 
   ifstream in(configFile, ifstream::in);
-  long n, m, level, nchunks;
+  long n, m, level, nchunks, sv_size;
   in >> n >> m >> level >> nchunks;
   in.close();
   cout << "n = " << n << ", m = " << m << endl;
   cout << "level = " << level << ", nchunks = " << nchunks << endl;
 
-  cout << adjChunk4kbFile << endl;
-  ifstream in2(adjChunk4kbFile,ifstream::in | ios::binary); //stored as uints
-  in2.seekg(0, ios::end);
-  long size = in2.tellg();
-  in2.seekg(0);
-  if(nchunks * 4096 != size){ 
-    cout << nchunks << " " << size << " " << nchunks * 4096 << std::endl;
-    cout << "adjChunk4kbFile size wrong\n"; abort(); 
-  }
-  char* s = (char *) malloc(size);
-  in2.read(s,size);
-  in2.close();
-  char* edges_chunks_4kb = s;
+  long size = nchunks * 4096;
+  char* edges_chunks_4kb = getFileData(adjChunk4kbFile, size, isMmap);
+  cout << "adjChunk4kbFile: " << adjChunk4kbFile << " " << (void*)edges_chunks_4kb << " " << size << endl;
 
-  cout << adjSvFile << endl;
-  ifstream in3(adjSvFile,ifstream::in | ios::binary); //stored as uints
-  in3.seekg(0, ios::end);
-  size = in3.tellg();
-  in3.seekg(0);
-  char* t = (char *) malloc(size);
-  in3.read(t,size);
-  in3.close();
-  char* edges_sv = t;
-  cout << "adjSvFile: " << (void*)t << " " << (void*)edges_sv << " " << size << endl;
-  // for(int i = 0; i < 1; i++)
-  //   cout << edges_sv[i] << endl;
+  sv_size = 671096832;
+  size = sv_size;
+  char* edges_sv = getFileData(adjSvFile, size, isMmap);
+  cout << "adjSvFile: " << adjSvFile << " " << (void*)edges_sv << " " << size << endl;
 
   ifstream in4(vertFile,ifstream::in | ios::binary); //stored as longs
   in4.seekg(0, ios::end);
@@ -538,8 +548,6 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
     cout << n << " " << size << " " << size/sizeof(pvertex_t) << std::endl;
     cout << "vertFile size wrong\n"; abort(); 
   }
-  cout << n << " " << size << " " << size/sizeof(pvertex_t) << std::endl;
-
   char* x = (char *) malloc(size);
   in4.read(x,size);
   in4.close();
@@ -560,7 +568,7 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
         uint32_t cid = (r >> 32);
         uint32_t coff = r & 0xFFFFFFFF;
         uint64_t foff = cid * 4096 + coff;
-        uintE* nebrs = (uintE*)(s+foff+8); // 8B for pblk header in HG
+        uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
         v[i].setOutNeighbors(nebrs);
         // { //debug
         // if(i == 1){
@@ -571,7 +579,7 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
         //     cout << endl;
         // }}
       }else{
-        uintE* nebrs = (uintE*)(t+r+8); // 8B for pblk header in HG
+        uintE* nebrs = (uintE*)(edges_sv+r+8); // 8B for pblk header in HG
         v[i].setOutNeighbors(nebrs);
       }
     }}
@@ -587,10 +595,10 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
         uint32_t cid = (r >> 32);
         uint32_t coff = r & 0xFFFFFFFF;
         uint64_t foff = cid * 4096 + coff;
-        uintE* nebrs = (uintE*)(s+foff+8); // 8B for pblk header in HG
+        uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
         v[i].setInNeighbors(nebrs);
       }else{
-        uintE* nebrs = (uintE*)(t+r+8); // 8B for pblk header in HG
+        uintE* nebrs = (uintE*)(edges_sv+r+8); // 8B for pblk header in HG
         v[i].setInNeighbors(nebrs);
       }}}}
   free(offsets);
@@ -601,7 +609,7 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric) {
 template <class vertex>
 graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0) {
   if(binary){ 
-    if(chunk) return readGraphFromBinaryChunk<vertex>(iFile,symmetric);
+    if(chunk) return readGraphFromBinaryChunk<vertex>(iFile,symmetric,mmap);
     return readGraphFromBinary<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);

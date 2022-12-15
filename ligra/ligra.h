@@ -477,7 +477,7 @@ int parallel_main(int argc, char* argv[]) {
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
   bool chunk = P.getOptionValue("-chunk");
-  //cout << "mmap = " << mmap << endl;
+  cout << "mmap = " << mmap << endl;
   long rounds = P.getOptionLongValue("-rounds",3);
   if (compressed) {
     if (symmetric) {

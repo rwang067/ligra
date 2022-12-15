@@ -33,9 +33,9 @@ public:
   void del() {
     if (allocatedInplace == NULL)
       for (long i=0; i < n; i++) V[i].del();
-    else free(allocatedInplace);
+    // else free(allocatedInplace);
     free(V);
-    if(inEdges != NULL) free(inEdges);
+    // if(inEdges != NULL) free(inEdges);
   }
 };
 
