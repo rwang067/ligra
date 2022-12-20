@@ -6,6 +6,7 @@
 #include "vertex.h"
 #include "compressedVertex.h"
 #include "parallel.h"
+#include "chunk_buffer.h"
 using namespace std;
 
 // **************************************************************
@@ -26,9 +27,10 @@ public:
   long n;
   long m;
   void* allocatedInplace, * inEdges;
+  ChunkBuffer* cbuff;
 
-  Uncompressed_Mem(vertex* VV, long nn, long mm, void* ai, void* _inEdges = NULL)
-  : V(VV), n(nn), m(mm), allocatedInplace(ai), inEdges(_inEdges) { }
+  Uncompressed_Mem(vertex* VV, long nn, long mm, void* ai, void* _inEdges = NULL, ChunkBuffer* _cbuff = NULL)
+  : V(VV), n(nn), m(mm), allocatedInplace(ai), inEdges(_inEdges), cbuff(_cbuff) { }
 
   void del() {
     if (allocatedInplace == NULL)
