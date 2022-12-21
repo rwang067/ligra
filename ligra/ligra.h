@@ -130,7 +130,10 @@ vertexSubsetData<data> edgeMapSparse(graph<vertex>& GA, vertex* frontierVertices
     parallel_for (size_t i = 0; i < m; i++) {
       uintT v = indices.vtx(i);
       vertex vert = frontierVertices[i];
-      vert.decodeOutNghSparse(v, 0, f, g);
+      // vert.decodeOutNghSparse(v, 0, f, g);
+      uintE d = vert.getOutDegree();
+      uintE* nebrs = GA.getChunkNeighbors(&vert,0);
+      vert.decodeOutNghSparseChunk(d,nebrs,v,0,f,g);
     }
   }
 
@@ -540,30 +543,52 @@ int parallel_main(int argc, char* argv[]) {
       // Compute(G,P);
       // if(G.transposed) G.transpose();
 
-      {//debug
-        int i = 1; // expect 20: 2~21 for FS
-        uint d = G.V[i].getOutDegree();
-        uintE* nebrs = G.V[i].getOutNeighbors();
-        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
-        for(int j = 0; j < d; j++)
-          cout << nebrs[j] << ", ";
-        cout << endl;
-
-        i = 2; // expect 196: 1 22 26 ... 850 for FS-sub
-        d = G.V[i].getInDegree();
-        nebrs = G.V[i].getInNeighbors();
+      {//debu GA.getChunkNeighbors(&vert,0);
+        int i; uint d; uintE* nebrs;
+        i = 1; // expect 20: 2~21 for FS
+        d = G.V[i].getOutDegree();
+        // uintE* nebrs = G.V[i].getOutNeighbors();
+        nebrs = G.getChunkNeighbors(&(G.V[i]),0);
         cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
         for(int j = 0; j < d; j++)
           cout << nebrs[j] << ", ";
-        cout << endl;
+        cout << "\n" << endl;
+
+        i = 3; // expect 4: 2 1 861 862 for FS-sub
+        d = G.V[i].getOutDegree();
+        // uintE* nebrs = G.V[i].getOutNeighbors();
+        nebrs = G.getChunkNeighbors(&(G.V[i]),0);
+        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
+        for(int j = 0; j < d; j++)
+          cout << nebrs[j] << ", ";
+        cout << "\n" << endl;
+
+        i = 2; // expect 196: 1 22 26 ... 850 for FS-sub
+        d = G.V[i].getInDegree();
+        // nebrs = G.V[i].getInNeighbors();
+        nebrs = G.getChunkNeighbors(&(G.V[i]),1);
+        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
+        for(int j = 0; j < d; j++)
+          cout << nebrs[j] << ", ";
+        cout  << "\n" << endl;
+
+        i = 3; // expect 3: 1 861 862 for FS-sub
+        d = G.V[i].getInDegree();
+        // nebrs = G.V[i].getInNeighbors();
+        nebrs = G.getChunkNeighbors(&(G.V[i]),1);
+        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
+        for(int j = 0; j < d; j++)
+          cout << nebrs[j] << ", ";
+        cout  << "\n" << endl;
 
         i = 4; // expect 1: 1 for FS
         d = G.V[i].getOutDegree();
-        nebrs = G.V[i].getOutNeighbors();
+        // nebrs = G.V[i].getOutNeighbors();
+        nebrs = G.getChunkNeighbors(&(G.V[i]),0);
         cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
         for(int j = 0; j < d; j++)
           cout << nebrs[j] << ", ";
-        cout << endl;
+        cout  << "\n" << endl;
       }
    
       for(int r=0;r<rounds;r++) {

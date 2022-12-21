@@ -9,6 +9,29 @@
 #include "chunk_buffer.h"
 using namespace std;
 
+  // template <class vertex>
+  // inline uintE* getChunkNeighbors(graph<vertex>& GA, vertex* v, bool inGraph) {
+  //   uintE d;
+  //   uintE* neighbors;
+  //   if(!inGraph){
+  //     d = v->getOutDegree();
+  //     neighbors = v->getOutNeighbors();
+  //   }else{
+  //     d = v->getInDegree();
+  //     neighbors = v->getInNeighbors();
+  //   }
+  // #ifdef CHUNK
+  //   if(d > 2 && d<=254){ 
+  //     uint64_t r = (uint64_t)neighbors;
+  //     uint32_t cid = r >> 32;
+  //     uint32_t coff = r & 0xFFFFFFFF;
+  //     char* mchunk = GA.D->cbuff->get_mchunk(cid);
+  //     return (uintE*)(mchunk+coff);
+  //   };
+  // #endif
+  //   return neighbors;
+  // }
+
 // **************************************************************
 //    ADJACENCY ARRAY REPRESENTATION
 // **************************************************************
@@ -27,10 +50,9 @@ public:
   long n;
   long m;
   void* allocatedInplace, * inEdges;
-  ChunkBuffer* cbuff;
 
-  Uncompressed_Mem(vertex* VV, long nn, long mm, void* ai, void* _inEdges = NULL, ChunkBuffer* _cbuff = NULL)
-  : V(VV), n(nn), m(mm), allocatedInplace(ai), inEdges(_inEdges), cbuff(_cbuff) { }
+  Uncompressed_Mem(vertex* VV, long nn, long mm, void* ai, void* _inEdges = NULL)
+  : V(VV), n(nn), m(mm), allocatedInplace(ai), inEdges(_inEdges){ }
 
   void del() {
     if (allocatedInplace == NULL)
@@ -105,17 +127,23 @@ struct graph {
   bool transposed;
   uintE* flags;
   Deletable *D;
+  ChunkBuffer* cbuff;
 
 graph(vertex* _V, long _n, long _m, Deletable* _D) : V(_V), n(_n), m(_m),
-  D(_D), flags(NULL), transposed(0) {}
+  D(_D), flags(NULL), transposed(0), cbuff(NULL) {}
 
 graph(vertex* _V, long _n, long _m, Deletable* _D, uintE* _flags) : V(_V),
-  n(_n), m(_m), D(_D), flags(_flags), transposed(0) {}
+  n(_n), m(_m), D(_D), flags(_flags), transposed(0), cbuff(NULL) {}
+
+graph(vertex* _V, long _n, long _m, Deletable* _D, ChunkBuffer* _cbuff) : V(_V),
+  n(_n), m(_m), D(_D), cbuff(_cbuff), transposed(0) {}
 
   void del() {
-    if (flags != NULL) free(flags);
-    D->del();
-    free(D);
+    // if (flags != NULL) free(flags);
+    // D->del();
+    // free(D);
+    cbuff->del();
+    free(cbuff);
   }
 
   void transpose() {
@@ -126,6 +154,29 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, uintE* _flags) : V(_V),
       }
       transposed = !transposed;
     }
+  }
+
+  inline uintE* getChunkNeighbors(vertex* v, bool inGraph) {
+    uintE d;
+    uintE* neighbors;
+    if(!inGraph){
+      d = v->getOutDegree();
+      neighbors = (uintE*) v->getOutNeighbors();
+    }else{
+      d = v->getInDegree();
+      neighbors = (uintE*) v->getInNeighbors();
+    }
+  #ifdef CHUNK
+    if(d > 2 && d<=254){ 
+      uint64_t r = (uint64_t)neighbors;
+      uint32_t cid = r >> 32;
+      uint32_t coff = r & 0xFFFFFFFF;
+      cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
+      char* mchunk = cbuff->get_mchunk(cid);
+      return (uintE*)(mchunk+coff+8);// 8B for pblk header in HG
+    };
+  #endif
+    return neighbors;
   }
 };
 

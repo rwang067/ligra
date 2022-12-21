@@ -193,6 +193,16 @@ namespace decode_compressed {
 #endif
   }
 
+  template <class F, class G>
+  inline void decodeOutNghSparseChunk(uintE d, uintE* nebrs, long i, uintT o, F &f, G &g) {
+    uchar *nghArr = (uchar*)nebrs;
+#ifdef WEIGHTED
+    decodeWgh(sparseT<F, G>(f, g, i, o), nghArr, i, d);
+#else
+    decode(sparseT<F, G>(f, g, i, o), nghArr, i, d);
+#endif
+  }
+
   template <class V, class F, class G>
   inline size_t decodeOutNghSparseSeq(V* v, long i, uintT o, F &f, G &g) {
     uchar *nghArr = v->getOutNeighbors();
@@ -297,6 +307,11 @@ struct compressedSymmetricVertex {
   }
 
   template <class F, class G>
+  inline void decodeOutNghSparseChunk(uintE d, uintE* nebrs,long i, uintT o, F &f, G &g) {
+    decode_compressed::decodeOutNghSparseChunk<F, G>(d, nebrs, i, o, f, g);
+  }
+
+  template <class F, class G>
   inline size_t decodeOutNghSparseSeq(long i, uintT o, F &f, G &g) {
     return decode_compressed::decodeOutNghSparseSeq<compressedSymmetricVertex, F, G>(this, i, o, f, g);
   }
@@ -356,6 +371,11 @@ struct compressedAsymmetricVertex {
   template <class F, class G>
   inline void decodeOutNghSparse(long i, uintT o, F &f, G &g) {
     decode_compressed::decodeOutNghSparse<compressedAsymmetricVertex, F, G>(this, i, o, f, g);
+  }
+
+  template <class F, class G>
+  inline void decodeOutNghSparseChunk(uintE d, uintE* nebrs,long i, uintT o, F &f, G &g) {
+    decode_uncompressed::decodeOutNghSparseChunk<F, G>(d, nebrs, i, o, f, g);
   }
 
   template <class F, class G>

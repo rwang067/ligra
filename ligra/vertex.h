@@ -1,31 +1,8 @@
 #ifndef VERTEX_H
 #define VERTEX_H
 #include "vertexSubset.h"
-// #include "chunk_buffer.h"
+#include "chunk_buffer.h"
 using namespace std;
-
-  // template <class vertex>
-  // inline uintE* getChunkNeighbors(graph<vertex>& GA, vertex* v, bool inGraph) {
-  //   uintE d;
-  //   uintE* neighbors;
-  //   if(!inGraph){
-  //     d = v->getOutDegree();
-  //     neighbors = v->getOutNeighbors();
-  //   }else{
-  //     d = v->getInDegree();
-  //     neighbors = v->getInNeighbors();
-  //   }
-  // #ifdef CHUNK
-  //   if(d > 2 && d<=254){ 
-  //     uint64_t r = (uint64_t)neighbors;
-  //     uint32_t cid = r >> 32;
-  //     uint32_t coff = r & 0xFFFFFFFF;
-  //     char* mchunk = GA.D->cbuff->get_mchunk(cid);
-  //     return (uintE*)(mchunk+coff);
-  //   };
-  // #endif
-  //   return neighbors;
-  // }
 
 namespace decode_uncompressed {
 
@@ -87,10 +64,24 @@ namespace decode_uncompressed {
   template <class V, class F, class G>
   inline void decodeOutNghSparse(V* v, long i, uintT o, F &f, G &g) {
     uintE d = v->getOutDegree();
-    // uintE* nebrs = getChunkNeighbors();
     granular_for(j, 0, d, (d > 1000), {
-      // uintE ngh = nebrs[j];
       uintE ngh = v->getOutNeighbor(j);
+      if (f.cond(ngh)) {
+#ifndef WEIGHTED
+        auto m = f.updateAtomic(i, ngh);
+#else
+        auto m = f.updateAtomic(i, ngh, v->getOutWeight(j));
+#endif
+        g(ngh, o+j, m);
+      } else {
+        g(ngh, o+j);
+      }
+    });
+  }
+  template <class F, class G>
+  inline void decodeOutNghSparseChunk(uintE d, uintE* nebrs, long i, uintT o, F &f, G &g) {
+    granular_for(j, 0, d, (d > 1000), {
+      uintE ngh = nebrs[j];
       if (f.cond(ngh)) {
 #ifndef WEIGHTED
         auto m = f.updateAtomic(i, ngh);
@@ -278,6 +269,11 @@ symmetricVertex(intE* n, uintT d)
   }
 
   template <class F, class G>
+  inline void decodeOutNghSparseChunk(uintE d, uintE* nebrs, long i, uintT o, F &f, G &g) {
+    decode_uncompressed::decodeOutNghSparseChunk<F, G>(d, nebrs, i, o, f, g);
+  }
+
+  template <class F, class G>
   inline size_t decodeOutNghSparseSeq(long i, uintT o, F &f, G &g) {
     return decode_uncompressed::decodeOutNghSparseSeq<symmetricVertex, F>(this, i, o, f, g);
   }
@@ -377,6 +373,11 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
   template <class F, class G>
   inline void decodeOutNghSparse(long i, uintT o, F &f, G &g, uintE* neighbors=0) {
     decode_uncompressed::decodeOutNghSparse<asymmetricVertex, F>(this, i, o, f, g);
+  }
+
+  template <class F, class G>
+  inline void decodeOutNghSparseChunk(uintE d, uintE* nebrs,long i, uintT o, F &f, G &g) {
+    decode_uncompressed::decodeOutNghSparseChunk<F, G>(d, nebrs, i, o, f, g);
   }
 
   template <class F, class G>

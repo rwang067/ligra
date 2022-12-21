@@ -692,14 +692,14 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
         // uint64_t foff = cid * 4096 + coff;
         // uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
         // v[i].setInNeighbors(nebrs);
-        v[i].setOutNeighbors((uintE*)r);
+        v[i].setInNeighbors((uintE*)r);
       }else{
         uintE* nebrs = (uintE*)(edges_sv+r+8); // 8B for pblk header in HG
         v[i].setInNeighbors(nebrs);
       }}}}
   free(offsets);
 
-  ChunkBuffer cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024);
+  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,10);
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
   return graph<vertex>(v,n,m,mem,cbuff);
 }
@@ -707,7 +707,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
 template <class vertex>
 graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0) {
   if(binary){ 
-    if(chunk) return readGraphFromBinaryChunk<vertex>(iFile,symmetric,mmap);
+    if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap);
     return readGraphFromBinary<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
