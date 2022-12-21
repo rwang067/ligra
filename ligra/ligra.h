@@ -74,7 +74,10 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
     auto g = get_emdense_nooutput_gen<data>();
     parallel_for (long v=0; v<n; v++) {
       if (f.cond(v)) {
-        G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+        // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+        uintE d = G[v].getOutDegree();
+        uintE* nebrs = GA.getChunkNeighbors(&G[v],0);
+        G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
       }
     }
     return vertexSubsetData<data>(n);
@@ -549,7 +552,7 @@ int parallel_main(int argc, char* argv[]) {
         d = G.V[i].getOutDegree();
         // uintE* nebrs = G.V[i].getOutNeighbors();
         nebrs = G.getChunkNeighbors(&(G.V[i]),0);
-        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
+        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
         for(int j = 0; j < d; j++)
           cout << nebrs[j] << ", ";
         cout << "\n" << endl;
@@ -558,7 +561,7 @@ int parallel_main(int argc, char* argv[]) {
         d = G.V[i].getOutDegree();
         // uintE* nebrs = G.V[i].getOutNeighbors();
         nebrs = G.getChunkNeighbors(&(G.V[i]),0);
-        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
+        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
         for(int j = 0; j < d; j++)
           cout << nebrs[j] << ", ";
         cout << "\n" << endl;

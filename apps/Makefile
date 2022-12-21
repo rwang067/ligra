@@ -51,7 +51,7 @@ endif
 
 COMMON= ligra.h graph.h chunk_buffer.h compressedVertex.h vertex.h utils.h IO.h parallel.h gettime.h index_map.h maybe.h sequence.h edgeMap_utils.h binary_search.h quickSort.h blockRadixSort.h transpose.h parseCommandLine.h byte.h byteRLE.h nibble.h byte-pd.h byteRLE-pd.h nibble-pd.h vertexSubset.h encoder.C decoder.C
 
-ALL= encoder decoder BFS BC BellmanFord Components Components-Shortcut Radii PageRank PageRankDelta BFSCC BFS-Bitvector KCore MIS Triangle CF TestAll
+ALL= encoder decoder BFS BC Components Components-Shortcut Radii PageRank PageRankDelta BFSCC BFS-Bitvector KCore Triangle MIS TestAll # BellmanFord MIS CF
 
 all: $(ALL)
 

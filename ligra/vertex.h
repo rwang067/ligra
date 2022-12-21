@@ -40,6 +40,35 @@ namespace decode_uncompressed {
       }
     }
   }
+  template <class F, class G, class VS>
+  inline void decodeInNghBreakEarlyChunk(uintE d, uintE* nebrs, long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+    if (!parallel || d < 1000) {
+      for (size_t j=0; j<d; j++) {
+        uintE ngh = nebrs[j];
+        if (vertexSubset.isIn(ngh)) {
+#ifndef WEIGHTED
+          auto m = f.update(ngh, v_id);
+#else
+          auto m = f.update(ngh, v_id, v->getInWeight(j));
+#endif
+          g(v_id, m);
+        }
+        if(!f.cond(v_id)) break;
+      }
+    } else {
+      parallel_for(size_t j=0; j<d; j++) {
+        uintE ngh = nebrs[j];
+        if (vertexSubset.isIn(ngh)) {
+#ifndef WEIGHTED
+          auto m = f.updateAtomic(ngh, v_id);
+#else
+          auto m = f.updateAtomic(ngh, v_id, v->getInWeight(j));
+#endif
+          g(v_id, m);
+        }
+      }
+    }
+  }
 
   // Used by edgeMapDenseForward. For each out-neighbor satisfying cond, call
   // updateAtomic.
@@ -86,7 +115,8 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
         auto m = f.updateAtomic(i, ngh);
 #else
-        auto m = f.updateAtomic(i, ngh, v->getOutWeight(j));
+        auto m = f.updateAtomic(i, ngh, nebrs[d+j]);
+        // auto m = f.updateAtomic(i, ngh, v->getOutWeight(j));
 #endif
         g(ngh, o+j, m);
       } else {
@@ -257,6 +287,10 @@ symmetricVertex(intE* n, uintT d)
   inline void decodeInNghBreakEarly(long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
     decode_uncompressed::decodeInNghBreakEarly<symmetricVertex, F, G, VS>(this, v_id, vertexSubset, f, g, parallel);
   }
+  template <class VS, class F, class G>
+  inline void decodeInNghBreakEarlyChunk(uintE d, uintE* nebrs, long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+    decode_uncompressed::decodeInNghBreakEarlyChunk<F, G, VS>(d, nebrs, v_id, vertexSubset, f, g, parallel);
+  }
 
   template <class F, class G>
   inline void decodeOutNgh(long i, F &f, G& g) {
@@ -363,6 +397,10 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
   template <class VS, class F, class G>
   inline void decodeInNghBreakEarly(long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
     decode_uncompressed::decodeInNghBreakEarly<asymmetricVertex, F, G, VS>(this, v_id, vertexSubset, f, g, parallel);
+  }
+  template <class VS, class F, class G>
+  inline void decodeInNghBreakEarlyChunk(uintE d, uintE* nebrs, long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+    decode_uncompressed::decodeInNghBreakEarlyChunk<F, G, VS>(d, nebrs, v_id, vertexSubset, f, g, parallel);
   }
 
   template <class F, class G>

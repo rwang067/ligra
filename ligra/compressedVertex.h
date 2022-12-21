@@ -171,6 +171,15 @@ namespace decode_compressed {
         decode(denseT<F, G, VS>(f, g, vertexSubset), nghArr, i, v->getInDegree());
 #endif
   }
+  template<class V, class F, class G, class VS>
+  inline void decodeInNghBreakEarlyChunk(uintE d, uintE* nebrs, V* v, long i, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+    uchar *nghArr = (uchar*)nebrs;
+#ifdef WEIGHTED
+        decodeWgh(denseT<F, G, VS>(f, g, vertexSubset), nghArr, i, d);
+#else
+        decode(denseT<F, G, VS>(f, g, vertexSubset), nghArr, i, d);
+#endif
+  }
 
   template<class V, class F, class G>
   inline void decodeOutNgh(V* v, long i, F &f, G &g) {
@@ -295,6 +304,10 @@ struct compressedSymmetricVertex {
   inline void decodeInNghBreakEarly(long i, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
     decode_compressed::decodeInNghBreakEarly<compressedSymmetricVertex, F, G, VS>(this, i, vertexSubset, f, g, parallel);
   }
+  template<class VS, class F, class G>
+  inline void decodeInNghBreakEarlyChunk(uintE d, uintE* nebrs, long i, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+    decode_compressed::decodeInNghBreakEarlyChunk<compressedSymmetricVertex, F, G, VS>(d, nebrs, this, i, vertexSubset, f, g, parallel);
+  }
 
   template<class F, class G>
   inline void decodeOutNgh(long i, F &f, G &g) {
@@ -361,6 +374,10 @@ struct compressedAsymmetricVertex {
   template<class VS, class F, class G>
   inline void decodeInNghBreakEarly(long i, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
     decode_compressed::decodeInNghBreakEarly<compressedAsymmetricVertex, F, G, VS>(this, i, vertexSubset, f, g, parallel);
+  }
+    template<class VS, class F, class G>
+  inline void decodeInNghBreakEarlyChunk(uintE d, uintE* nebrs, long i, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+    decode_compressed::decodeInNghBreakEarlyChunk<compressedAsymmetricVertex, F, G, VS>(d, nebrs, this, i, vertexSubset, f, g, parallel);
   }
 
   template<class F, class G>
