@@ -1,4 +1,4 @@
-# export OPENMP := 1
+export OPENMP := 1
 export LONG := 1
 export CHUNK := 1
 

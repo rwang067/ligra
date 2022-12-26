@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
+#include <mutex>
 #include "parallel.h"
 using namespace std;
 
@@ -17,6 +18,7 @@ private:
   cid_t cur_mcid;
 
   cid_t *cmap, *mcmap; // cid -> mcid, mcid -> cid
+  mutex* chunk_lock;
 
 public:
   ChunkBuffer(char filename[], size_t _chunk_size, cid_t _nchunks, cid_t _nmchunks)
@@ -53,6 +55,8 @@ public:
     cout << endl;
 
     cout << "ChunkBuffer initialized " << nmchunks << " mchunks of size " << chunk_size << ", nchunks = " << nchunks << "\n" << endl;
+
+    chunk_lock = new std::mutex[nchunks];
   }
   ~ChunkBuffer(){
   }
@@ -64,6 +68,7 @@ public:
     free(cmap);
     free(mchunks);
     free(buff);
+    delete [] chunk_lock;
   }
 
   cid_t get_cmap(cid_t cid){
@@ -76,16 +81,21 @@ public:
   char* get_mchunk(cid_t cid){
     // cout << "Before get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << endl;
     if(cmap[cid] == nmchunks){ // Not in DRAM buffer
+      chunk_lock[cid].lock();
       cid_t mcid = cur_mcid;
+      cid_t mmcid = mcmap[mcid];
       // cout << "mcid = " << mcid << ", mcmap[mcid] = " << mcmap[mcid] << endl;
-      if(mcmap[mcid] != nchunks){
-        free_chunk(mcmap[mcid], mcid);
-        cmap[mcmap[mcid]] = nmchunks;
-        mcmap[mcid] = nchunks;
+      if(mmcid != nchunks){
+        chunk_lock[mmcid].lock();
+        free_chunk(mmcid, mcid);
+        cmap[mmcid] = nmchunks;
+        mmcid = nchunks;
+        chunk_lock[mmcid].unlock();
       }
       load_chunk(cid, mcid);
       cmap[cid] = mcid;
       cur_mcid = (cur_mcid + 1)%nmchunks;
+      chunk_lock[cid].unlock();
     }
     // cout << "After get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << ", mchunks[cmap[cid]] = " << (void*)mchunks[cmap[cid]] << "\n" << endl;
     return mchunks[cmap[cid]];
