@@ -74,10 +74,10 @@ public:
   }
 
   char* get_mchunk(cid_t cid){
-    cout << "Before get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << endl;
+    // cout << "Before get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << endl;
     if(cmap[cid] == nmchunks){ // Not in DRAM buffer
       cid_t mcid = cur_mcid;
-      cout << "mcid = " << mcid << ", mcmap[mcid] = " << mcmap[mcid] << endl;
+      // cout << "mcid = " << mcid << ", mcmap[mcid] = " << mcmap[mcid] << endl;
       if(mcmap[mcid] != nchunks){
         free_chunk(mcmap[mcid], mcid);
         cmap[mcmap[mcid]] = nmchunks;
@@ -85,15 +85,15 @@ public:
       }
       load_chunk(cid, mcid);
       cmap[cid] = mcid;
-      cur_mcid++;
+      cur_mcid = (cur_mcid + 1)%nmchunks;
     }
-    cout << "After get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << ", mchunks[cmap[cid]] = " << (void*)mchunks[cmap[cid]] << endl;
+    // cout << "After get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << ", mchunks[cmap[cid]] = " << (void*)mchunks[cmap[cid]] << "\n" << endl;
     return mchunks[cmap[cid]];
   }
 
   void load_chunk(cid_t cid, cid_t mcid){
-    cout << "pread: fd = " << cfd << ", *buf = " << (void*)mchunks[mcid] << ", nbytes = " << chunk_size << ", offset = " << chunk_size*cid << endl;
     if(pread(cfd,mchunks[mcid],chunk_size,chunk_size*cid)==-1){
+      cout << "pread: fd = " << cfd << ", *buf = " << (void*)mchunks[mcid] << ", nbytes = " << chunk_size << ", offset = " << chunk_size*cid << endl;
       cout << "pread wrong\n"; abort(); 
       exit(-1);
     }

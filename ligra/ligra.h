@@ -75,8 +75,14 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
     parallel_for (long v=0; v<n; v++) {
       if (f.cond(v)) {
         // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
-        uintE d = G[v].getOutDegree();
-        uintE* nebrs = GA.getChunkNeighbors(&G[v],0);
+        uintE d = G[v].getInDegree();
+        uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+        if(v==25256578 || v < 5){
+          uint64_t r = (uint64_t)G[v].getInNeighbors();
+          uint32_t cid = r >> 32;
+          uint32_t coff = r & 0xFFFFFFFF;
+          cout << "v = " << v << ", d = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", nebrs = " << (void*)nebrs << endl;
+        }
         G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
       }
     }

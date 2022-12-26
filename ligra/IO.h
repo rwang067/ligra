@@ -687,11 +687,13 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       if(d<=2){
         v[i].setInNeighbors((uintE*)r);
       }else if(d<=254){
-        // uint32_t cid = (r >> 32);
-        // uint32_t coff = r & 0xFFFFFFFF;
-        // uint64_t foff = cid * 4096 + coff;
-        // uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
-        // v[i].setInNeighbors(nebrs);
+        if(i==25256578 || i < 5){
+          uint32_t cid = r >> 32;
+          uint32_t coff = r & 0xFFFFFFFF;
+          uint64_t foff = cid * 4096 + coff;
+          // uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
+          cout << "v = " << i << ", d = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", foff = " << foff << endl;
+        }
         v[i].setInNeighbors((uintE*)r);
       }else{
         uintE* nebrs = (uintE*)(edges_sv+r+8); // 8B for pblk header in HG
