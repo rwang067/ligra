@@ -628,7 +628,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
 
   ifstream in(configFile, ifstream::in);
   long n, m, level, nchunks, sv_size, size;
-  in >> n >> m >> level >> nchunks;
+  in >> n >> m >> level >> nchunks >> sv_size;
   in.close();
   cout << "n = " << n << ", m = " << m << endl;
   cout << "level = " << level << ", nchunks = " << nchunks << endl;
@@ -637,7 +637,6 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, size, isMmap);
   // cout << "adjChunk4kbFile: " << adjChunk4kbFile << " " << (void*)edges_chunks_4kb << " " << size << endl;
 
-  sv_size = 671096832;
   size = sv_size;
   char* edges_sv = getFileData(adjSvFile, size, isMmap);
   cout << "adjSvFile: " << adjSvFile << " " << (void*)edges_sv << " " << size << endl;
@@ -657,6 +656,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   cout << "vertFile: " << (void*)x << " " << (void*)offsets << " " << size << endl;
 
   vertex* v = newA(vertex,n);
+  // setWorkers(16);
   {parallel_for(long i=0;i<n;i++) {
     uintE d = offsets[i].out_deg;
     uint64_t r = offsets[i].residue;
@@ -692,7 +692,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
           uint32_t coff = r & 0xFFFFFFFF;
           uint64_t foff = cid * 4096 + coff;
           // uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
-          cout << "v = " << i << ", d = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", foff = " << foff << endl;
+          cout << "v = " << i << ", ind = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", foff = " << foff << endl;
         }
         v[i].setInNeighbors((uintE*)r);
       }else{
@@ -701,7 +701,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       }}}}
   free(offsets);
 
-  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,10);
+  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024*1024*8);
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
   return graph<vertex>(v,n,m,mem,cbuff);
 }

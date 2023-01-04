@@ -66,7 +66,10 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
     parallel_for (long v=0; v<n; v++) {
       std::get<0>(next[v]) = 0;
       if (f.cond(v)) {
-        G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+        // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+        uintE d = G[v].getInDegree();
+        uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+        G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
       }
     }
     return vertexSubsetData<data>(n, next);
@@ -77,12 +80,6 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
         // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
         uintE d = G[v].getInDegree();
         uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
-        // if(v==25256578 || v < 5){
-        //   uint64_t r = (uint64_t)G[v].getInNeighbors();
-        //   uint32_t cid = r >> 32;
-        //   uint32_t coff = r & 0xFFFFFFFF;
-        //   cout << "v = " << v << ", d = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", nebrs = " << (void*)nebrs << endl;
-        // }
         G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
       }
     }
@@ -132,7 +129,10 @@ vertexSubsetData<data> edgeMapSparse(graph<vertex>& GA, vertex* frontierVertices
     parallel_for (size_t i = 0; i < m; i++) {
       uintT v = indices.vtx(i), o = offsets[i];
       vertex vert = frontierVertices[i];
-      vert.decodeOutNghSparse(v, o, f, g);
+      // vert.decodeOutNghSparse(v, o, f, g);
+      uintE d = vert.getOutDegree();
+      uintE* nebrs = GA.getChunkNeighbors(&vert,0);
+      vert.decodeOutNghSparseChunk(d,nebrs,v,o,f,g);
     }
   } else {
     auto g = get_emsparse_nooutput_gen<data>();
