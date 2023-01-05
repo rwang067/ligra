@@ -7,17 +7,24 @@
 #include "parallel.h"
 using namespace std;
 
-// inline void lock(volatile bool &flag)
-// {
-// 	while(!__sync_bool_compare_and_swap(&flag, 0, 1)){}
-// }
+inline void lock(volatile bool &flag)
+{
+	while(!__sync_bool_compare_and_swap(&flag, 0, 1)){}
+}
 
-// inline void unlock(volatile bool &flag)
-// {
-// 	flag = 0;
-// }
+inline void unlock(volatile bool &flag)
+{
+	flag = 0;
+}
 
 typedef uint32_t cid_t; //chunk_id
+typedef uint32_t hot_t; //chunk_id
+struct Chunk_t{
+  hot_t hotness;
+  uint16_t max_size;
+  uint16_t cur_size;
+};
+
 class ChunkBuffer{
 private:
   size_t chunk_size;
@@ -29,9 +36,13 @@ private:
   cid_t cur_mcid;
 
   cid_t *cmap, *mcmap; // cid -> mcid, mcid -> cid
-  // volatile bool* chunk_lock;
+  volatile bool* chunk_lock;
 
-  uint32_t *hotness;
+  hot_t *hotness;
+  hot_t hotsum;
+  
+  cid_t loaded_chunk_count;
+  size_t space_waste;
 
 public:
   ChunkBuffer(char filename[], size_t _chunk_size, cid_t _nchunks, cid_t _nmchunks)
@@ -80,44 +91,45 @@ public:
 
     cout << "ChunkBuffer initialized " << nmchunks << " mchunks of size " << chunk_size << ", nchunks = " << nchunks << "\n" << endl;
 
-    // chunk_lock = (volatile bool*)calloc(nchunks, sizeof(volatile bool));
+    chunk_lock = (volatile bool*)calloc(nchunks, sizeof(volatile bool));
 
-    hotness = (uint32_t*)calloc(nmchunks, sizeof(uint32_t));
+    hotness = (hot_t*)calloc(nmchunks, sizeof(hot_t));
+    hotsum = 0;
+
+    loaded_chunk_count = 0;
+    space_waste = 0;
   }
   ~ChunkBuffer(){
   }
 
   void del(){
     { // used for debug, check the correctness of cmap and mcmap
-
       // cout << "i<-mcmap[i]: " << endl;
-      // for(int i = 0; i < nmchunks; i++){
-      //   if(mcmap[i] != nchunks)
-      //     cout << i << "<-" << mcmap[i] << ", ";
-      // }
-      // cout << endl;
+      int mcached_count = 0;
+      for(int i = 0; i < nmchunks; i++){
+        if(mcmap[i] != nchunks){
+          mcached_count++;
+          // cout << i << "<-" << mcmap[i] << ", ";
+        }
+      }
+      cout << "mcached chunk count = " << mcached_count << endl;
 
       // cout << "i->cmap[i]: " << endl;
-      // for(int i = 0; i < nchunks; i++){
-      //   if(cmap[i] != nmchunks){
-      //     cout << i << "->" << cmap[i] << ", ";
-      //   }
-      // }
-      // cout << endl;
-
       int cached_count = 0;
       for(int i = 0; i < nchunks; i++){
         if(cmap[i] != nmchunks){
           cached_count++;
           if(mcmap[cmap[i]] != i)
             cout << "Error map: i cmap[i] mcmap[cmap[i]] cmap[mcmap[cmap[i]]] = " << i << ", " << cmap[i] << ", " << mcmap[cmap[i]] << ", " << cmap[mcmap[cmap[i]]] << endl;
+          // cout << i << "->" << cmap[i] << ", ";
         }
       }
-      cout << "cached chunk count = " << cached_count << endl;
+      cout << "cached chunk count = " << cached_count << ", hotness sum = " << hotsum << ", hotness avg = " << hotsum/nmchunks << endl;
+      cout << "loaded chunk count = " << loaded_chunk_count << ", wasted space = " << space_waste << ", avg = " << space_waste/loaded_chunk_count<< endl;
     }
 
     close(cfd);
-    cout << "Close file, cfd = " << cfd << endl;
+    cout << "Close file, cfd = " << cfd << ".\n" << endl;
     free(mcmap);
     free(cmap);
     free(mchunks);
@@ -135,7 +147,7 @@ public:
   cid_t evict_seq(){
     return __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
   }
-  cid_t evict_cold(uint32_t threshold){
+  cid_t evict_colder(hot_t threshold){
     cid_t res_cid = __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
     while(hotness[res_cid]>threshold){
       res_cid = __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
@@ -144,7 +156,7 @@ public:
   }
   cid_t evict_coldest(){
     cid_t res_cid = cur_mcid;
-    uint32_t res_hot = hotness[res_cid];
+    hot_t res_hot = hotness[res_cid];
     for(cid_t i = cur_mcid+1; i < nmchunks; i++){
       if(res_hot < hotness[i]){
         res_cid = i;
@@ -163,33 +175,21 @@ public:
   }
 
   char* get_mchunk(cid_t cid){
-    // cout << "Before get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << endl;
     if(cmap[cid] == nmchunks){ // Not in DRAM buffer
-      // lock(chunk_lock[cid]);
+      while(chunk_lock[cid]);
       if(cmap[cid] == nmchunks) {  
-        cid_t mcid = evict_seq();
-        // cid_t mcid = evict_cold(0);
+        lock(chunk_lock[cid]);
+        // cid_t mcid = evict_seq();
+        cid_t mcid = evict_colder(hotsum/nmchunks);
         cid_t mmcid = mcmap[mcid];
-        // cout << "mcid = " << mcid << ", mcmap[mcid] = " << mcmap[mcid] << endl;
         if(mmcid != nchunks){
-          // lock(chunk_lock[mmcid]);
-          // free_chunk(mmcid, mcid);
-          cmap[mmcid] = nmchunks;
-          mmcid = nchunks;
-          // unlock(chunk_lock[mmcid]);
+          free_chunk(mmcid, mcid);
         }
         load_chunk(cid, mcid);
-        cmap[cid] = mcid;
-        mcmap[mcid] = cid;
-        hotness[mcid] = 0;//(uint32_t)(mchunks[mcid]);
+        unlock(chunk_lock[cid]);
       }
-      // unlock(chunk_lock[cid]);
     }
-    // cout << "After get_mchunk, cid = " << cid << ", cmap[cid] = " << cmap[cid] << ", mchunks[cmap[cid]] = " << (void*)mchunks[cmap[cid]] << "\n" << endl;
-    // lock(chunk_lock[cid]);
-    cid_t res_cid = cmap[cid];
-    // unlock(chunk_lock[cid]);
-    return mchunks[res_cid];
+    return mchunks[cmap[cid]];
   }
 
   void load_chunk(cid_t cid, cid_t mcid){
@@ -200,7 +200,23 @@ public:
       abort(); 
       // exit(-1);
     }
+    cmap[cid] = mcid;
+    mcmap[mcid] = cid;
+
+    hotness[mcid] = ((Chunk_t*)(mchunks[mcid]))->hotness;
+    uint16_t max_size = ((Chunk_t*)(mchunks[mcid]))->max_size;
+    uint16_t cur_size = ((Chunk_t*)(mchunks[mcid]))->cur_size;
+    __sync_fetch_and_add(&hotsum, hotness[mcid]);
+
+    __sync_fetch_and_add(&loaded_chunk_count, 1);
+    __sync_fetch_and_add(&space_waste, max_size - cur_size);
+    
+    // cout << "load_chunk: cid = " << cid << ", mcid = " << mcid << endl;
+    // cout << "  hotness[mcid] = " << hotness[mcid] << ", max_size = " << max_size << ", cur_size = " << cur_size << endl;
   }
-  void free_chunk(cid_t cid, cid_t mcid){
+  void free_chunk(cid_t mmcid, cid_t mcid){
+    __sync_fetch_and_sub(&hotsum, hotness[mcid]);
+    cmap[mmcid] = nmchunks;
+    mcmap[mcid] = nchunks;
   }
 }; 
