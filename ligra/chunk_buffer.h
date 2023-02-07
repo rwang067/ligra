@@ -41,7 +41,7 @@ private:
   hot_t *hotness;
   hot_t hotsum;
   
-  cid_t loaded_chunk_count;
+  cid_t loaded_chunk_count, freed_chunk_count;
   size_t space_waste;
 
 public:
@@ -83,7 +83,8 @@ public:
       mcmap[i] = nchunks; 
     }
 
-    cout << "buff = " << (void*)buff << ", mchunks = " << endl;
+    cout << "buff addr = " << (void*)buff << ", buff size = " << (nmchunks * chunk_size /1024/1024) << " MB." << endl;
+    // cout << "mchunks addrs = " << endl;
     // for(int i = 0; i < nmchunks; i++){
     //   cout << (void*)(mchunks[i]) << " ";
     // }
@@ -97,6 +98,7 @@ public:
     hotsum = 0;
 
     loaded_chunk_count = 0;
+    freed_chunk_count = 0;
     space_waste = 0;
   }
   ~ChunkBuffer(){
@@ -112,7 +114,7 @@ public:
           // cout << i << "<-" << mcmap[i] << ", ";
         }
       }
-      cout << "mcached chunk count = " << mcached_count << endl;
+      cout << "mcmap cached chunk count = " << mcached_count << endl;
 
       // cout << "i->cmap[i]: " << endl;
       int cached_count = 0;
@@ -124,8 +126,9 @@ public:
           // cout << i << "->" << cmap[i] << ", ";
         }
       }
-      cout << "cached chunk count = " << cached_count << ", hotness sum = " << hotsum << ", hotness avg = " << hotsum/nmchunks << endl;
+      cout << "cmap cached chunk count = " << cached_count << ", hotness sum = " << hotsum << ", hotness avg = " << hotsum/nmchunks << endl;
       cout << "loaded chunk count = " << loaded_chunk_count << ", wasted space = " << space_waste << ", avg = " << space_waste/loaded_chunk_count<< endl;
+      cout << "freed chunk count = " << freed_chunk_count << ", loaded-freed chunk count = " << (loaded_chunk_count-freed_chunk_count) << endl;
     }
 
     close(cfd);
@@ -218,5 +221,7 @@ public:
     __sync_fetch_and_sub(&hotsum, hotness[mcid]);
     cmap[mmcid] = nmchunks;
     mcmap[mcid] = nchunks;
+
+    __sync_fetch_and_add(&freed_chunk_count, 1);
   }
 }; 

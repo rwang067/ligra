@@ -9,29 +9,6 @@
 #include "chunk_buffer.h"
 using namespace std;
 
-  // template <class vertex>
-  // inline uintE* getChunkNeighbors(graph<vertex>& GA, vertex* v, bool inGraph) {
-  //   uintE d;
-  //   uintE* neighbors;
-  //   if(!inGraph){
-  //     d = v->getOutDegree();
-  //     neighbors = v->getOutNeighbors();
-  //   }else{
-  //     d = v->getInDegree();
-  //     neighbors = v->getInNeighbors();
-  //   }
-  // #ifdef CHUNK
-  //   if(d > 2 && d<=254){ 
-  //     uint64_t r = (uint64_t)neighbors;
-  //     uint32_t cid = r >> 32;
-  //     uint32_t coff = r & 0xFFFFFFFF;
-  //     char* mchunk = GA.D->cbuff->get_mchunk(cid);
-  //     return (uintE*)(mchunk+coff);
-  //   };
-  // #endif
-  //   return neighbors;
-  // }
-
 // **************************************************************
 //    ADJACENCY ARRAY REPRESENTATION
 // **************************************************************
@@ -167,13 +144,14 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, ChunkBuffer* _cbuff) : V(_V),
       neighbors = (uintE*) v->getInNeighbors();
     }
   #ifdef CHUNK
-    if(d > 2 && d<=254){ 
+    if(d > 2 && d<=1022){ 
       uint64_t r = (uint64_t)neighbors;
       uint32_t cid = r >> 32;
       uint32_t coff = r & 0xFFFFFFFF;
       // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
       char* mchunk = cbuff->get_mchunk(cid);
-      return (uintE*)(mchunk+coff); //+8);// 8B for pblk header in HG, removed
+      return (uintE*)(mchunk+coff);
+      // return (uintE*)(mchunk+coff+8);// 8B for pblk header (max_count/count) in HG, removed
     };
   #endif
     return neighbors;

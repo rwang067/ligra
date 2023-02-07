@@ -32,7 +32,7 @@ Chunk_data[6]=/mnt/nvme2/wr/yahooweb/out.yahooweb
 # echo $$ | sudo tee /sys/fs/cgroup/cxy-test/cgroup.procs
 
 make clean; make cleansrc;
-make BFS PageRank Components KCore
+make testNebrs BFS PageRank Components KCore
 
 # for idx in 7
 for idx in {0,0}
@@ -44,24 +44,37 @@ do
     echo ${rts[$idx]}
 
     # sysctl -w vm.drop_caches=3
-    echo "=======BFS======="
-    ./BFS -b -r ${rts[$idx]} -chunk -m -rounds 1 ${Chunk_data[$idx]}
+    echo "=======testNebrs======="
+    ./testNebrs -b -m -chunk -debug -rounds 1 ${Chunk_data[$idx]}
     wait
 
     # sysctl -w vm.drop_caches=3
-    echo "=======PageRank======="
-    ./PageRank -b -chunk -m -rounds 1 ${Chunk_data[$idx]}
+    echo "=======BFS======="
+    ./BFS -b -r ${rts[$idx]} -m -chunk -rounds 1 ${Chunk_data[$idx]}
     wait
 
     # sysctl -w vm.drop_caches=3
     echo "=======Components======="
-    ./Components -b -chunk -m -rounds 1 ${Chunk_data[$idx]}
+    ./Components -b -m -chunk -rounds 1 ${Chunk_data[$idx]}
     wait
 
     # sysctl -w vm.drop_caches=3
     echo "=======KCore======="
-    ./KCore -b -chunk -m -rounds 1 ${Chunk_data[$idx]}
+    ./KCore -b -m -chunk -rounds 1 ${Chunk_data[$idx]}
     wait
+
+    # sysctl -w vm.drop_caches=3
+    echo "=======PageRank======="
+    ./PageRank -b -m -chunk -rounds 1 ${Chunk_data[$idx]}
+    wait
+
     echo ""
 done
 
+# ## For debug ##
+# make BFS
+# ./BFS -b -r 35005211 -m -chunk -rounds 1 /mnt/nvme2/zorax/Friendster/out.friendster
+# gdb ./BFS
+# set args -b -r 35005211 -m -chunk -rounds 1 /mnt/nvme2/zorax/Friendster/out.friendster
+
+# ./BFS -b -r 35005211 -m -chunk -rounds 1 /mnt/nvme2/wr/friendster_chunks/out.friendster

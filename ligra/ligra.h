@@ -489,7 +489,7 @@ int parallel_main(int argc, char* argv[]) {
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
   bool chunk = P.getOptionValue("-chunk");
-  cout << "mmap = " << mmap << endl;
+  bool debug = P.getOptionValue("-debug");
   long rounds = P.getOptionLongValue("-rounds",3);
   if (compressed) {
     if (symmetric) {
@@ -544,62 +544,13 @@ int parallel_main(int argc, char* argv[]) {
     } else {
 #ifndef HYPER
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
 #else
       hypergraph<asymmetricVertex> G =
         readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
 #endif
       // Compute(G,P);
       // if(G.transposed) G.transpose();
-
-      {//debu GA.getChunkNeighbors(&vert,0);
-        int i; uint d; uintE* nebrs;
-        i = 1; // expect 20: 2~21 for FS
-        d = G.V[i].getOutDegree();
-        // uintE* nebrs = G.V[i].getOutNeighbors();
-        nebrs = G.getChunkNeighbors(&(G.V[i]),0);
-        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
-        for(int j = 0; j < d; j++)
-          cout << nebrs[j] << ", ";
-        cout << "\n" << endl;
-
-        i = 3; // expect 4: 2 1 861 862 for FS-sub
-        d = G.V[i].getOutDegree();
-        // uintE* nebrs = G.V[i].getOutNeighbors();
-        nebrs = G.getChunkNeighbors(&(G.V[i]),0);
-        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
-        for(int j = 0; j < d; j++)
-          cout << nebrs[j] << ", ";
-        cout << "\n" << endl;
-
-        i = 2; // expect 196: 1 22 26 ... 850 for FS-sub
-        d = G.V[i].getInDegree();
-        // nebrs = G.V[i].getInNeighbors();
-        nebrs = G.getChunkNeighbors(&(G.V[i]),1);
-        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
-        for(int j = 0; j < d; j++)
-          cout << nebrs[j] << ", ";
-        cout  << "\n" << endl;
-
-        i = 3; // expect 3: 1 861 862 for FS-sub
-        d = G.V[i].getInDegree();
-        // nebrs = G.V[i].getInNeighbors();
-        nebrs = G.getChunkNeighbors(&(G.V[i]),1);
-        cout << "i = " << i << ", ind = " << d << ", Nebrs = ";
-        for(int j = 0; j < d; j++)
-          cout << nebrs[j] << ", ";
-        cout  << "\n" << endl;
-
-        i = 4; // expect 1: 1 for FS
-        d = G.V[i].getOutDegree();
-        // nebrs = G.V[i].getOutNeighbors();
-        nebrs = G.getChunkNeighbors(&(G.V[i]),0);
-        cout << "i = " << i << ", outd = " << d << ", Nebrs = ";
-        for(int j = 0; j < d; j++)
-          cout << nebrs[j] << ", ";
-        cout  << "\n" << endl;
-      }
-   
       setWorkers(96);
       for(int r=0;r<rounds;r++) {
         startTime();
