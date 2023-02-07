@@ -84,7 +84,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
       Degrees[i] = GA.V[i].getOutDegree();
     }}
   long largestCore = -1;
-  for (long k = 1; k <= n; k++) {
+  long max_k = n > 10 ? 10 : n;
+  for (long k = 1; k <= max_k; k++) {
     while (true) {
       vertexSubset toRemove 
 	= vertexFilter(Frontier,Deg_LessThan_K<vertex>(GA.V,Degrees,coreNumbers,k));

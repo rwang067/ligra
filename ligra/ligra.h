@@ -600,6 +600,7 @@ int parallel_main(int argc, char* argv[]) {
         cout  << "\n" << endl;
       }
    
+      setWorkers(96);
       for(int r=0;r<rounds;r++) {
         startTime();
         Compute(G,P);

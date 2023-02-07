@@ -47,8 +47,8 @@ private:
 public:
   ChunkBuffer(char filename[], size_t _chunk_size, cid_t _nchunks, cid_t _nmchunks)
   :chunk_size(_chunk_size), nchunks(_nchunks), nmchunks(_nmchunks) {
-    cfd = open(filename, O_RDONLY);// | O_DIRECT); //| O_NOATIME);
-    // cfd = open(filename, O_RDONLY | O_DIRECT | O_NOATIME);
+    // cfd = open(filename, O_RDONLY);// | O_DIRECT); //| O_NOATIME);
+    cfd = open(filename, O_RDONLY | O_DIRECT | O_NOATIME);
     if(cfd == -1)
     {
       fprintf(stdout,"Wrong open %s\n",filename);

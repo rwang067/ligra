@@ -526,16 +526,16 @@ graph<vertex> readGraphFromBinaryChunk(char* iFile, bool isSymmetric, bool isMma
 
   ifstream in(configFile, ifstream::in);
   long n, m, level, nchunks, sv_size;
-  in >> n >> m >> level >> nchunks;
+  in >> n >> m >> level >> nchunks >> sv_size;
   in.close();
+  cout << "ConfigFile: " << configFile << endl; 
   cout << "n = " << n << ", m = " << m << endl;
-  cout << "level = " << level << ", nchunks = " << nchunks << endl;
+  cout << "level = " << level << ", nchunks = " << nchunks << ", sv_size = " << sv_size << endl;
 
   long size = nchunks * 4096;
   char* edges_chunks_4kb = getFileData(adjChunk4kbFile, size, isMmap);
   cout << "adjChunk4kbFile: " << adjChunk4kbFile << " " << (void*)edges_chunks_4kb << " " << size << endl;
 
-  sv_size = 671096832;
   size = sv_size;
   char* edges_sv = getFileData(adjSvFile, size, isMmap);
   cout << "adjSvFile: " << adjSvFile << " " << (void*)edges_sv << " " << size << endl;
@@ -630,8 +630,9 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   long n, m, level, nchunks, sv_size, size;
   in >> n >> m >> level >> nchunks >> sv_size;
   in.close();
+  cout << "ConfigFile: " << configFile << endl; 
   cout << "n = " << n << ", m = " << m << endl;
-  cout << "level = " << level << ", nchunks = " << nchunks << endl;
+  cout << "level = " << level << ", nchunks = " << nchunks << ", sv_size = " << sv_size << endl;
 
   // size = nchunks * 4096;
   // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, size, isMmap);
@@ -701,7 +702,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       }}}}
   free(offsets);
 
-  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024*1024*8);
+  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024*1024);
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
   return graph<vertex>(v,n,m,mem,cbuff);
 }
