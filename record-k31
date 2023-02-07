@@ -1,0 +1,4 @@
+Data: /data2/Kron31_csr/out
+Root: 0
+---------swap version-----------
+vm.drop_caches = 3

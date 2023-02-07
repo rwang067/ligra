@@ -1,0 +1,64 @@
+Data: /data1/wr/datasets/Friendster/csr_bin/out.friendster
+Root: 26737282
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 0.641
+vm.drop_caches = 3
+=======PageRank=======
+Time : 56.4
+vm.drop_caches = 3
+=======CC=======
+Time : 6.81
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 3.13
+Data: /data1/zorax/datasets/Twitter/row_0_col_0/out.txt
+Root: 18225348
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 0.551
+vm.drop_caches = 3
+=======PageRank=======
+Time : 23.8
+vm.drop_caches = 3
+=======CC=======
+Time : 3.01
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 2.32
+Data: /data1/wr/datasets/Ukdomain/csr_bin/out.uk
+Root: 5699262
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 1.09
+vm.drop_caches = 3
+=======PageRank=======
+Time : 11.2
+vm.drop_caches = 3
+=======CC=======
+Time : 2.95
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 6.16
+Data: /data1/wr/datasets/Kron28/csr_bin/out
+Root: 254655025
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 1.66
+vm.drop_caches = 3
+=======PageRank=======
+Time : 66
+vm.drop_caches = 3
+=======CC=======
+Time : 10.8
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 6.69

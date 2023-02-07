@@ -83,43 +83,85 @@ struct CC_Vertex_F {
     prevIDs[i] = IDs[i];
     return 1; }};
 
+struct Update_Deg {
+  intE* Degrees;
+  Update_Deg(intE* _Degrees) : Degrees(_Degrees) {}
+  inline bool update (uintE s, uintE d) { 
+    Degrees[d]--;
+    return 1;
+  }
+  inline bool updateAtomic (uintE s, uintE d){
+    writeAdd(&Degrees[d],-1);
+    return 1;
+  }
+  inline bool cond (uintE d) { return Degrees[d] > 0; }
+};
+
+template<class vertex>
+struct Deg_LessThan_K {
+  vertex* V;
+  uintE* coreNumbers;
+  intE* Degrees;
+  uintE k;
+  Deg_LessThan_K(vertex* _V, intE* _Degrees, uintE* _coreNumbers, uintE _k) : 
+    V(_V), k(_k), Degrees(_Degrees), coreNumbers(_coreNumbers) {}
+  inline bool operator () (uintE i) {
+    if(Degrees[i] < k) { coreNumbers[i] = k-1; Degrees[i] = 0; return true; }
+    else return false;
+  }
+};
+
+template<class vertex>
+struct Deg_AtLeast_K {
+  vertex* V;
+  intE *Degrees;
+  uintE k;
+  Deg_AtLeast_K(vertex* _V, intE* _Degrees, uintE _k) : 
+    V(_V), k(_k), Degrees(_Degrees) {}
+  inline bool operator () (uintE i) {
+    return Degrees[i] >= k;
+  }
+};
+
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
+    setWorkers(96);
     long n = GA.n;
 
-    std::cout << "=======1HOP=======" << std::endl;
-    srand(time(NULL));
-    long num = P.getOptionLongValue("-num",1L << 24);
-    long* samples = newA(long, num);
-    for(int i = 0; i < num; i++)
-    {
-        long v = rand() * n / RAND_MAX;
-        while(!GA.V[v].getOutDegree() && !GA.V[v].getInDegree())
-            v = rand() * n / RAND_MAX;
-        samples[i] = v;
-    }
-    startTime();
-    long deg_sum = 0;
-    {parallel_for(long i=0;i<num;i++) {
-        long out_deg = GA.V[samples[i]].getOutDegree(), in_deg = GA.V[samples[i]].getInDegree();
-        if(out_deg) {
-            uintE* out_buff = newA(uintE, out_deg);
-            memcpy(out_buff, GA.V[samples[i]].getOutNeighbors(), out_deg);
-            free(out_buff);
-        }
-        if(in_deg) {
-            uintE* in_buff = newA(uintE, in_deg);
-            memcpy(in_buff, GA.V[samples[i]].getInNeighbors(), in_deg);
-            free(in_buff);
-        }
-        deg_sum += out_deg + in_deg;
-    }}
-    nextTime("Time");
-    free(samples);
+    // std::cout << "=======1HOP=======" << std::endl;
+    // srand(time(NULL));
+    // long num = P.getOptionLongValue("-num",1L << 24);
+    // long* samples = newA(long, num);
+    // for(int i = 0; i < num; i++)
+    // {
+    //     long v = rand() * n / RAND_MAX;
+    //     while(!GA.V[v].getOutDegree() && !GA.V[v].getInDegree())
+    //         v = rand() * n / RAND_MAX;
+    //     samples[i] = v;
+    // }
+    // startTime();
+    // long deg_sum = 0;
+    // {parallel_for(long i=0;i<num;i++) {
+    //     long out_deg = GA.V[samples[i]].getOutDegree(), in_deg = GA.V[samples[i]].getInDegree();
+    //     if(out_deg) {
+    //         uintE* out_buff = newA(uintE, out_deg);
+    //         memcpy(out_buff, GA.V[samples[i]].getOutNeighbors(), out_deg);
+    //         free(out_buff);
+    //     }
+    //     if(in_deg) {
+    //         uintE* in_buff = newA(uintE, in_deg);
+    //         memcpy(in_buff, GA.V[samples[i]].getInNeighbors(), in_deg);
+    //         free(in_buff);
+    //     }
+    //     deg_sum += out_deg + in_deg;
+    // }}
+    // nextTime("Time");
+    // free(samples);
     
     std::cout << "=======BFS=======" << std::endl;
     startTime();
     long start = P.getOptionLongValue("-r",0);
+    // long start = rounds == 4 ? P.getOptionLongValue("-r3",0) : (rounds == 3 ? P.getOptionLongValue("-r2",0) : P.getOptionLongValue("-r1",0));
     //creates Parents array, initialized to all -1, except for start
     uintE* Parents = newA(uintE,n);
     parallel_for(long i=0;i<n;i++) Parents[i] = UINT_E_MAX;
@@ -160,7 +202,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
         vertexMap(Frontier_PR,PR_Vertex_Reset(p_curr));
         swap(p_curr,p_next);
     }
-    Frontier_PR.del(); free(p_curr); free(p_next); 
+    Frontier_PR.del(); free(p_curr); free(p_next);
     nextTime("Time");
     
     std::cout << "=======CC=======" << std::endl;
@@ -169,14 +211,49 @@ void Compute(graph<vertex>& GA, commandLine P) {
     {parallel_for(long i=0;i<n;i++) IDs[i] = i;} //initialize unique IDs
     bool* fron = newA(bool,n);
     {parallel_for(long i=0;i<n;i++) fron[i] = 1;} 
-    vertexSubset Frontier(n,n,fron); //initial frontier contains all vertices
-    while(!Frontier.isEmpty()){ //iterate until IDS converge
-        vertexMap(Frontier,CC_Vertex_F(IDs,prevIDs));
-        vertexSubset output = edgeMap(GA, Frontier, CC_F(IDs,prevIDs));
-        Frontier.del();
-        Frontier = output;
+    vertexSubset FrontierCC(n,n,fron); //initial frontier contains all vertices
+    while(!FrontierCC.isEmpty()){ //iterate until IDS converge
+        vertexMap(FrontierCC,CC_Vertex_F(IDs,prevIDs));
+        vertexSubset output = edgeMap(GA, FrontierCC, CC_F(IDs,prevIDs));
+        FrontierCC.del();
+        FrontierCC = output;
     }
-    Frontier.del(); free(IDs); free(prevIDs);
+    FrontierCC.del(); free(IDs); free(prevIDs);
+    nextTime("Time");
+
+    std::cout << "=======KCore=======" << std::endl;
+    startTime();
+    bool* active = newA(bool,n);
+    {parallel_for(long i=0;i<n;i++) active[i] = 1;}
+    vertexSubset Frontier(n, n, active);
+    uintE* coreNumbers = newA(uintE,n);
+    intE* Degrees = newA(intE,n);
+    {parallel_for(long i=0;i<n;i++) {
+        coreNumbers[i] = 0;
+        Degrees[i] = GA.V[i].getOutDegree();
+    }}
+    long largestCore = -1;
+    long lim = n > 10 ? 10 : n;
+    for (long k = 1; k <= lim; k++) {
+      while (true) {
+        vertexSubset toRemove 
+    = vertexFilter(Frontier,Deg_LessThan_K<vertex>(GA.V,Degrees,coreNumbers,k));
+        vertexSubset remaining = vertexFilter(Frontier,Deg_AtLeast_K<vertex>(GA.V,Degrees,k));
+        Frontier.del();
+        Frontier = remaining;
+        if (0 == toRemove.numNonzeros()) { // fixed point. found k-core
+    toRemove.del();
+          break;
+        }
+        else {
+    edgeMap(GA,toRemove,Update_Deg(Degrees), -1, no_output);
+    toRemove.del();
+        }
+      }
+      if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
+    }
+    cout << "largestCore was " << largestCore << endl;
+    Frontier.del(); free(coreNumbers); free(Degrees);
     nextTime("Time");
     std::cout << std::endl;
 }

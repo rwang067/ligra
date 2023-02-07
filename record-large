@@ -1,0 +1,48 @@
+Data: /data1/wr/datasets/Yahoo/csr_bin/out
+Root: 35005211
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 18.8
+vm.drop_caches = 3
+=======PageRank=======
+Time : 818
+vm.drop_caches = 3
+=======CC=======
+Time : 305
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 1.79e+03
+Data: /data1/wr/datasets/Kron29/csr_bin/out
+Root: 310059974
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 22.8
+vm.drop_caches = 3
+=======PageRank=======
+Time : 202
+vm.drop_caches = 3
+=======CC=======
+Time : 55.8
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 34.4
+Data: /data1/wr/datasets/Kron30/csr_bin/out
+Root: 233665123
+---------swap version-----------
+vm.drop_caches = 3
+=======BFS=======
+Time : 386
+vm.drop_caches = 3
+=======PageRank=======
+Time : 653
+vm.drop_caches = 3
+=======CC=======
+Time : 868
+vm.drop_caches = 3
+=======KCore=======
+largestCore was -1
+Time : 385

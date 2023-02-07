@@ -1,9 +1,9 @@
 export OPENMP := 1
-export LONG := 1
+# export LOWMEM := 1
 
-ifdef LONG
+# ifdef LONG
 INTT = -DLONG
-endif
+# endif
 
 ifdef EDGELONG
 INTE = -DEDGELONG

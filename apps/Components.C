@@ -51,19 +51,21 @@ struct CC_Vertex_F {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long n = GA.n;
-  uintE* IDs = newA(uintE,n), *prevIDs = newA(uintE,n);
-  {parallel_for(long i=0;i<n;i++) IDs[i] = i;} //initialize unique IDs
-
-  bool* frontier = newA(bool,n);
-  {parallel_for(long i=0;i<n;i++) frontier[i] = 1;} 
-  vertexSubset Frontier(n,n,frontier); //initial frontier contains all vertices
-
-  while(!Frontier.isEmpty()){ //iterate until IDS converge
-    vertexMap(Frontier,CC_Vertex_F(IDs,prevIDs));
-    vertexSubset output = edgeMap(GA, Frontier, CC_F(IDs,prevIDs));
-    Frontier.del();
-    Frontier = output;
-  }
-  Frontier.del(); free(IDs); free(prevIDs);
+    setWorkers(96);
+    long n = GA.n;
+    std::cout << "=======CC=======" << std::endl;
+    startTime();
+    uintE* IDs = newA(uintE,n), *prevIDs = newA(uintE,n);
+    {parallel_for(long i=0;i<n;i++) IDs[i] = i;} //initialize unique IDs
+    bool* fron = newA(bool,n);
+    {parallel_for(long i=0;i<n;i++) fron[i] = 1;} 
+    vertexSubset FrontierCC(n,n,fron); //initial frontier contains all vertices
+    while(!FrontierCC.isEmpty()){ //iterate until IDS converge
+        vertexMap(FrontierCC,CC_Vertex_F(IDs,prevIDs));
+        vertexSubset output = edgeMap(GA, FrontierCC, CC_F(IDs,prevIDs));
+        FrontierCC.del();
+        FrontierCC = output;
+    }
+    FrontierCC.del(); free(IDs); free(prevIDs);
+    nextTime("Time");
 }

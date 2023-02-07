@@ -68,33 +68,34 @@ struct PR_Vertex_Reset {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long maxIters = P.getOptionLongValue("-maxiters",100);
-  const intE n = GA.n;
-  const double damping = 0.85, epsilon = 0.0000001;
-  
-  double one_over_n = 1/(double)n;
-  double* p_curr = newA(double,n);
-  {parallel_for(long i=0;i<n;i++) p_curr[i] = one_over_n;}
-  double* p_next = newA(double,n);
-  {parallel_for(long i=0;i<n;i++) p_next[i] = 0;} //0 if unchanged
-  bool* frontier = newA(bool,n);
-  {parallel_for(long i=0;i<n;i++) frontier[i] = 1;}
-
-  vertexSubset Frontier(n,n,frontier);
-  
-  long iter = 0;
-  while(iter++ < maxIters) {
-    edgeMap(GA,Frontier,PR_F<vertex>(p_curr,p_next,GA.V),0, no_output);
-    vertexMap(Frontier,PR_Vertex_F(p_curr,p_next,damping,n));
-    //compute L1-norm between p_curr and p_next
-    {parallel_for(long i=0;i<n;i++) {
-      p_curr[i] = fabs(p_curr[i]-p_next[i]);
-      }}
-    double L1_norm = sequence::plusReduce(p_curr,n);
-    if(L1_norm < epsilon) break;
-    //reset p_curr
-    vertexMap(Frontier,PR_Vertex_Reset(p_curr));
-    swap(p_curr,p_next);
-  }
-  Frontier.del(); free(p_curr); free(p_next); 
+    setWorkers(96);
+    const intE n = GA.n;
+    std::cout << "=======PageRank=======" << std::endl;
+    startTime();
+    long maxIters = P.getOptionLongValue("-maxiters",10);
+    const double damping = 0.85, epsilon = 0.0000001;
+    double one_over_n = 1/(double)n;
+    double* p_curr = newA(double,n);
+    {parallel_for(long i=0;i<n;i++) p_curr[i] = one_over_n;}
+    double* p_next = newA(double,n);
+    {parallel_for(long i=0;i<n;i++) p_next[i] = 0;} //0 if unchanged
+    bool* frontier = newA(bool,n);
+    {parallel_for(long i=0;i<n;i++) frontier[i] = 1;}
+    vertexSubset Frontier_PR(n,n,frontier);
+    long iter = 0;
+    while(iter++ < maxIters) {
+        edgeMap(GA,Frontier_PR,PR_F<vertex>(p_curr,p_next,GA.V),0, no_output);
+        vertexMap(Frontier_PR,PR_Vertex_F(p_curr,p_next,damping,n));
+        //compute L1-norm between p_curr and p_next
+        {parallel_for(long i=0;i<n;i++) {
+        p_curr[i] = fabs(p_curr[i]-p_next[i]);
+        }}
+        double L1_norm = sequence::plusReduce(p_curr,n);
+        if(L1_norm < epsilon) break;
+        //reset p_curr
+        vertexMap(Frontier_PR,PR_Vertex_Reset(p_curr));
+        swap(p_curr,p_next);
+    }
+    Frontier_PR.del(); free(p_curr); free(p_next);
+    nextTime("Time");
 }
