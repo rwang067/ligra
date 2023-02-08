@@ -100,8 +100,18 @@ public:
     loaded_chunk_count = 0;
     freed_chunk_count = 0;
     space_waste = 0;
+
+    pre_load();
   }
   ~ChunkBuffer(){
+  }
+
+  void pre_load(){
+    cid_t mcid = 0;
+    for(cid_t cid = 0; cid < nmchunks; cid++){
+      mcid = evict_colder(hotsum/nmchunks);
+      load_chunk(cid, mcid);
+    }
   }
 
   void del(){

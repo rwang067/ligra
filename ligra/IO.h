@@ -484,7 +484,9 @@ char* getFileData(char filename[], size_t size = 0, bool isMmap = 0){
     in.seekg(0);
     if(size1 != size){ 
       cout << size1 << " " << size << std::endl;
-      cout << "filename size wrong\n"; abort(); 
+      cout << "Filename size wrong for :" << filename << std::endl; 
+      cout << "Specified size = " << size << ", read size = " << size1 << std::endl;
+      abort(); 
     }
     addr = (char *) malloc(size);
     in.read(addr,size);
@@ -526,38 +528,21 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   strcat(adjSvFile,adj_sv);
 
   ifstream in(configFile, ifstream::in);
-  long n, m, level, nchunks, sv_size, size;
+  long n, m, level, nchunks, sv_size;
   in >> n >> m >> level >> nchunks >> sv_size;
   in.close();
+
+  // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
+  char* edges_sv = getFileData(adjSvFile, sv_size, isMmap); // -m for read file by mmap
+  pvertex_t* offsets = (pvertex_t*) getFileData(vertFile, sizeof(pvertex_t) * n * 2, 0);
+
   if(debug){
     cout << "ConfigFile: " << configFile << endl; 
     cout << "n = " << n << ", m = " << m << endl;
     cout << "level = " << level << ", nchunks = " << nchunks << ", sv_size = " << sv_size << endl;
-  }
-  // size = nchunks * 4096;
-  // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, size, isMmap);
   // cout << "adjChunk4kbFile: " << adjChunk4kbFile << " " << (void*)edges_chunks_4kb << " " << size << endl;
-
-  size = sv_size;
-  char* edges_sv = getFileData(adjSvFile, size, isMmap);
-  if(debug){
-    cout << "adjSvFile: " << adjSvFile << " " << (void*)edges_sv << " " << size << endl;
-  }
-
-  ifstream in4(vertFile,ifstream::in | ios::binary); //stored as longs
-  in4.seekg(0, ios::end);
-  size = in4.tellg();
-  in4.seekg(0);
-  if(n*2 != size/sizeof(pvertex_t)) { 
-    cout << n << " " << size << " " << size/sizeof(pvertex_t) << std::endl;
-    cout << "vertFile size wrong\n"; abort(); 
-  }
-  char* x = (char *) malloc(size);
-  in4.read(x,size);
-  in4.close();
-  pvertex_t* offsets = (pvertex_t*) x;
-  if(debug){
-    cout << "vertFile: " << (void*)x << " " << (void*)offsets << " " << size << endl;
+    cout << "adjSvFile: " << adjSvFile << ", addr = " << (void*)edges_sv << ", size = " << sv_size << endl;
+    cout << "vertFile " << vertFile << ", addr = " << (void*)offsets << ", size = " << sizeof(pvertex_t) * n * 2 << endl;
   }
 
   vertex* v = newA(vertex,n);
@@ -608,7 +593,8 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       }}}}
   free(offsets);
 
-  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024*1024*8);
+  long nmchunks = 1024*1024*8;
+  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,nchunks <= nmchunks? nchunks: nmchunks);
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
   return graph<vertex>(v,n,m,mem,cbuff);
 }
