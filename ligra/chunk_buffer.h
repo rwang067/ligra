@@ -182,7 +182,6 @@ public:
       while(chunk_lock[cid]);
       if(cmap[cid] == nmchunks) {  
         lock(chunk_lock[cid]);
-        // cid_t mcid = evict_seq();
         cid_t mcid = evict_colder(hotsum/nmchunks);
         cid_t mmcid = mcmap[mcid];
         if(mmcid != nchunks){

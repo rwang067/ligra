@@ -581,7 +581,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
         }
         v[i].setOutNeighbors((uintE*)r);
       }else{
-        uintE* nebrs = (uintE*)(edges_sv+r+8); // 8B for pblk header in HG
+        uintE* nebrs = (uintE*)(edges_sv+r);//+8); // 8B for pblk header (max_count/count) in HG, removed
         v[i].setOutNeighbors(nebrs);
       }
     }}
@@ -603,12 +603,12 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
         }
         v[i].setInNeighbors((uintE*)r);
       }else{
-        uintE* nebrs = (uintE*)(edges_sv+r+8); // 8B for pblk header in HG
+        uintE* nebrs = (uintE*)(edges_sv+r);//+8); // 8B for pblk header (max_count/count) in HG, removed
         v[i].setInNeighbors(nebrs);
       }}}}
   free(offsets);
 
-  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024*1024);
+  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,1024*1024*8);
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
   return graph<vertex>(v,n,m,mem,cbuff);
 }

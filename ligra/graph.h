@@ -150,8 +150,7 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, ChunkBuffer* _cbuff) : V(_V),
       uint32_t coff = r & 0xFFFFFFFF;
       // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
       char* mchunk = cbuff->get_mchunk(cid);
-      return (uintE*)(mchunk+coff);
-      // return (uintE*)(mchunk+coff+8);// 8B for pblk header (max_count/count) in HG, removed
+      return (uintE*)(mchunk+coff);//+8);// 8B for pblk header (max_count/count) in HG, removed
     };
   #endif
     return neighbors;
