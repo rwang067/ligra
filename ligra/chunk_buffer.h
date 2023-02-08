@@ -101,7 +101,7 @@ public:
     freed_chunk_count = 0;
     space_waste = 0;
 
-    pre_load();
+    // pre_load();
   }
   ~ChunkBuffer(){
   }
@@ -116,26 +116,25 @@ public:
 
   void del(){
     { // used for debug, check the correctness of cmap and mcmap
-      // cout << "i<-mcmap[i]: " << endl;
       int mcached_count = 0;
       for(int i = 0; i < nmchunks; i++){
         if(mcmap[i] != nchunks){
           mcached_count++;
-          // cout << i << "<-" << mcmap[i] << ", ";
+          if(cmap[mcmap[i]] != i)
+            cout << "Error cmap: i mcmap[i] cmap[mcmap[i]] mcmap[cmap[mcmap[i]]] = " << i << ", " << mcmap[i] << ", " << cmap[mcmap[i]] << ", " << mcmap[cmap[mcmap[i]]] << endl;
         }
       }
-      cout << "mcmap cached chunk count = " << mcached_count << endl;
 
-      // cout << "i->cmap[i]: " << endl;
       int cached_count = 0;
       for(int i = 0; i < nchunks; i++){
         if(cmap[i] != nmchunks){
           cached_count++;
           if(mcmap[cmap[i]] != i)
-            cout << "Error map: i cmap[i] mcmap[cmap[i]] cmap[mcmap[cmap[i]]] = " << i << ", " << cmap[i] << ", " << mcmap[cmap[i]] << ", " << cmap[mcmap[cmap[i]]] << endl;
-          // cout << i << "->" << cmap[i] << ", ";
+            cout << "Error mcmap: i cmap[i] mcmap[cmap[i]] cmap[mcmap[cmap[i]]] = " << i << ", " << cmap[i] << ", " << mcmap[cmap[i]] << ", " << cmap[mcmap[cmap[i]]] << endl;
         }
       }
+
+      cout << "mcmap cached chunk count = " << mcached_count << endl;
       cout << "cmap cached chunk count = " << cached_count << ", hotness sum = " << hotsum << ", hotness avg = " << hotsum/nmchunks << endl;
       cout << "loaded chunk count = " << loaded_chunk_count << ", wasted space = " << space_waste << ", avg = " << space_waste/loaded_chunk_count<< endl;
       cout << "freed chunk count = " << freed_chunk_count << ", loaded-freed chunk count = " << (loaded_chunk_count-freed_chunk_count) << endl;
@@ -190,14 +189,17 @@ public:
   char* get_mchunk(cid_t cid){
     if(cmap[cid] == nmchunks){ // Not in DRAM buffer
       while(chunk_lock[cid]);
-      if(cmap[cid] == nmchunks) {  
+      if(cmap[cid] == nmchunks) { 
+        while(chunk_lock[cid]);
         lock(chunk_lock[cid]);
-        cid_t mcid = evict_colder(hotsum/nmchunks);
-        cid_t mmcid = mcmap[mcid];
-        if(mmcid != nchunks){
-          free_chunk(mmcid, mcid);
+        if(cmap[cid] == nmchunks) {  
+          cid_t mcid = evict_colder(hotsum/nmchunks);
+          cid_t mmcid = mcmap[mcid];
+          if(mmcid != nchunks){
+            free_chunk(mmcid, mcid);
+          }
+          load_chunk(cid, mcid);
         }
-        load_chunk(cid, mcid);
         unlock(chunk_lock[cid]);
       }
     }
@@ -216,11 +218,11 @@ public:
     mcmap[mcid] = cid;
 
     hotness[mcid] = ((Chunk_t*)(mchunks[mcid]))->hotness;
-    uint16_t max_size = ((Chunk_t*)(mchunks[mcid]))->max_size;
-    uint16_t cur_size = ((Chunk_t*)(mchunks[mcid]))->cur_size;
     __sync_fetch_and_add(&hotsum, hotness[mcid]);
 
     __sync_fetch_and_add(&loaded_chunk_count, 1);
+    uint16_t max_size = ((Chunk_t*)(mchunks[mcid]))->max_size;
+    uint16_t cur_size = ((Chunk_t*)(mchunks[mcid]))->cur_size;
     __sync_fetch_and_add(&space_waste, max_size - cur_size);
     
     // cout << "load_chunk: cid = " << cid << ", mcid = " << mcid << endl;
