@@ -1,0 +1,12 @@
+.vscode/
+*.txt
+apps/*.h
+apps/decoder.C
+apps/encoder.C
+
+# ALL= encoder decoder BFS BC Components Components-Shortcut Radii PageRank PageRankDelta BFSCC BFS-Bitvector KCore Triangle MIS TestAll testNebrs # BellmanFord MIS CF
+apps/testNebrs
+apps/BFS
+apps/Components
+apps/KCore
+apps/PageRank

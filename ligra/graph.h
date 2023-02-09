@@ -149,8 +149,36 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, ChunkBuffer* _cbuff) : V(_V),
       uint32_t cid = r >> 32;
       uint32_t coff = r & 0xFFFFFFFF;
       // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
-      char* mchunk = cbuff->get_mchunk(cid);
-      return (uintE*)(mchunk+coff);//+8);// 8B for pblk header (max_count/count) in HG, removed
+      return cbuff->get_nebrs_from_mchunk(cid, coff, d);
+
+      // uintE* nebrs = cbuff->get_nebrs_from_mchunk(cid, coff, d);
+      // vertex* v1; uintE d1; uintE* neighbors1;
+      // if (d < 1000) {
+      //   for(uintE i = 0; i < d; i++){
+      //     v1 = &V[nebrs[i]];
+      //     if(!inGraph) d1 = v1->getOutDegree();
+      //     else d1 = v1->getInDegree();
+      //     if(d1 > 2 && d1 <= 1022){ 
+      //       if(!inGraph) neighbors1 = (uintE*) v1->getOutNeighbors();
+      //       else neighbors1 = (uintE*) v1->getInNeighbors();
+      //       uint32_t cid1 = ((uint64_t)neighbors1) >> 32;
+      //       cbuff->update_chunk_hot(cid, d1*sizeof(uintE));
+      //     }
+      //   }
+      // } else {
+      //   parallel_for(uintE i = 0; i < d; i++){
+      //     v1 = &V[nebrs[i]];
+      //     if(!inGraph) d1 = v1->getOutDegree();
+      //     else d1 = v1->getInDegree();
+      //     if(d1 > 2 && d1 <= 1022){ 
+      //       if(!inGraph) neighbors1 = (uintE*) v1->getOutNeighbors();
+      //       else neighbors1 = (uintE*) v1->getInNeighbors();
+      //       uint32_t cid1 = ((uint64_t)neighbors1) >> 32;
+      //       cbuff->update_chunk_hot(cid, d1*sizeof(uintE));
+      //     }
+      //   }
+      // }
+      // return nebrs;
     };
   #endif
     return neighbors;

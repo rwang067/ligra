@@ -101,7 +101,7 @@ public:
     freed_chunk_count = 0;
     space_waste = 0;
 
-    // pre_load();
+    pre_load();
   }
   ~ChunkBuffer(){
   }
@@ -186,6 +186,12 @@ public:
     return res_cid;
   }
 
+  uintE* get_nebrs_from_mchunk(cid_t cid, uint32_t coff, uint32_t d){
+    char* mchunk = get_mchunk(cid);
+    // update_mchunk_hot(cmap[cid], sizeof(uintE)*d);
+    return (uintE*)(mchunk+coff);
+  }
+
   char* get_mchunk(cid_t cid){
     if(cmap[cid] == nmchunks){ // Not in DRAM buffer
       while(chunk_lock[cid]);
@@ -218,21 +224,29 @@ public:
     mcmap[mcid] = cid;
 
     hotness[mcid] = ((Chunk_t*)(mchunks[mcid]))->hotness;
-    __sync_fetch_and_add(&hotsum, hotness[mcid]);
+    hotsum += hotness[mcid]; // __sync_fetch_and_add(&hotsum, hotness[mcid]);
 
-    __sync_fetch_and_add(&loaded_chunk_count, 1);
-    uint16_t max_size = ((Chunk_t*)(mchunks[mcid]))->max_size;
-    uint16_t cur_size = ((Chunk_t*)(mchunks[mcid]))->cur_size;
-    __sync_fetch_and_add(&space_waste, max_size - cur_size);
-    
-    // cout << "load_chunk: cid = " << cid << ", mcid = " << mcid << endl;
-    // cout << "  hotness[mcid] = " << hotness[mcid] << ", max_size = " << max_size << ", cur_size = " << cur_size << endl;
+    // __sync_fetch_and_add(&loaded_chunk_count, 1);
+    // uint16_t max_size = ((Chunk_t*)(mchunks[mcid]))->max_size;
+    // uint16_t cur_size = ((Chunk_t*)(mchunks[mcid]))->cur_size;
+    // __sync_fetch_and_add(&space_waste, max_size - cur_size);
   }
   void free_chunk(cid_t mmcid, cid_t mcid){
-    __sync_fetch_and_sub(&hotsum, hotness[mcid]);
+    hotsum -= hotness[mcid]; // __sync_fetch_and_sub(&hotsum, hotness[mcid]);
     cmap[mmcid] = nmchunks;
     mcmap[mcid] = nchunks;
 
-    __sync_fetch_and_add(&freed_chunk_count, 1);
+    // __sync_fetch_and_add(&freed_chunk_count, 1);
+  }
+
+  void update_mchunk_hot(cid_t mcid, hot_t h){
+    hotness[mcid] += h; // __sync_fetch_and_add(&hotness[mcid], h);
+    hotsum += h; // __sync_fetch_and_add(&hotsum, h);
+  }
+  void update_chunk_hot(cid_t cid, hot_t h){
+    cid_t mcid = cmap[cid];
+    if(mcid != nmchunks){
+      update_mchunk_hot(mcid, h);
+    }
   }
 }; 
