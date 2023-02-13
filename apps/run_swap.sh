@@ -60,7 +60,7 @@ do
 
     # sysctl -w vm.drop_caches=3
     echo "=======PageRank======="
-    ./PageRank -b -rounds 1 ${CSR_data[$idx]}
+    ./PageRank -maxiters 10 -b -rounds 1 ${CSR_data[$idx]}
     wait
 
     echo ""
