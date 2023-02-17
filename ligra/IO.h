@@ -475,7 +475,7 @@ struct pvertex_t {
     uintE out_deg;
     uint64_t residue;
 }; 
-char* getFileData(char filename[], size_t size = 0, bool isMmap = 0){
+char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
   char* addr = 0;
   if(!isMmap){
     ifstream in(filename,ifstream::in | ios::binary); //stored as uints
@@ -509,41 +509,38 @@ char* getFileData(char filename[], size_t size = 0, bool isMmap = 0){
 
 template <class vertex>
 graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool isMmap, bool debug) {
-  char* config = (char*) ".config";
-  char* vert = (char*) ".vertex";
-  char* adj_chunk4kb = (char*) ".adj.chunk4kb";
-  char* adj_sv = (char*) ".adj.sv";
-  char configFile[strlen(iFile)+strlen(config)+1];
-  char vertFile[strlen(iFile)+strlen(vert)+1];
-  char adjChunk4kbFile[strlen(iFile)+strlen(adj_chunk4kb)+1];
-  char adjSvFile[strlen(iFile)+strlen(adj_sv)+1];
-  *configFile = *vertFile = *adjChunk4kbFile = *adjSvFile = '\0';
-  strcat(configFile,iFile);
-  strcat(vertFile,iFile);
-  strcat(adjChunk4kbFile,iFile);
-  strcat(adjSvFile,iFile);
-  strcat(configFile,config);
-  strcat(vertFile,vert);
-  strcat(adjChunk4kbFile,adj_chunk4kb);
-  strcat(adjSvFile,adj_sv);
+  string baseFile = iFile;
+  string configFile = baseFile + ".config";
+  string vertFile = baseFile + ".vertex";
+  string adjSvFile = baseFile + ".adj.sv";
+  string adjChunkFiles = baseFile + ".adj.chunk_";
 
-  ifstream in(configFile, ifstream::in);
-  long n, m, level, nchunks, sv_size;
-  in >> n >> m >> level >> nchunks >> sv_size;
+  long n, m, level, sv_size;
+  long *end_deg, *chunk_sz, *nchunks;
+  ifstream in(configFile.c_str(), ifstream::in);
+  in >> n >> m >> level >> sv_size;
+  end_deg = new long[level];
+  chunk_sz = new long[level];
+  nchunks = new long[level];
+  for(int i = 0; i < level; i++) 
+    in >> end_deg[i] >> chunk_sz[i] >> nchunks[i];
   in.close();
-
-  // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
-  char* edges_sv = getFileData(adjSvFile, sv_size, isMmap); // -m for read file by mmap
-  pvertex_t* offsets = (pvertex_t*) getFileData(vertFile, sizeof(pvertex_t) * n * 2, 0);
-
   if(debug){
     cout << "ConfigFile: " << configFile << endl; 
-    cout << "n = " << n << ", m = " << m << endl;
-    cout << "level = " << level << ", nchunks = " << nchunks << ", sv_size = " << sv_size << endl;
-  // cout << "adjChunk4kbFile: " << adjChunk4kbFile << " " << (void*)edges_chunks_4kb << " " << size << endl;
-    cout << "adjSvFile: " << adjSvFile << ", addr = " << (void*)edges_sv << ", size = " << sv_size << endl;
-    cout << "vertFile " << vertFile << ", addr = " << (void*)offsets << ", size = " << sizeof(pvertex_t) * n * 2 << endl;
+    cout << "n = " << n << ", m = " << m << ", level = " << level << ", sv_size = " << sv_size << endl;
+    for(int i = 0; i < level; i++) cout << "end_deg[i] = " << end_deg[i] << ", chunk_sz[i] = " << chunk_sz[i] << ", nchunks[i] = " << nchunks[i] << endl;
   }
+
+  long nmchunks = 1024*1024*8;
+  ChunkBuffer** cbuffs = new ChunkBuffer*[level];
+  for(int i = 0; i < level; i++) {
+    string adjChunkFile = adjChunkFiles + to_string(i);
+    cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
+  }
+
+  // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
+  char* edges_sv = getFileData(adjSvFile.c_str(), sv_size, isMmap); // -m for read file by mmap
+  pvertex_t* offsets = (pvertex_t*) getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
 
   vertex* v = newA(vertex,n);
   // setWorkers(16);
@@ -554,16 +551,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       v[i].setOutDegree(d);
       if(d==0){
         v[i].setOutNeighbors(0);
-      }else if(d<=2){
-        v[i].setOutNeighbors((uintE*)r);
-      }else if(d<=1022){
-        if(debug && i < 5){ // For debug
-          uint32_t cid = r >> 32;
-          uint32_t coff = r & 0xFFFFFFFF;
-          uint64_t foff = cid * 4096 + coff;
-          // uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
-          cout << "v = " << i << ", outd = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", foff = " << foff << endl;
-        }
+      }else if(d<=end_deg[level-1]){
         v[i].setOutNeighbors((uintE*)r);
       }else{
         uintE* nebrs = (uintE*)(edges_sv+r);//+8); // 8B for pblk header (max_count/count) in HG, removed
@@ -576,16 +564,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
     uintT d = offsets[n+i].out_deg;
     uintT r = offsets[n+i].residue;
       v[i].setInDegree(d);
-      if(d<=2){
-        v[i].setInNeighbors((uintE*)r);
-      }else if(d<=1022){
-        if(debug && (i==25256578 || i < 5) ){ // For debug
-          uint32_t cid = r >> 32;
-          uint32_t coff = r & 0xFFFFFFFF;
-          uint64_t foff = cid * 4096 + coff;
-          // uintE* nebrs = (uintE*)(edges_chunks_4kb+foff+8); // 8B for pblk header in HG
-          cout << "v = " << i << ", ind = " << d << ", r = " << r << ", cid = " << cid << ", coff = " << coff << ", foff = " << foff << endl;
-        }
+      if(d <= end_deg[level-1]){
         v[i].setInNeighbors((uintE*)r);
       }else{
         uintE* nebrs = (uintE*)(edges_sv+r);//+8); // 8B for pblk header (max_count/count) in HG, removed
@@ -593,10 +572,8 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       }}}}
   free(offsets);
 
-  long nmchunks = 1024*1024*8;
-  ChunkBuffer* cbuff = new ChunkBuffer(adjChunk4kbFile,4096,nchunks,nchunks <= nmchunks? nchunks: nmchunks);
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
-  return graph<vertex>(v,n,m,mem,cbuff);
+  return graph<vertex>(v,n,m,mem,level,end_deg,cbuffs);
 }
 
 template <class vertex>

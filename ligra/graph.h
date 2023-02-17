@@ -104,23 +104,27 @@ struct graph {
   bool transposed;
   uintE* flags;
   Deletable *D;
-  ChunkBuffer* cbuff;
+  long chunk_level;
+  long *end_deg;
+  ChunkBuffer** cbuffs;
 
 graph(vertex* _V, long _n, long _m, Deletable* _D) : V(_V), n(_n), m(_m),
-  D(_D), flags(NULL), transposed(0), cbuff(NULL) {}
+  D(_D), flags(NULL), transposed(0), chunk_level(0), end_deg(NULL), cbuffs(NULL) {}
 
 graph(vertex* _V, long _n, long _m, Deletable* _D, uintE* _flags) : V(_V),
-  n(_n), m(_m), D(_D), flags(_flags), transposed(0), cbuff(NULL) {}
+  n(_n), m(_m), D(_D), flags(_flags), transposed(0), chunk_level(0), end_deg(NULL), cbuffs(NULL) {}
 
-graph(vertex* _V, long _n, long _m, Deletable* _D, ChunkBuffer* _cbuff) : V(_V),
-  n(_n), m(_m), D(_D), cbuff(_cbuff), transposed(0) {}
+graph(vertex* _V, long _n, long _m, Deletable* _D, long _level, long* _end_deg, ChunkBuffer** _cbuffs) : V(_V),
+  n(_n), m(_m), D(_D), chunk_level(_level), end_deg(_end_deg), cbuffs(_cbuffs), transposed(0) {}
 
   void del() {
     // if (flags != NULL) free(flags);
     // D->del();
     // free(D);
-    cbuff->del();
-    free(cbuff);
+    for(int i = 0; i < chunk_level; i++)
+      cbuffs[i]->del();
+    delete [] cbuffs;
+    delete [] end_deg;
   }
 
   void transpose() {
@@ -144,42 +148,55 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, ChunkBuffer* _cbuff) : V(_V),
       neighbors = (uintE*) v->getInNeighbors();
     }
   #ifdef CHUNK
-    if(d > 2 && d<=1022){ 
+    if(d > 2 && d <= end_deg[chunk_level-1]){ 
       uint64_t r = (uint64_t)neighbors;
       uint32_t cid = r >> 32;
       uint32_t coff = r & 0xFFFFFFFF;
       // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
-      return cbuff->get_nebrs_from_mchunk(cid, coff, d);
+      if(chunk_level > 0 && d <= end_deg[0])
+        return cbuffs[0]->get_nebrs_from_mchunk(cid, coff, d);
+      if(chunk_level > 1 && d <= end_deg[1])
+        return cbuffs[1]->get_nebrs_from_mchunk(cid, coff, d);
+      if(chunk_level > 2 && d <= end_deg[2])
+        return cbuffs[2]->get_nebrs_from_mchunk(cid, coff, d);
+    }
 
-      // uintE* nebrs = cbuff->get_nebrs_from_mchunk(cid, coff, d);
-      // vertex* v1; uintE d1; uintE* neighbors1;
-      // if (d < 1000) {
-      //   for(uintE i = 0; i < d; i++){
-      //     v1 = &V[nebrs[i]];
-      //     if(!inGraph) d1 = v1->getOutDegree();
-      //     else d1 = v1->getInDegree();
-      //     if(d1 > 2 && d1 <= 1022){ 
-      //       if(!inGraph) neighbors1 = (uintE*) v1->getOutNeighbors();
-      //       else neighbors1 = (uintE*) v1->getInNeighbors();
-      //       uint32_t cid1 = ((uint64_t)neighbors1) >> 32;
-      //       cbuff->update_chunk_hot(cid, d1*sizeof(uintE));
-      //     }
-      //   }
-      // } else {
-      //   parallel_for(uintE i = 0; i < d; i++){
-      //     v1 = &V[nebrs[i]];
-      //     if(!inGraph) d1 = v1->getOutDegree();
-      //     else d1 = v1->getInDegree();
-      //     if(d1 > 2 && d1 <= 1022){ 
-      //       if(!inGraph) neighbors1 = (uintE*) v1->getOutNeighbors();
-      //       else neighbors1 = (uintE*) v1->getInNeighbors();
-      //       uint32_t cid1 = ((uint64_t)neighbors1) >> 32;
-      //       cbuff->update_chunk_hot(cid, d1*sizeof(uintE));
-      //     }
-      //   }
-      // }
-      // return nebrs;
-    };
+    // if(d > 2 && d<=1022){ 
+    //   uint64_t r = (uint64_t)neighbors;
+    //   uint32_t cid = r >> 32;
+    //   uint32_t coff = r & 0xFFFFFFFF;
+    //   // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
+    //   return cbuff->get_nebrs_from_mchunk(cid, coff, d);
+
+    //   // uintE* nebrs = cbuff->get_nebrs_from_mchunk(cid, coff, d);
+    //   // vertex* v1; uintE d1; uintE* neighbors1;
+    //   // if (d < 1000) {
+    //   //   for(uintE i = 0; i < d; i++){
+    //   //     v1 = &V[nebrs[i]];
+    //   //     if(!inGraph) d1 = v1->getOutDegree();
+    //   //     else d1 = v1->getInDegree();
+    //   //     if(d1 > 2 && d1 <= 1022){ 
+    //   //       if(!inGraph) neighbors1 = (uintE*) v1->getOutNeighbors();
+    //   //       else neighbors1 = (uintE*) v1->getInNeighbors();
+    //   //       uint32_t cid1 = ((uint64_t)neighbors1) >> 32;
+    //   //       cbuff->update_chunk_hot(cid, d1*sizeof(uintE));
+    //   //     }
+    //   //   }
+    //   // } else {
+    //   //   parallel_for(uintE i = 0; i < d; i++){
+    //   //     v1 = &V[nebrs[i]];
+    //   //     if(!inGraph) d1 = v1->getOutDegree();
+    //   //     else d1 = v1->getInDegree();
+    //   //     if(d1 > 2 && d1 <= 1022){ 
+    //   //       if(!inGraph) neighbors1 = (uintE*) v1->getOutNeighbors();
+    //   //       else neighbors1 = (uintE*) v1->getInNeighbors();
+    //   //       uint32_t cid1 = ((uint64_t)neighbors1) >> 32;
+    //   //       cbuff->update_chunk_hot(cid, d1*sizeof(uintE));
+    //   //     }
+    //   //   }
+    //   // }
+    //   // return nebrs;
+    // };
   #endif
     return neighbors;
   }
