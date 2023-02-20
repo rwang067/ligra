@@ -7,6 +7,9 @@ function set_schedule {
 	export OMP_SCHEDULE="${SCHEDULE}"
 }
 
+clear_hugepages() { echo 0 > /proc/sys/vm/nr_hugepages; }
+open_hugepages() { echo 8192 > /proc/sys/vm/nr_hugepages; }
+
 #mkdir -p results_small
 
 set_schedule "dynamic,64"
@@ -26,13 +29,19 @@ Chunk_data[6]=/mnt/nvme2/zorax/Yahoo/out
 Chunk_data[7]=/mnt/nvme2/zorax/Kron31/xxx
 Chunk_data[8]=/mnt/nvme2/zorax/Crawl/xxx
 
+
+Chunk_data[0]=/mnt/nvme2/zorax/case2mb/Friendster/friendster
+Chunk_data[6]=/mnt/nvme2/zorax/case2mb/Yahoo/yahoo
+
 # echo $$ | sudo tee /sys/fs/cgroup/cxy-test/cgroup.procs
 
 make clean; make cleansrc;
 make testNebrs BFS PageRank Components KCore
 
-# for idx in 7
-for idx in {2,3,4,5,6}
+open_hugepages
+
+# for idx in 0
+for idx in {0,6}
 do
     echo "---------Chunk version-----------"
     echo -n "Data: "
@@ -67,6 +76,8 @@ do
 
     echo ""
 done
+
+clear_hugepages
 
 # ## For debug ##
 # make BFS

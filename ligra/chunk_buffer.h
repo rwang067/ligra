@@ -4,8 +4,12 @@
 #include <unistd.h>
 #include <mutex>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <asm/mman.h>
 #include "parallel.h"
 using namespace std;
+
+#define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)
 
 inline void lock(volatile bool &flag)
 {
@@ -34,6 +38,7 @@ private:
   void* buff; 
   char** mchunks;
   cid_t cur_mcid;
+  bool is_huge_pages;
 
   cid_t *cmap, *mcmap; // cid -> mcid, mcid -> cid
   volatile bool* chunk_lock;
@@ -57,16 +62,29 @@ public:
 	  }
     cout << "Open file " << filename << ", cfd = " << cfd << endl;
 
-    buff = (char*)calloc(nmchunks, chunk_size);
+    buff = 0;
+    if(chunk_size >= 2097152){
+      is_huge_pages = 0;
+      buff = (char *)mmap(NULL, nmchunks*chunk_size, PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+      if(buff == MAP_FAILED) {	
+        perror("mmap");
+        buff = 0;
+      }
+    } 
+    if(buff == 0) {
+      is_huge_pages = 1;
+      buff = (char*)calloc(nmchunks, chunk_size);
+    }
+
     int ret;
     /* allocate 1 KB along a 256-byte boundary */
     // ret = posix_memalign (&buf, 256, 1024);
-    ret = posix_memalign (&buff, 4096, nmchunks*chunk_size);
+    ret = posix_memalign (&buff, chunk_size, nmchunks*chunk_size);
     if (ret) {
       fprintf (stderr, "posix_memalign: %s\n", strerror (ret));
       exit(-1);
     }
-    memset(buff,0,nmchunks*chunk_size);
+    memset(buff, 0, nmchunks*chunk_size);
 
     mchunks = (char**)calloc(nmchunks, sizeof(char*));
     for(int i = 0; i < nmchunks; i++){
@@ -112,6 +130,7 @@ public:
       mcid = evict_colder(hotsum/nmchunks);
       load_chunk(cid, mcid);
     }
+    cout << "ChunkBuffer pre_loaded the former " << nmchunks << " chunks." << endl;
   }
 
   void del(){
@@ -145,7 +164,9 @@ public:
     free(mcmap);
     free(cmap);
     free(mchunks);
-    free(buff);
+
+    if(is_huge_pages) munmap(buff, chunk_size*nmchunks);
+    else free(buff);
     // free(chunk_lock);
   }
 

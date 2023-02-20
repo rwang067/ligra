@@ -531,15 +531,24 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
     for(int i = 0; i < level; i++) cout << "end_deg[i] = " << end_deg[i] << ", chunk_sz[i] = " << chunk_sz[i] << ", nchunks[i] = " << nchunks[i] << endl;
   }
 
-  long nmchunks = 1024*1024*8;
+  size_t BUFF_SIZE = 32 * 1024 * 1024; // size in KB, --> 32GB
+  size_t buff_size_per_level = BUFF_SIZE / level;
   ChunkBuffer** cbuffs = new ChunkBuffer*[level];
   for(int i = 0; i < level; i++) {
-    string adjChunkFile = adjChunkFiles + to_string(i);
-    cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
+    if(nchunks[i] > 0){
+      long nmchunks = buff_size_per_level / (chunk_sz[i] / 1024);
+      cout << BUFF_SIZE << ", " << buff_size_per_level << ", " << chunk_sz[i] << ", " << nmchunks << ", " << nchunks[i] << endl;
+      string adjChunkFile = adjChunkFiles + to_string(i);
+      cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
+    } else {
+      cbuffs[i] = 0;
+    }
   }
 
   // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
-  char* edges_sv = getFileData(adjSvFile.c_str(), sv_size, isMmap); // -m for read file by mmap
+  char* edges_sv = 0;
+  if(sv_size > 0) edges_sv = getFileData(adjSvFile.c_str(), sv_size, isMmap); // -m for read file by mmap
+
   pvertex_t* offsets = (pvertex_t*) getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
 
   vertex* v = newA(vertex,n);
