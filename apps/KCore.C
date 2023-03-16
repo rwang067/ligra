@@ -84,7 +84,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
       Degrees[i] = GA.V[i].getOutDegree();
     }}
   long largestCore = -1;
-  long max_k = n > 10 ? 10 : n;
+  // long max_k = n > 10 ? 10 : n;
+  long max_k = P.getOptionLongValue("-maxk", n > 10 ? 10 : n);
   for (long k = 1; k <= max_k; k++) {
     while (true) {
       vertexSubset toRemove 
@@ -101,6 +102,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
 	toRemove.del();
       }
     }
+    std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
     if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
   }
   cout << "largestCore was " << largestCore << endl;
