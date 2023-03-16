@@ -513,7 +513,10 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   string configFile = baseFile + ".config";
   string vertFile = baseFile + ".vertex";
   string adjSvFile = baseFile + ".adj.sv";
-  string adjChunkFiles = baseFile + ".adj.chunk_";
+  string adjChunkFiles = baseFile + ".adj.chunk";
+
+  timer t;
+  t.start();
 
   long n, m, level, sv_size;
   long *end_deg, *chunk_sz, *nchunks;
@@ -544,12 +547,14 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       cbuffs[i] = 0;
     }
   }
+  t.reportNext("Load Chunk Time");
 
   // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
   char* edges_sv = 0;
   if(sv_size > 0) edges_sv = getFileData(adjSvFile.c_str(), sv_size, isMmap); // -m for read file by mmap
-
+  t.reportNext("Load Adjlist Time");
   pvertex_t* offsets = (pvertex_t*) getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
+  t.reportNext("Load MetaData Time");
 
   vertex* v = newA(vertex,n);
   // setWorkers(16);
@@ -567,7 +572,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
         v[i].setOutNeighbors(nebrs);
       }
     }}
-
+  t.reportNext("Load OutNeighbors Time");
   if(!isSymmetric) {
     {parallel_for(long i=0;i<n;i++) {
     uintT d = offsets[n+i].out_deg;
@@ -580,8 +585,11 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
         v[i].setInNeighbors(nebrs);
       }}}}
   free(offsets);
+  t.reportNext("Load InNeighbors Time");
 
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
+  t.stop();
+  t.reportTotal("Read Graph Time");
   return graph<vertex>(v,n,m,mem,level,end_deg,cbuffs);
 }
 
