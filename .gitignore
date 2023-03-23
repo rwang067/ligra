@@ -14,3 +14,4 @@ apps/TestAll
 apps/perf.*
 
 scripts/*
+apps/hierg_query_time.csv

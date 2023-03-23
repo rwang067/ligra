@@ -185,6 +185,7 @@ fi
 
 if $DEBUG; then
     # ## For debug ##
+    make clean
     make testNebrs BFS PageRank Components KCore
     clear_hugepages
     # open_hugepages
@@ -200,10 +201,9 @@ if $DEBUG; then
     # ./BFS -b -r 233665123 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Kron30/kron30
     # ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/zorax/case2mb/Kron29/kron29
 
-    ./testNebrs -b -m -chunk -rounds 1 /mnt/nvme2/wr/case4kb/Friendster/friendster
     # ./testNebrs -b -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Friendster/friendster
     # ./BFS -b -r 26737282 -m -chunk -rounds 1 /mnt/nvme2/wr/case4kb/Friendster/friendster
-    # ./BFS -b -r 26737282 -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Friendster/friendster
+    ./BFS -b -r 26737282 -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Friendster/friendster
 
     # ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Kron29/kron29
 

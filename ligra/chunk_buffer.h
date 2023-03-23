@@ -140,7 +140,7 @@ public:
         if(mcmap[i] != nchunks){
           mcached_count++;
           if(cmap[mcmap[i]] != i)
-            cout << "Error cmap: i mcmap[i] cmap[mcmap[i]] mcmap[cmap[mcmap[i]]] = " << i << ", " << mcmap[i] << ", " << cmap[mcmap[i]] << ", " << mcmap[cmap[mcmap[i]]] << endl;
+            cout << "Error cmap of chunksize_" << chunk_size << " : i mcmap[i] cmap[mcmap[i]] mcmap[cmap[mcmap[i]]] = " << i << ", " << mcmap[i] << ", " << cmap[mcmap[i]] << ", " << mcmap[cmap[mcmap[i]]] << endl;
         }
       }
 
@@ -149,7 +149,7 @@ public:
         if(cmap[i] != nmchunks){
           cached_count++;
           if(mcmap[cmap[i]] != i)
-            cout << "Error mcmap: i cmap[i] mcmap[cmap[i]] cmap[mcmap[cmap[i]]] = " << i << ", " << cmap[i] << ", " << mcmap[cmap[i]] << ", " << cmap[mcmap[cmap[i]]] << endl;
+            cout << "Error mcmap of chunksize_" << chunk_size << " : i cmap[i] mcmap[cmap[i]] cmap[mcmap[cmap[i]]] = " << i << ", " << cmap[i] << ", " << mcmap[cmap[i]] << ", " << cmap[mcmap[cmap[i]]] << endl;
         }
       }
 
@@ -220,7 +220,8 @@ public:
         while(chunk_lock[cid]);
         lock(chunk_lock[cid]);
         if(cmap[cid] == nmchunks) {  
-          cid_t mcid = evict_colder(hotsum/nmchunks);
+          cid_t mcid = evict_seq();
+          // cid_t mcid = evict_colder(hotsum/nmchunks);
           cid_t mmcid = mcmap[mcid];
           if(mmcid != nchunks){
             free_chunk(mmcid, mcid);
