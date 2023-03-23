@@ -12,3 +12,5 @@ apps/KCore
 apps/PageRank
 apps/TestAll
 apps/perf.*
+
+scripts/*

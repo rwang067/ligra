@@ -27,6 +27,23 @@
 #include <iomanip>
 #include <iostream>
 
+std::string statistic_filename = "hierg_query_time.csv";
+std::ofstream _ofs;
+
+void reportInit() {
+  _ofs.open(statistic_filename.c_str(), std::ofstream::out | std::ofstream::app );
+}
+void reportTitle(char* str) {
+  _ofs << "[" << str << "]:" ;
+}
+void reportTimeToFile(double time) {
+  _ofs << std::setprecision(3) << time <<  ",";
+}
+void reportEnd() {
+  _ofs << std::endl;
+  _ofs.close();
+}
+
 struct timer {
   double totalTime;
   double lastTime;
@@ -76,11 +93,12 @@ struct timer {
   }
 
   void reportT(double time) {
-    std::cout << std::setprecision(3) << time <<  std::endl;;
+    std::cout << std::setprecision(3) << time <<  std::endl;
   }
 
-  void reportTime(double time) {
+  double reportTime(double time) {
     reportT(time);
+    return time;
   }
 
   void reportStop(double weight, std::string str) {
@@ -99,9 +117,12 @@ struct timer {
     std::cout << str << " : "; 
     reportTotal();}
 
-  void reportNext() {reportTime(next());}
+  double reportNext() { return reportTime(next());}
 
-  void reportNext(std::string str) {std::cout << str << " : "; reportNext();}
+  double reportNext(std::string str) {
+    std::cout << str << " : ";
+    return reportNext();
+  }
 };
 
 static timer _tm;
