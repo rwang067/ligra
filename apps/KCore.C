@@ -104,9 +104,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
     toRemove.del();
         }
       }
+      std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
       if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
     }
     cout << "largestCore was " << largestCore << endl;
     Frontier.del(); free(coreNumbers); free(Degrees);
-    nextTime("Time");
+    double time = nextTime("Running time");
+    reportTimeToFile(time);
 }

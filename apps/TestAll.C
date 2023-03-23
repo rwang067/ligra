@@ -155,7 +155,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
     //     }
     //     deg_sum += out_deg + in_deg;
     // }}
-    // nextTime("Time");
+    // double time = nextTime("Running time");
+    // reportTimeToFile(time);
     // free(samples);
     
     std::cout << "=======BFS=======" << std::endl;
@@ -174,7 +175,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
     } 
     Frontier_BFS.del();
     free(Parents);
-    nextTime("Time");
+    double time = nextTime("Running time");
+    reportTimeToFile(time);
     
     std::cout << "=======PageRank=======" << std::endl;
     startTime();
@@ -203,7 +205,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
         swap(p_curr,p_next);
     }
     Frontier_PR.del(); free(p_curr); free(p_next);
-    nextTime("Time");
+    time = nextTime("Running time");
+    reportTimeToFile(time);
     
     std::cout << "=======CC=======" << std::endl;
     startTime();
@@ -219,7 +222,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
         FrontierCC = output;
     }
     FrontierCC.del(); free(IDs); free(prevIDs);
-    nextTime("Time");
+    time = nextTime("Running time");
+    reportTimeToFile(time);
 
     std::cout << "=======KCore=======" << std::endl;
     startTime();
@@ -254,6 +258,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
     }
     cout << "largestCore was " << largestCore << endl;
     Frontier.del(); free(coreNumbers); free(Degrees);
-    nextTime("Time");
+    time = nextTime("Running time");
+    reportTimeToFile(time);
     std::cout << std::endl;
 }

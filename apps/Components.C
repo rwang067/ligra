@@ -60,12 +60,15 @@ void Compute(graph<vertex>& GA, commandLine P) {
     bool* fron = newA(bool,n);
     {parallel_for(long i=0;i<n;i++) fron[i] = 1;} 
     vertexSubset FrontierCC(n,n,fron); //initial frontier contains all vertices
+    uint32_t level = 0;
     while(!FrontierCC.isEmpty()){ //iterate until IDS converge
-        vertexMap(FrontierCC,CC_Vertex_F(IDs,prevIDs));
-        vertexSubset output = edgeMap(GA, FrontierCC, CC_F(IDs,prevIDs));
-        FrontierCC.del();
-        FrontierCC = output;
+      std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << FrontierCC.numNonzeros() << std::endl;
+      vertexMap(FrontierCC,CC_Vertex_F(IDs,prevIDs));
+      vertexSubset output = edgeMap(GA, FrontierCC, CC_F(IDs,prevIDs));
+      FrontierCC.del();
+      FrontierCC = output;
     }
     FrontierCC.del(); free(IDs); free(prevIDs);
-    nextTime("Time");
+    double time = nextTime("Running time");
+    reportTimeToFile(time);
 }

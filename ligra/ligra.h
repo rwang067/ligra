@@ -478,6 +478,10 @@ int parallel_main(int argc, char* argv[]) {
   bool mmap = P.getOptionValue("-m");
   //cout << "mmap = " << mmap << endl;
   long rounds = P.getOptionLongValue("-rounds",3);
+
+  reportInit();
+  reportTitle(argv[0]);
+
   if (compressed) {
     if (symmetric) {
 #ifndef HYPER
@@ -491,7 +495,8 @@ int parallel_main(int argc, char* argv[]) {
       for(int r=0;r<rounds;r++) {
         startTime();
         Compute(G,P);
-        nextTime("Running time");
+        double time = nextTime("Running time");
+        reportTimeToFile(time);
       }
       G.del();
     } else {
@@ -507,7 +512,8 @@ int parallel_main(int argc, char* argv[]) {
       for(int r=0;r<rounds;r++) {
         startTime();
         Compute(G,P);
-        nextTime("Running time");
+        double time = nextTime("Running time");
+        reportTimeToFile(time);
         if(G.transposed) G.transpose();
       }
       G.del();
@@ -525,7 +531,8 @@ int parallel_main(int argc, char* argv[]) {
       for(int r=0;r<rounds;r++) {
         startTime();
         Compute(G,P);
-        nextTime("Running time");
+        double time = nextTime("Running time");
+        reportTimeToFile(time);
       }
       G.del();
     } else {

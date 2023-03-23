@@ -91,11 +91,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
         p_curr[i] = fabs(p_curr[i]-p_next[i]);
         }}
         double L1_norm = sequence::plusReduce(p_curr,n);
+        std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm << std::endl;
         if(L1_norm < epsilon) break;
         //reset p_curr
         vertexMap(Frontier_PR,PR_Vertex_Reset(p_curr));
         swap(p_curr,p_next);
     }
     Frontier_PR.del(); free(p_curr); free(p_next);
-    nextTime("Time");
+    double time = nextTime("Running time");
+    reportTimeToFile(time);
 }

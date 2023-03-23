@@ -50,12 +50,15 @@ void Compute(graph<vertex>& GA, commandLine P) {
     parallel_for(long i=0;i<n;i++) Parents[i] = UINT_E_MAX;
     Parents[start] = start;
     vertexSubset Frontier_BFS(n,start); //creates initial frontier
+    uint32_t level = 0;
     while(!Frontier_BFS.isEmpty()){ //loop until frontier is empty
-        vertexSubset output = edgeMap(GA, Frontier_BFS, BFS_F(Parents));    
-        Frontier_BFS.del();
-        Frontier_BFS = output; //set new frontier
+      std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << Frontier_BFS.numNonzeros() << std::endl;
+      vertexSubset output = edgeMap(GA, Frontier_BFS, BFS_F(Parents));    
+      Frontier_BFS.del();
+      Frontier_BFS = output; //set new frontier
     } 
     Frontier_BFS.del();
     free(Parents);
-    nextTime("Time");
+    double time = nextTime("Running time");
+    reportTimeToFile(time);
 }
