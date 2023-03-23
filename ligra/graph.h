@@ -142,7 +142,7 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, long _level, long* _end_deg, 
     uintE* neighbors;
     if(!inGraph){
       d = v->getOutDegree();
-      neighbors = (uintE*) v->getOutNeighbors();
+      neighbors = (uintE*) v->getOutNeighbors(); // if d <=2 return (uintE*)(&outNeighbors); in vertex.h
     }else{
       d = v->getInDegree();
       neighbors = (uintE*) v->getInNeighbors();

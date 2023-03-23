@@ -196,12 +196,19 @@ if $DEBUG; then
     # ./BFS -b -r 26737282 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster 
     # ./PageRank -b -maxiters 10 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster
     # ./KCore -b -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster
-    ./Components -b -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster
+    # ./Components -b -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster
     # ./BFS -b -r 233665123 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Kron30/kron30
     # ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/zorax/case2mb/Kron29/kron29
 
-    commandargs="./BFS -b -r 26737282 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster"
-    filename="friendster_chunk4kb"
+    ./testNebrs -b -m -chunk -rounds 1 /mnt/nvme2/wr/case4kb/Friendster/friendster
+    # ./testNebrs -b -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Friendster/friendster
+    # ./BFS -b -r 26737282 -m -chunk -rounds 1 /mnt/nvme2/wr/case4kb/Friendster/friendster
+    # ./BFS -b -r 26737282 -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Friendster/friendster
 
-    profile_run "\${commandargs}" "\${filename}"
+    # ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Kron29/kron29
+
+    # commandargs="./BFS -b -r 26737282 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster"
+    # filename="friendster_chunk4kb"
+
+    # profile_run "\${commandargs}" "\${filename}"
 fi
