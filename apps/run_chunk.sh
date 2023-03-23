@@ -7,6 +7,35 @@ function set_schedule {
 	export OMP_SCHEDULE="${SCHEDULE}"
 }
 
+profile_run() {
+    eval commandargs="$1"
+    eval filename="$2"
+    
+    commandname=$(echo $commandargs | awk '{print $1}')
+
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    echo $cur_time "profile run with command: " $commandargs > ../${filename}.txt
+
+    nohup $commandargs >> ../${filename}.log &
+    pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
+    iostat | sed '7,32d' | head -n 7 > ../${filename}_iostat.txt
+
+    pidstat -p $pid -dl 1 > ../${filename}_disk.txt &
+    pidstat -p $pid -rl 1 > ../${filename}_mem.txt &
+    wait $pid
+    iostat | sed '7,32d' | head -n 7 >> ../${filename}_iostat.txt
+
+    # calculate total disk
+    rdisk=$(cat ../${filename}_disk.txt | sed '1,3d' | awk 'BEGIN {sum=0} {sum += $5} END {print sum}')
+    echo 'total disk read: '${rdisk} >> ../${filename}_disk.txt
+
+    # calculate total memory and page faults
+    min_flt=$(cat ../${filename}_mem.txt | sed '1,3d' | awk 'BEGIN {sum=0} {sum += $5} END {print sum}')
+    maj_flt=$(cat ../${filename}_mem.txt | sed '1,3d' | awk 'BEGIN {sum=0} {sum += $6} END {print sum}')
+    echo 'total minor fault: '${min_flt} >> ../${filename}_mem.txt
+    echo 'total major fault: '${maj_flt} >> ../${filename}_mem.txt
+}
+
 # clear_hugepages() { echo 0 > /proc/sys/vm/nr_hugepages; }
 # open_hugepages() { echo 8192 > /proc/sys/vm/nr_hugepages; }
 
@@ -170,4 +199,9 @@ if $DEBUG; then
     ./Components -b -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster
     # ./BFS -b -r 233665123 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Kron30/kron30
     # ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/zorax/case2mb/Kron29/kron29
+
+    commandargs="./BFS -b -r 26737282 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster"
+    filename="friendster_chunk4kb"
+
+    profile_run "\${commandargs}" "\${filename}"
 fi

@@ -10,3 +10,5 @@ apps/BFS
 apps/Components
 apps/KCore
 apps/PageRank
+apps/TestAll
+apps/perf.*

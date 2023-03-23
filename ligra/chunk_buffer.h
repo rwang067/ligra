@@ -64,7 +64,7 @@ public:
 
     buff = 0;
     if(chunk_size >= 2097152){
-      is_huge_pages = 0;
+      is_huge_pages = 1;
       buff = (char *)mmap(NULL, nmchunks*chunk_size, PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
       if(buff == MAP_FAILED) {	
         perror("mmap");
@@ -72,7 +72,7 @@ public:
       }
     } 
     if(buff == 0) {
-      is_huge_pages = 1;
+      is_huge_pages = 0;
       buff = (char*)calloc(nmchunks, chunk_size);
     }
 
