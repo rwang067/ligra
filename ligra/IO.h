@@ -541,19 +541,19 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   for(int i = 0; i < level; i++) {
     if(nchunks[i] > 0){
       long nmchunks = buff_size_per_level / (chunk_sz[i] / 1024);
-      cout << BUFF_SIZE << ", " << buff_size_per_level << ", " << chunk_sz[i] << ", " << nmchunks << ", " << nchunks[i] << endl;
+      cout << "BUFF_SIZE = " << buff_size_per_level << ", chunk_sz = " << chunk_sz[i] << ", nmchunks = " << nmchunks << ", nchunks = " << nchunks[i] << endl;
       string adjChunkFile = adjChunkFiles + to_string(i);
       cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
     } else {
       cbuffs[i] = 0;
     }
+    t.reportNext("Load Chunk_" + to_string(i) + " Adjlist Time");
   }
-  t.reportNext("Load Chunk Time");
 
   // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
   char* edges_sv = 0;
   if(sv_size > 0) edges_sv = getFileData(adjSvFile.c_str(), sv_size, isMmap); // -m for read file by mmap
-  t.reportNext("Load Adjlist Time");
+  t.reportNext("Load Supervertex Adjlist Time");
   pvertex_t* offsets = (pvertex_t*) getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
   t.reportNext("Load MetaData Time");
 
@@ -591,6 +591,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
   t.stop();
   t.reportTotal("Read Graph Time");
+  cout << "readGraphFromBinaryChunkBuff end.\n" << endl;
   return graph<vertex>(v,n,m,mem,level,end_deg,cbuffs);
 }
 

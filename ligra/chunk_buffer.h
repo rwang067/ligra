@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <asm/mman.h>
+#include <cassert>
 #include "parallel.h"
 using namespace std;
 
@@ -15,10 +16,26 @@ inline void lock(volatile bool &flag)
 {
 	while(!__sync_bool_compare_and_swap(&flag, 0, 1)){}
 }
-
 inline void unlock(volatile bool &flag)
 {
 	flag = 0;
+}
+
+template <typename T>
+void preada(int f, T * tbuf, size_t nbytes, size_t off = 0) {
+    size_t nread = 0;
+    T * buf = (T*)tbuf;
+    while(nread<nbytes) {
+        ssize_t a = pread(f, buf, nbytes - nread, off + nread);
+        if (a == (-1)) {
+            std::cout << "Error, could not read: " << strerror(errno) << "; file-desc: " << f << std::endl;
+            std::cout << "Pread arguments: " << f << " tbuf: " << tbuf << " nbytes: " << nbytes << " off: " << off << std::endl;
+            exit(-1);
+        }
+        buf += a/sizeof(T);
+        nread += a;
+    }
+    assert(nread <= nbytes);
 }
 
 typedef uint32_t cid_t; //chunk_id
@@ -108,8 +125,6 @@ public:
     // }
     // cout << endl;
 
-    cout << "ChunkBuffer initialized " << nmchunks << " mchunks of size " << chunk_size << ", nchunks = " << nchunks << "\n" << endl;
-
     chunk_lock = (volatile bool*)calloc(nchunks, sizeof(volatile bool));
 
     hotness = (hot_t*)calloc(nmchunks, sizeof(hot_t));
@@ -120,16 +135,19 @@ public:
     space_waste = 0;
 
     pre_load();
+
+    cout << "ChunkBuffer initialized " << nmchunks << " mchunks of size " << chunk_size << ", nchunks = " << nchunks << endl;
   }
   ~ChunkBuffer(){
   }
 
   void pre_load(){
-    cid_t mcid = 0;
-    for(cid_t cid = 0; cid < nmchunks; cid++){
-      mcid = evict_colder(hotsum/nmchunks);
-      load_chunk(cid, mcid);
-    }
+    // cid_t mcid = 0;
+    // for(cid_t cid = 0; cid < nmchunks; cid++){
+    //   mcid = evict_colder(hotsum/nmchunks);
+    //   load_chunk(cid, mcid);
+    // }
+    load_chunks(0,0,nmchunks);
     cout << "ChunkBuffer pre_loaded the former " << nmchunks << " chunks." << endl;
   }
 
@@ -235,13 +253,7 @@ public:
   }
 
   void load_chunk(cid_t cid, cid_t mcid){
-    if(pread(cfd,mchunks[mcid],chunk_size,chunk_size*cid)==-1){
-      cout << "pread wrong\n";
-      cout << "cid = " << cid << ", mcid = " << mcid << endl;
-      cout << "pread: fd = " << cfd << ", *buf = " << (void*)mchunks[mcid] << ", nbytes = " << chunk_size << ", offset = " << chunk_size*cid << endl;
-      abort(); 
-      // exit(-1);
-    }
+    preada(cfd,mchunks[mcid],chunk_size,chunk_size*cid);
     cmap[cid] = mcid;
     mcmap[mcid] = cid;
 
@@ -252,6 +264,15 @@ public:
     // uint16_t max_size = ((Chunk_t*)(mchunks[mcid]))->max_size;
     // uint16_t cur_size = ((Chunk_t*)(mchunks[mcid]))->cur_size;
     // __sync_fetch_and_add(&space_waste, max_size - cur_size);
+  }
+  void load_chunks(cid_t cid, cid_t mcid, cid_t count){ // read `count` chunks together
+    preada(cfd,mchunks[mcid],chunk_size*count,chunk_size*cid);
+    for(cid_t id = 0; id < count; id++){
+      cmap[cid+id] = mcid+id;
+      mcmap[mcid+id] = cid+id;
+      hotness[mcid+id] = ((Chunk_t*)(mchunks[mcid+id]))->hotness;
+      hotsum += hotness[mcid+id]; // __sync_fetch_and_add(&hotsum, hotness[mcid]);
+    }
   }
   void free_chunk(cid_t mmcid, cid_t mcid){
     hotsum -= hotness[mcid]; // __sync_fetch_and_sub(&hotsum, hotness[mcid]);
