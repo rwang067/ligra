@@ -220,6 +220,40 @@ struct vertexSubsetData<pbbs::empty> {
     isDense = true;
   }
 
+  void printActivateSparse() {
+    printf("printActivateSparse\n");
+    for(long i=0;i<m;i++) {
+      printf("%d ", s[i]);
+    }
+    printf("\n");
+  }
+
+  void getActivateSparse(S* adj) {
+    for(long i=0;i<m;i++) {
+      adj[i] = s[i];
+    }
+  }
+
+  void printActivateDense() {
+    printf("printActivateDense\n");
+    for(long i=0;i<n;i++) {
+      if(d[i]) printf("%ld ", i);
+    }
+    printf("\n");
+  }
+
+  void getActivateDense(S* adj) {
+    long idx = 0;
+    for(long i=0;i<n;i++) {
+      if(d[i]) adj[idx++] = i;
+    }
+  }
+
+  void printActivateVertices() {
+    if (isDense) printActivateDense();
+    else printActivateSparse();
+  }
+
   S* s;
   bool* d;
   size_t n, m;

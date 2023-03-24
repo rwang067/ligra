@@ -8,6 +8,8 @@
 #include <asm/mman.h>
 #include <cassert>
 #include "parallel.h"
+#include "monitor.h"
+
 using namespace std;
 
 #define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)
@@ -232,6 +234,10 @@ public:
   }
 
   char* get_mchunk(cid_t cid){
+#ifdef PROFILE_EN
+  int tid = getWorkersID();
+  profiler.profile_get_chunk(tid);
+#endif
     if(cmap[cid] == nmchunks){ // Not in DRAM buffer
       while(chunk_lock[cid]);
       if(cmap[cid] == nmchunks) { 
@@ -253,6 +259,10 @@ public:
   }
 
   void load_chunk(cid_t cid, cid_t mcid){
+#ifdef PROFILE_EN
+  int tid = getWorkersID();
+  profiler.profile_load_chunk(tid);
+#endif
     preada(cfd,mchunks[mcid],chunk_size,chunk_size*cid);
     cmap[cid] = mcid;
     mcmap[mcid] = cid;

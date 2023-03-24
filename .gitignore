@@ -1,5 +1,6 @@
 .vscode/
 *.txt
+*.csv
 apps/*.h
 apps/decoder.C
 apps/encoder.C

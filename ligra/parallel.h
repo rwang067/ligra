@@ -81,6 +81,7 @@ static void setWorkers(int n) {
 #define parallel_for_1 _Pragma("omp parallel for schedule (static,1)") for
 #define parallel_for_256 _Pragma("omp parallel for schedule (static,256)") for
 static int getWorkers() { return omp_get_max_threads(); }
+static int getWorkersID() { return omp_get_thread_num(); }
 static void setWorkers(int n) { omp_set_num_threads(n); }
 
 // c++

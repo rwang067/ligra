@@ -479,6 +479,9 @@ template<class vertex>
 void Compute(graph<vertex>&, commandLine);
 
 template<class vertex>
+void Compare(graph<vertex>&, graph<vertex>&, commandLine);
+
+template<class vertex>
 void Compute(hypergraph<vertex>&, commandLine);
 
 int parallel_main(int argc, char* argv[]) {
@@ -552,6 +555,10 @@ int parallel_main(int argc, char* argv[]) {
 #ifndef HYPER
       graph<asymmetricVertex> G =
         readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
+      // graph<asymmetricVertex> G1 =
+      //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case4kb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
+      // graph<asymmetricVertex> G2 =
+      //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case2mb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
 #else
       hypergraph<asymmetricVertex> G =
         readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
@@ -570,5 +577,8 @@ int parallel_main(int argc, char* argv[]) {
     }
   }
   reportEnd();
+#ifdef PROFILE_EN
+  profiler.print_page_miss_ratio();
+#endif
 }
 #endif
