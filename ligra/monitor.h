@@ -30,7 +30,7 @@ public:
       for (int i = 0; i < nthreads; ++i) sum_num_load_chunk += num_load_chunk[i];
       for (int i = 0; i < nthreads; ++i) sum_num_get_chunk += num_get_chunk[i];
       
-      printf("num_load_chunk = %lu, num_get_chunk = %lu, ratio = %.2f", sum_num_load_chunk, sum_num_get_chunk, (double)sum_num_load_chunk / (double)sum_num_get_chunk);
+      printf("num_load_chunk = %lu, num_get_chunk = %lu, ratio = %.2f\n", sum_num_load_chunk, sum_num_get_chunk, (double)sum_num_load_chunk / (double)sum_num_get_chunk);
    }
 
 private:

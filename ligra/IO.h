@@ -509,7 +509,7 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
 }
 
 template <class vertex>
-graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool isMmap, bool debug) {
+graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool isMmap, bool debug, long dram_4kb, long dram_2mb) {
   string baseFile = iFile;
   string configFile = baseFile + ".config";
   string vertFile = baseFile + ".vertex";
@@ -535,13 +535,13 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
     for(int i = 0; i < level; i++) cout << "end_deg[i] = " << end_deg[i] << ", chunk_sz[i] = " << chunk_sz[i] << ", nchunks[i] = " << nchunks[i] << endl;
   }
 
-  size_t BUFF_SIZE = 32 * 1024 * 1024; // size in KB, --> 32GB
-  size_t buff_size_per_level = BUFF_SIZE / level;
+  // size_t BUFF_SIZE = 64 * 1024 * 1024; // size in KB, --> 32GB
+  size_t buff_size_per_level[2] = { (size_t)dram_4kb * 1024 * 1024, (size_t)dram_2mb * 1024 * 1024 };
   ChunkBuffer** cbuffs = new ChunkBuffer*[level];
   for(int i = 0; i < level; i++) {
     if(nchunks[i] > 0){
-      long nmchunks = buff_size_per_level / (chunk_sz[i] / 1024);
-      cout << "BUFF_SIZE = " << buff_size_per_level << ", chunk_sz = " << chunk_sz[i] << ", nmchunks = " << nmchunks << ", nchunks = " << nchunks[i] << endl;
+      long nmchunks = buff_size_per_level[i] / (chunk_sz[i] / 1024);
+      cout << "BUFF_SIZE = " << buff_size_per_level[i] << ", chunk_sz = " << chunk_sz[i] << ", nmchunks = " << nmchunks << ", nchunks = " << nchunks[i] << endl;
       string adjChunkFile = adjChunkFiles + to_string(i);
       cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
     } else {
@@ -596,9 +596,9 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
 }
 
 template <class vertex>
-graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0, bool debug=0) {
+graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0, bool debug=0, long dram_4kb=16,long dram_2mb=16) {
   if(binary){ 
-    if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug);
+    if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug,dram_4kb,dram_2mb);
     return readGraphFromBinary<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);

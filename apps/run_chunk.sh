@@ -40,7 +40,11 @@ profile_run() {
 # open_hugepages() { echo 8192 > /proc/sys/vm/nr_hugepages; }
 
 clear_hugepages() { echo "password" | sudo -S sysctl -w vm.nr_hugepages=0; }
-open_hugepages() { echo "password" | sudo -S sysctl -w vm.nr_hugepages=16384; }
+open_hugepages() { 
+    eval page_num="$1"
+    echo "password" | sudo -S sysctl -w vm.nr_hugepages=$page_num;
+}
+# open_hugepages() { echo "password" | sudo -S sysctl -w vm.nr_hugepages=16384; }
 
 # mkdir -p results_small
 
@@ -48,6 +52,9 @@ set_schedule "dynamic,64"
 
 # roots:        TT       FS       UK      K28       K29       K30       YW       K31       CW
 declare -a rts=(18225348 26737282 5699262 254655025 310059974 233665123 35005211 691502068 739935047)
+declare -a d4kb=(8 18 16 16 30 32 33)
+declare -a d2mb=(4 2 10 18 36 40 15)
+declare -a c2mb=(1909 802 4325 8407 17583 34699 7495)
 
 TEST_4KB=false
 TEST_2MB=false
@@ -139,55 +146,55 @@ if $TEST_2MB; then
     Chunk_data[5]=/mnt/nvme2/zorax/case2mb/Kron30/kron30
     Chunk_data[6]=/mnt/nvme2/zorax/case2mb/Yahoo/yahoo
 
-    clear_hugepages
-    open_hugepages
+    cd apps && make clean && make testNebrs BFS PageRank Components KCore
 
-    # for idx in 0
-    # for idx in {0,1,2,3,4,5,6}
-    for idx in {5,6}
+    clear_hugepages
+
+    max_times=3
+    for ((times = 0; times < $max_times; times += 1 ))
     do
-        echo "---------Chunk version-----------"
-        echo -n "Data: "
-        echo ${Chunk_data[$idx]}
-        echo -n "Root: "
-        echo ${rts[$idx]}
+        for idx in {0,1,2,3,4,5,6}
+        # for idx in {4,5,6}
+        do
+            # open_hugepages "\${c2mb[\$idx]}"
+            echo "---------Chunk version-----------"
+            echo -n "Data: "
+            echo ${Chunk_data[$idx]}
+            echo -n "Root: "
+            echo ${rts[$idx]}
 
-        # # sysctl -w vm.drop_caches=3
-        # echo "=======testNebrs======="
-        # ./testNebrs -b -chunk -debug -rounds 1 ${Chunk_data[$idx]}
-        # wait
+            # # sysctl -w vm.drop_caches=3
+            # echo "=======testNebrs======="
+            # ./testNebrs -b -chunk -debug -rounds 1 ${Chunk_data[$idx]}
+            # wait
 
-        # sysctl -w vm.drop_caches=3
-        # echo "=======BFS======="
-        # ./BFS -b -r ${rts[$idx]} -chunk -rounds 1 ${Chunk_data[$idx]}
-        # wait
+            # sysctl -w vm.drop_caches=3
+            echo "=======BFS======="
+            ./BFS -b -r ${rts[$idx]} -chunk -rounds 1 -d4kb ${d4kb[$idx]} -d2mb ${d2mb[$idx]} ${Chunk_data[$idx]}  >> res_2mb_mmap_bfs.txt
+            wait
 
-        # # sysctl -w vm.drop_caches=3
-        echo "=======Components======="
-        ./Components -b -chunk -rounds 1 ${Chunk_data[$idx]}
-        wait
+            # # sysctl -w vm.drop_caches=3
+            echo "=======Components======="
+            ./Components -b -chunk -rounds 1 -d4kb ${d4kb[$idx]} -d2mb ${d2mb[$idx]} ${Chunk_data[$idx]} >> res_2mb_mmap_cc.txt
+            wait
 
-        # # sysctl -w vm.drop_caches=3
-        echo "=======KCore======="
-        ./KCore -b -chunk -rounds 1 ${Chunk_data[$idx]}
-        wait
+            # # sysctl -w vm.drop_caches=3
+            echo "=======KCore======="
+            ./KCore -b -chunk -rounds 1 -d4kb ${d4kb[$idx]} -d2mb ${d2mb[$idx]} ${Chunk_data[$idx]} >> res_2mb_mmap_kc.txt
+            wait
 
-        # # sysctl -w vm.drop_caches=3
-        echo "=======PageRank======="
-        ./PageRank -maxiters 10 -b -chunk -rounds 1 ${Chunk_data[$idx]}
-        wait
-
-        echo ""
+            # # sysctl -w vm.drop_caches=3
+            echo "=======PageRank======="
+            ./PageRank -maxiters 10 -b -chunk -rounds 1 -d4kb ${d4kb[$idx]} -d2mb ${d2mb[$idx]} ${Chunk_data[$idx]} >> res_2mb_mmap_pr.txt
+            wait
+            # clear_hugepages
+            echo ""
+        done
     done
-
-    clear_hugepages
 fi
 
 if $DEBUG; then
     # ## For debug ##
-    # clear_hugepages
-    # open_hugepages
-    # gdb ./BFS
     
     # perf stat -e task-clock,cycles,instructions,cache-references,cache-misses,page-faults
     # perf record -e task-clock,cycles,instructions,cache-references,cache-misses,page-faults
