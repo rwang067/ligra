@@ -71,4 +71,5 @@ void Compute(graph<vertex>& GA, commandLine P) {
     FrontierCC.del(); free(IDs); free(prevIDs);
     double time = nextTime("Running time");
     reportTimeToFile(time);
+    reportEnd();
 }

@@ -111,4 +111,5 @@ void Compute(graph<vertex>& GA, commandLine P) {
     Frontier.del(); free(coreNumbers); free(Degrees);
     double time = nextTime("Running time");
     reportTimeToFile(time);
+    reportEnd();
 }

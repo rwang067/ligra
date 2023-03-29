@@ -100,4 +100,5 @@ void Compute(graph<vertex>& GA, commandLine P) {
     Frontier_PR.del(); free(p_curr); free(p_next);
     double time = nextTime("Running time");
     reportTimeToFile(time);
+    reportEnd();
 }

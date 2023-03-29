@@ -480,7 +480,7 @@ int parallel_main(int argc, char* argv[]) {
   long rounds = P.getOptionLongValue("-rounds",3);
 
   reportInit();
-  reportTitle(argv[0]);
+  reportTitle(argv[0], iFile);
 
   if (compressed) {
     if (symmetric) {

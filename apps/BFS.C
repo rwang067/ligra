@@ -61,4 +61,5 @@ void Compute(graph<vertex>& GA, commandLine P) {
     free(Parents);
     double time = nextTime("Running time");
     reportTimeToFile(time);
+    reportEnd();
 }
