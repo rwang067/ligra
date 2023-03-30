@@ -534,13 +534,41 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
     cout << "n = " << n << ", m = " << m << ", level = " << level << ", sv_size = " << sv_size << endl;
     for(int i = 0; i < level; i++) cout << "end_deg[i] = " << end_deg[i] << ", chunk_sz[i] = " << chunk_sz[i] << ", nchunks[i] = " << nchunks[i] << endl;
   }
+  
+  // calculate DRAM buffer size per layer
+  size_t *buff_size_per_level = (size_t*)malloc(sizeof(size_t)*level);
+  size_t total_buff_size = 0;
+  size_t max_buff_size = (size_t)128 * 1024 * 1024 * 1024 - sizeof(vertex) * n * 2; // Bytes
+  for(int i = 0; i < level; i++) {
+    buff_size_per_level[i] = chunk_sz[i] * nchunks[i];
+    total_buff_size += buff_size_per_level[i];
+  }
+  total_buff_size += sv_size;
+  for(int i = 0; i < level; i++) {
+    printf("buff_size_per_level[%d] = %lu\n", i, buff_size_per_level[i]);
+  }
+  
+  cout << "sizeof(vertex) = " << sizeof(vertex) << endl;
+  cout << "sizeof(uintT) = " << sizeof(uintT) << endl;
+  cout << "sizeof(uintE) = " << sizeof(uintE) << endl;
+  cout << "max_buff_size = " << max_buff_size / 1024 / 1024 / 1024 << endl;
+  cout << "total_buff_size = " << total_buff_size / 1024 / 1024 / 1024 << endl;
 
-  // size_t BUFF_SIZE = 64 * 1024 * 1024; // size in KB, --> 32GB
-  size_t buff_size_per_level[2] = { (size_t)dram_4kb * 1024 * 1024, (size_t)dram_2mb * 1024 * 1024 };
+  if (total_buff_size > max_buff_size) {
+    for(int i = 0; i < level; i++) {
+      buff_size_per_level[i] = (size_t)(ceil((buff_size_per_level[i] * (double)max_buff_size / total_buff_size) / chunk_sz[i]) * chunk_sz[i]);
+      // printf("buff_size_per_level[%d] = %lu\n", i, buff_size_per_level[i]);
+    }
+  }
+  for(int i = 0; i < level; i++) {
+    printf("buff_size_per_level[%d] = %lu\n", i, buff_size_per_level[i]);
+  }
+  exit(0);
+
   ChunkBuffer** cbuffs = new ChunkBuffer*[level];
   for(int i = 0; i < level; i++) {
     if(nchunks[i] > 0){
-      long nmchunks = buff_size_per_level[i] / (chunk_sz[i] / 1024);
+      long nmchunks = buff_size_per_level[i] / chunk_sz[i];
       cout << "BUFF_SIZE = " << buff_size_per_level[i] << ", chunk_sz = " << chunk_sz[i] << ", nmchunks = " << nmchunks << ", nchunks = " << nchunks[i] << endl;
       string adjChunkFile = adjChunkFiles + to_string(i);
       cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
@@ -549,6 +577,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
     }
     t.reportNext("Load Chunk_" + to_string(i) + " Adjlist Time");
   }
+  free(buff_size_per_level);
 
   // char* edges_chunks_4kb = getFileData(adjChunk4kbFile, nchunks * 4096, isMmap);
   char* edges_sv = 0;
