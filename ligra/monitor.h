@@ -23,6 +23,7 @@ public:
    inline size_t get_num_get_chunk(int tid) { return num_get_chunk[tid]; }
 
    inline void profile_load_chunk(int tid) { num_load_chunk[tid]++; }
+   inline void profile_load_chunk(int tid, uint32_t count) { num_load_chunk[tid] += count; }
    inline void profile_get_chunk(int tid) { num_get_chunk[tid]++; }
 
    inline void print_page_miss_ratio() {
