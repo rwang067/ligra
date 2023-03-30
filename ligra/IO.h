@@ -565,6 +565,10 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   }
   exit(0);
 
+  // size_t BUFF_SIZE = 64 * 1024 * 1024; // size in KB, --> 32GB
+  dram_4kb = 16;
+  dram_2mb = 32;
+  // size_t buff_size_per_level[2] = { (size_t)dram_4kb * 1024 * 1024, (size_t)dram_2mb * 1024 * 1024 };
   ChunkBuffer** cbuffs = new ChunkBuffer*[level];
   for(int i = 0; i < level; i++) {
     if(nchunks[i] > 0){

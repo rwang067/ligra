@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <asm/mman.h>
 #include <cassert>
+#include <omp.h>
 #include "parallel.h"
 #include "monitor.h"
 
@@ -200,9 +201,21 @@ public:
   cid_t evict_seq(){
     return __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
   }
+  cid_t evict_rand(){
+    return rand()%nmchunks;
+  }
   cid_t evict_colder(hot_t threshold){
     cid_t res_cid = __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
     while(hotness[res_cid]>threshold){
+      res_cid = __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
+    }
+    return res_cid;
+  }
+  cid_t evict_colder_decay(hot_t threshold){
+    cid_t res_cid = __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
+    while(hotness[res_cid]>threshold){
+      hotsum -= hotness[res_cid]/2;
+      hotness[res_cid] /= 2;
       res_cid = __sync_fetch_and_add(&cur_mcid, 1)%nmchunks;
     }
     return res_cid;
@@ -245,7 +258,9 @@ public:
         lock(chunk_lock[cid]);
         if(cmap[cid] == nmchunks) {  
           cid_t mcid = evict_seq();
+          // cid_t mcid = evict_rand();
           // cid_t mcid = evict_colder(hotsum/nmchunks);
+          // cid_t mcid = evict_colder_decay(hotsum/nmchunks*2);
           cid_t mmcid = mcmap[mcid];
           if(mmcid != nchunks){
             free_chunk(mmcid, mcid);

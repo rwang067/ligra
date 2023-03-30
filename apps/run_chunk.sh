@@ -212,7 +212,7 @@ if $DEBUG; then
 
     # ./testNebrs -b -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Kron29/kron29
     # ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/wr/case4kb/Kron29/kron29
-    ./BFS -b -r 310059974 -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Kron29/kron29
+    ./Components -b -m -chunk -rounds 1 /mnt/nvme2/wr/case2mb/Kron29/kron29
 
     # commandargs="./BFS -b -r 26737282 -chunk -rounds 1 /mnt/nvme2/zorax/case4kb/Friendster/friendster"
     # filename="friendster_chunk4kb"
