@@ -547,10 +547,11 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   for(int i = 0; i < level; i++) {
     printf("buff_size_per_level[%d] = %lu\n", i, buff_size_per_level[i]);
   }
-  
+
   cout << "sizeof(vertex) = " << sizeof(vertex) << endl;
   cout << "sizeof(uintT) = " << sizeof(uintT) << endl;
   cout << "sizeof(uintE) = " << sizeof(uintE) << endl;
+
   cout << "max_buff_size = " << max_buff_size / 1024 / 1024 / 1024 << endl;
   cout << "total_buff_size = " << total_buff_size / 1024 / 1024 / 1024 << endl;
 
@@ -563,7 +564,6 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
   for(int i = 0; i < level; i++) {
     printf("buff_size_per_level[%d] = %lu\n", i, buff_size_per_level[i]);
   }
-  exit(0);
 
   // size_t BUFF_SIZE = 64 * 1024 * 1024; // size in KB, --> 32GB
   dram_4kb = 16;

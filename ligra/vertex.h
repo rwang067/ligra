@@ -335,8 +335,10 @@ struct asymmetricVertex {
 #else
   intE* inNeighbors, *outNeighbors;
 #endif
-  uintT outDegree;
-  uintT inDegree;
+  // uintT outDegree;
+  // uintT inDegree;
+  uint64_t outDegree:32;
+  uint64_t inDegree:32;
   void del() {free(inNeighbors); free(outNeighbors);}
 #ifndef WEIGHTED
 asymmetricVertex(uintE* iN, uintE* oN, uintT id, uintT od)
@@ -392,7 +394,13 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
   uintT getOutDegree() const { return outDegree; }
   void setInDegree(uintT _d) { inDegree = _d; }
   void setOutDegree(uintT _d) { outDegree = _d; }
-  void flipEdges() { swap(inNeighbors,outNeighbors); swap(inDegree,outDegree); }
+  void flipEdges() { swap(inNeighbors,outNeighbors); 
+    // swap(inDegree,outDegree); 
+    uint32_t temp = inDegree;
+    inDegree = outDegree;
+    outDegree = temp;
+    
+  }
 
   template <class VS, class F, class G>
   inline void decodeInNghBreakEarly(long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
