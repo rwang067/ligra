@@ -109,6 +109,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long round = 0;
   while(!Frontier.isEmpty()){ //first phase
     round++;
+#ifdef DEBUG_EN
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#endif
     vertexSubset output = edgeMap(GA, Frontier, BC_F(NumPaths,Visited));
     vertexMap(output, BC_Vertex_F(Visited)); //mark visited
     Levels.push_back(output); //save frontier onto Levels
@@ -131,6 +134,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
   //tranpose graph
   GA.transpose();
   for(long r=round-2;r>=0;r--) { //backwards phase
+#ifdef DEBUG_EN
+    std::cout << "round = " << r << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#endif
     edgeMap(GA, Frontier, BC_Back_F(Dependencies,Visited), -1, no_output);
     Frontier.del();
     Frontier = Levels[r]; //gets frontier from Levels array

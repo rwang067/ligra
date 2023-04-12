@@ -92,6 +92,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   intE round = 0;
   while(!Frontier.isEmpty()){
+#ifdef DEBUG_EN
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#endif
     round++;
     vertexMap(Frontier, Radii_Vertex_F(Visited,NextVisited));
     vertexSubset output = edgeMap(GA,Frontier,Radii_F(Visited,NextVisited,radii,round));

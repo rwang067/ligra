@@ -494,6 +494,7 @@ int parallel_main(int argc, char* argv[]) {
   bool chunk = P.getOptionValue("-chunk");
   bool debug = P.getOptionValue("-debug");
   long rounds = P.getOptionLongValue("-rounds",3);
+  long buffer = P.getOptionLongValue("-buffer",0);
   long dram_4kb = P.getOptionLongValue("-d4kb",16);
   long dram_2mb = P.getOptionLongValue("-d2mb",16);
 
@@ -555,8 +556,11 @@ int parallel_main(int argc, char* argv[]) {
       G.del();
     } else {
 #ifndef HYPER
+      startTime();
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk,debug,dram_4kb,dram_2mb); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk,debug,buffer); //asymmetric graph
+      double time = nextTime("Preload time");
+      reportTimeToFile(time);
       // graph<asymmetricVertex> G1 =
       //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case4kb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
       // graph<asymmetricVertex> G2 =

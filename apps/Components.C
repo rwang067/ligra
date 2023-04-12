@@ -62,7 +62,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
   uint32_t level = 0;
   while(!Frontier.isEmpty()){ //iterate until IDS converge
     vertexMap(Frontier,CC_Vertex_F(IDs,prevIDs));
-    std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#ifdef DEBUG_EN
+  std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#endif
     vertexSubset output = edgeMap(GA, Frontier, CC_F(IDs,prevIDs));
     Frontier.del();
     Frontier = output;

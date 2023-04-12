@@ -148,18 +148,27 @@ graph(vertex* _V, long _n, long _m, Deletable* _D, long _level, long* _end_deg, 
       neighbors = (uintE*) v->getInNeighbors();
     }
   #ifdef CHUNK
-    if(d > 2 && d <= end_deg[chunk_level-1]){ 
+    if(d > 2 && d <= end_deg[chunk_level-1]) {
       uint64_t r = (uint64_t)neighbors;
       uint32_t cid = r >> 32;
       uint32_t coff = r & 0xFFFFFFFF;
-      // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
-      if(chunk_level > 0 && d <= end_deg[0])
-        return cbuffs[0]->get_nebrs_from_mchunk(cid, coff, d);
-      if(chunk_level > 1 && d <= end_deg[1])
-        return cbuffs[1]->get_nebrs_from_mchunk(cid, coff, d);
-      if(chunk_level > 2 && d <= end_deg[2])
-        return cbuffs[2]->get_nebrs_from_mchunk(cid, coff, d);
+      for (int i = 0; i < chunk_level; ++i) {
+        if (d <= end_deg[i]) return cbuffs[i]->get_nebrs_from_mchunk(cid, coff, d);
+      }
     }
+    // if(d > 2 && d <= end_deg[chunk_level-1]){ 
+    //   uint64_t r = (uint64_t)neighbors;
+    //   uint32_t cid = r >> 32;
+    //   uint32_t coff = r & 0xFFFFFFFF;
+    //   // cout << "r = " << r << ", cid = " << cid << ", coff = " << coff << endl;
+
+    //   if(chunk_level > 0 && d <= end_deg[0])
+    //     return cbuffs[0]->get_nebrs_from_mchunk(cid, coff, d);
+    //   if(chunk_level > 1 && d <= end_deg[1])
+    //     return cbuffs[1]->get_nebrs_from_mchunk(cid, coff, d);
+    //   if(chunk_level > 2 && d <= end_deg[2])
+    //     return cbuffs[2]->get_nebrs_from_mchunk(cid, coff, d);
+    // }
 
     // if(d > 2 && d<=1022){ 
     //   uint64_t r = (uint64_t)neighbors;

@@ -68,7 +68,7 @@ struct PR_Vertex_Reset {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long maxIters = P.getOptionLongValue("-maxiters",100);
+  long maxIters = P.getOptionLongValue("-maxiters",10);
   const intE n = GA.n;
   const double damping = 0.85, epsilon = 0.0000001;
   
@@ -91,7 +91,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
       p_curr[i] = fabs(p_curr[i]-p_next[i]);
       }}
     double L1_norm = sequence::plusReduce(p_curr,n);
+#ifdef DEBUG_EN
     std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm << std::endl;
+#endif
     if(L1_norm < epsilon) break;
     //reset p_curr
     vertexMap(Frontier,PR_Vertex_Reset(p_curr));

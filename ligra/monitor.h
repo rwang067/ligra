@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define PROFILE_EN
+// #define PROFILE_EN
+// #define DEBUG_EN
 
 class profiler_t {
 public:

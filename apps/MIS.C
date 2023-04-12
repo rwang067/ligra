@@ -116,6 +116,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long round = 0;
   vertexSubset Frontier(n, frontier_data);
   while (!Frontier.isEmpty()) {
+#ifdef DEBUG_EN
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#endif
     edgeMap(GA, Frontier, MIS_Update(flags), -1, no_output);
     vertexSubset output = vertexFilter(Frontier, MIS_Filter(flags));
     Frontier.del();
