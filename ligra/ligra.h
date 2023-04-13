@@ -554,5 +554,8 @@ int parallel_main(int argc, char* argv[]) {
       G.del();
     }
   }
+#ifdef PROFILE_EN
+  profiler.print_page_miss_ratio();
+#endif
 }
 #endif
