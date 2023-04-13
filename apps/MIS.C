@@ -38,7 +38,7 @@ enum {UNDECIDED,CONDITIONALLY_IN,OUT,IN};
 //Uncomment the following line to enable checking for
 //correctness. Currently the checker does not work with Ligra+.
 
-//#define CHECK 1
+#define CHECK 1
 
 #ifdef CHECK
 template<class vertex>
@@ -102,7 +102,12 @@ struct MIS_Filter {
 //Takes a symmetric graph as input; priority of a vertex is its ID.
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
+  setWorkers(96);
   const intE n = GA.n;
+
+  std::cout << "=======MIS=======" << std::endl;
+  startTime();
+  
   bool checkCorrectness = P.getOptionValue("-checkCorrectness");
 
   //flags array: UNDECIDED means "undecided", CONDITIONALLY_IN means
@@ -116,6 +121,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long round = 0;
   vertexSubset Frontier(n, frontier_data);
   while (!Frontier.isEmpty()) {
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
     edgeMap(GA, Frontier, MIS_Update(flags), -1, no_output);
     vertexSubset output = vertexFilter(Frontier, MIS_Filter(flags));
     Frontier.del();
@@ -130,4 +136,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
 #endif
   free(flags);
   Frontier.del();
+  double time = nextTime("Running time");
+  reportTimeToFile(time);
+  reportEnd();
 }

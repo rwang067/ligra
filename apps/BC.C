@@ -91,8 +91,11 @@ struct BC_Back_Vertex_F {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long start = P.getOptionLongValue("-r",0);
+  setWorkers(96);
   long n = GA.n;
+  std::cout << "=======BC=======" << std::endl;
+  startTime();
+  long start = P.getOptionLongValue("-r",0);
 
   fType* NumPaths = newA(fType,n);
   {parallel_for(long i=0;i<n;i++) NumPaths[i] = 0.0;}
@@ -109,6 +112,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long round = 0;
   while(!Frontier.isEmpty()){ //first phase
     round++;
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
     vertexSubset output = edgeMap(GA, Frontier, BC_F(NumPaths,Visited));
     vertexMap(output, BC_Vertex_F(Visited)); //mark visited
     Levels.push_back(output); //save frontier onto Levels
@@ -131,6 +135,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   //tranpose graph
   GA.transpose();
   for(long r=round-2;r>=0;r--) { //backwards phase
+    std::cout << "round = " << r << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
     edgeMap(GA, Frontier, BC_Back_F(Dependencies,Visited), -1, no_output);
     Frontier.del();
     Frontier = Levels[r]; //gets frontier from Levels array
@@ -147,4 +152,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
   free(inverseNumPaths);
   free(Visited);
   free(Dependencies);
+
+  double time = nextTime("Running time");
+  reportTimeToFile(time);
+  reportEnd();
 }

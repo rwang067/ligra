@@ -71,7 +71,10 @@ struct Radii_Vertex_F {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
+  setWorkers(96);
   long n = GA.n;
+  std::cout << "=======Radii=======" << std::endl;
+  startTime();
   intE* radii = newA(intE,n);
   long* Visited = newA(long,n), *NextVisited = newA(long,n);
   {parallel_for(long i=0;i<n;i++) {
@@ -92,11 +95,15 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   intE round = 0;
   while(!Frontier.isEmpty()){
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
     round++;
     vertexMap(Frontier, Radii_Vertex_F(Visited,NextVisited));
     vertexSubset output = edgeMap(GA,Frontier,Radii_F(Visited,NextVisited,radii,round));
     Frontier.del();
     Frontier = output;
   }
-  free(Visited); free(NextVisited); Frontier.del(); free(radii); 
+  free(Visited); free(NextVisited); Frontier.del(); free(radii);
+  double time = nextTime("Running time");
+  reportTimeToFile(time);
+  reportEnd(); 
 }
