@@ -491,15 +491,18 @@ int parallel_main(int argc, char* argv[]) {
   bool compressed = P.getOptionValue("-c");
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
+  long job = P.getOptionLongValue("-j",0);
+  long nthreads = P.getOptionLongValue("-t",96);
   bool chunk = P.getOptionValue("-chunk");
+  bool update = P.getOptionValue("-update");
   bool debug = P.getOptionValue("-debug");
-  long rounds = P.getOptionLongValue("-rounds",3);
+  long rounds = P.getOptionLongValue("-rounds",1);
   long buffer = P.getOptionLongValue("-buffer",0);
   long dram_4kb = P.getOptionLongValue("-d4kb",16);
   long dram_2mb = P.getOptionLongValue("-d2mb",16);
 
   reportInit();
-  reportTitle(argv[0], iFile);
+  reportTitle(argv[0], iFile, buffer);
 
   if (compressed) {
     if (symmetric) {
@@ -558,7 +561,7 @@ int parallel_main(int argc, char* argv[]) {
 #ifndef HYPER
       startTime();
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk,debug,buffer); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer); //asymmetric graph
       double time = nextTime("Preload time");
       reportTimeToFile(time);
       // graph<asymmetricVertex> G1 =
@@ -571,7 +574,7 @@ int parallel_main(int argc, char* argv[]) {
 #endif
       // Compute(G,P);
       // if(G.transposed) G.transpose();
-      setWorkers(96);
+      setWorkers(nthreads);
       for(int r=0;r<rounds;r++) {
         startTime();
         Compute(G,P);

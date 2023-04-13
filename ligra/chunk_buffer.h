@@ -69,9 +69,12 @@ private:
   cid_t loaded_chunk_count, freed_chunk_count;
   size_t space_waste;
 
+  long job;
+  bool update;
+
 public:
-  ChunkBuffer(const char* filename, size_t _chunk_size, cid_t _nchunks, cid_t _nmchunks)
-  :chunk_size(_chunk_size), nchunks(_nchunks), nmchunks(_nmchunks) {
+  ChunkBuffer(const char* filename, size_t _chunk_size, cid_t _nchunks, cid_t _nmchunks, long job, bool update)
+  :chunk_size(_chunk_size), nchunks(_nchunks), nmchunks(_nmchunks), job(job), update(update) {
     // cfd = open(filename, O_RDONLY);// | O_DIRECT); //| O_NOATIME);
     cfd = open(filename, O_RDONLY | O_DIRECT | O_NOATIME);
     if(cfd == -1)
@@ -242,7 +245,7 @@ public:
 
   uintE* get_nebrs_from_mchunk(cid_t cid, uint32_t coff, uint32_t d){
     char* mchunk = get_mchunk(cid);
-    // update_mchunk_hot(cmap[cid], sizeof(uintE)*d);
+    if (update) update_mchunk_hot(cmap[cid], sizeof(uintE)*d);
     return (uintE*)(mchunk+coff);
   }
 
@@ -257,10 +260,28 @@ public:
         while(chunk_lock[cid]);
         lock(chunk_lock[cid]);
         if(cmap[cid] == nmchunks) {  
-          cid_t mcid = evict_seq();
-          // cid_t mcid = evict_rand();
-          // cid_t mcid = evict_colder(hotsum/nmchunks);
-          // cid_t mcid = evict_colder_decay(hotsum/nmchunks*2);
+          cid_t mcid;
+          switch (job)
+          {
+          case 0:
+            mcid = evict_seq();
+            break;
+          case 1:
+            mcid = evict_rand();
+            break;
+          case 2:
+            mcid = evict_colder(hotsum/nmchunks);
+            break;
+          case 3:
+            mcid = evict_colder_decay(hotsum/nmchunks*2);
+            break;
+          case 4:
+            mcid = evict_coldest();
+            break;
+          default:
+            std::cerr << "Error job = " << job << endl;
+            break;
+          }
           cid_t mmcid = mcmap[mcid];
           if(mmcid != nchunks){
             free_chunk(mmcid, mcid);

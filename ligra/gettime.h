@@ -33,8 +33,8 @@ std::ofstream _ofs;
 void reportInit() {
   _ofs.open(statistic_filename.c_str(), std::ofstream::out | std::ofstream::app );
 }
-void reportTitle(char* str, char* iFile) {
-  _ofs << "[" << str << "], [" << iFile << "]:" ;
+void reportTitle(char* str, char* iFile, long buffer=0) {
+  _ofs << "[" << str << "],[" << iFile << "#buffer:" << buffer << "],";
 }
 void reportTimeToFile(double time) {
   _ofs << std::setprecision(3) << time <<  ",";

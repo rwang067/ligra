@@ -509,7 +509,8 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
 }
 
 template <class vertex>
-graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool isMmap, bool debug, long buffer) {
+graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool isMmap, bool debug, 
+                                          long buffer, long job, bool update) {
   string baseFile = iFile;
   string configFile = baseFile + ".config";
   string vertFile = baseFile + ".vertex";
@@ -572,7 +573,7 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
       long nmchunks = buff_size_per_level[i] / chunk_sz[i];
       cout << "BUFF_SIZE = " << buff_size_per_level[i] << ", chunk_sz = " << chunk_sz[i] << ", nmchunks = " << nmchunks << ", nchunks = " << nchunks[i] << endl;
       string adjChunkFile = adjChunkFiles + to_string(i);
-      cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks);
+      cbuffs[i] = new ChunkBuffer(adjChunkFile.c_str(),chunk_sz[i],nchunks[i],nchunks[i] <= nmchunks? nchunks[i]: nmchunks, job, update);
     } else {
       cbuffs[i] = 0;
     }
@@ -626,9 +627,10 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
 }
 
 template <class vertex>
-graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0, bool debug=0, long buffer=0) {
+graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, 
+                        long job=0, bool update=0, bool chunk=0, bool debug=0, long buffer=0) {
   if(binary){ 
-    if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug,buffer);
+    if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug,buffer,job,update);
     return readGraphFromBinary<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
