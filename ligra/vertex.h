@@ -1,6 +1,7 @@
 #ifndef VERTEX_H
 #define VERTEX_H
 #include "vertexSubset.h"
+#include "monitor.h"
 using namespace std;
 
 namespace decode_uncompressed {
@@ -324,6 +325,10 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
 
   template <class VS, class F, class G>
   inline void decodeInNghBreakEarly(long v_id, VS& vertexSubset, F &f, G &g, bool parallel = 0) {
+#ifdef PROFILE_EN
+  int tid = getWorkersID();
+  profiler.profile_get_chunk(tid);
+#endif
     decode_uncompressed::decodeInNghBreakEarly<asymmetricVertex, F, G, VS>(this, v_id, vertexSubset, f, g, parallel);
   }
 
@@ -334,6 +339,10 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
 
   template <class F, class G>
   inline void decodeOutNghSparse(long i, uintT o, F &f, G &g) {
+#ifdef PROFILE_EN
+  int tid = getWorkersID();
+  profiler.profile_get_chunk(tid);
+#endif
     decode_uncompressed::decodeOutNghSparse<asymmetricVertex, F>(this, i, o, f, g);
   }
 
