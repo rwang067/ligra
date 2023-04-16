@@ -14,5 +14,9 @@ apps/Components
 apps/KCore
 apps/PageRank
 apps/TestAll
-apps/perf.*
-
+apps/BC
+apps/MIS
+apps/Radii
+*.perf
+*.perf.old
+*.snoop
