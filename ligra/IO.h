@@ -386,79 +386,51 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
     }}
 
   if(!isSymmetric) {
-    uintT* tOffsets = newA(uintT,n);
-    {parallel_for(long i=0;i<n;i++) tOffsets[i] = INT_T_MAX;}
+    char *suffix = (char*) ".radj"; 
+    char radjFile[strlen(iFile)+strlen(suffix)+1];
+    *radjFile = 0;
+    strcat(radjFile, iFile);
+    strcat(radjFile, suffix);
+    suffix = (char*) ".ridx"; 
+    char ridxFile[strlen(iFile)+strlen(suffix)+1];
+    *ridxFile = 0;
+    strcat(ridxFile, iFile);
+    strcat(ridxFile, suffix);
+
 #ifndef WEIGHTED
-    intPair* temp = newA(intPair,m);
-#else
-    intTriple* temp = newA(intTriple,m);
-#endif
-    {parallel_for(intT i=0;i<n;i++){
-      uintT o = offsets[i];
-      for(uintT j=0;j<v[i].getOutDegree();j++){
-#ifndef WEIGHTED
-	temp[o+j] = make_pair(v[i].getOutNeighbor(j),i);
-#else
-	temp[o+j] = make_pair(v[i].getOutNeighbor(j),make_pair(i,v[i].getOutWeight(j)));
-#endif
-      }
-      }}
-    free(offsets);
-#ifndef WEIGHTED
-#ifndef LOWMEM
-    intSort::iSort(temp,m,n+1,getFirst<uintE>());
-#else
-    quickSort(temp,m,pairFirstCmp<uintE>());
-#endif
-#else
-#ifndef LOWMEM
-    intSort::iSort(temp,m,n+1,getFirst<intPair>());
-#else
-    quickSort(temp,m,pairFirstCmp<intPair>());
-#endif
-#endif
-    tOffsets[temp[0].first] = 0;
-#ifndef WEIGHTED
-    uintE* inEdges = newA(uintE,m);
-    inEdges[0] = temp[0].second;
+    uintE* inEdges;
 #else
     intE* inEdges = newA(intE,2*m);
-    inEdges[0] = temp[0].second.first;
-    inEdges[1] = temp[0].second.second;
 #endif
-    {parallel_for(long i=1;i<m;i++) {
-#ifndef WEIGHTED
-      inEdges[i] = temp[i].second;
-#else
-      inEdges[2*i] = temp[i].second.first;
-      inEdges[2*i+1] = temp[i].second.second;
-#endif
-      if(temp[i].first != temp[i-1].first) {
-	tOffsets[temp[i].first] = i;
-      }
-      }}
-    free(temp);
-    //fill in offsets of degree 0 vertices by taking closest non-zero
-    //offset to the right
-    sequence::scanIBack(tOffsets,tOffsets,n,minF<uintT>(),(uintT)m);
+    ifstream in4(radjFile,ifstream::in | ios::binary);
+    in4.seekg(0, ios::end);
+    size = in4.tellg();
+    in4.seekg(0);
+    inEdges = (uintE*) malloc(size);
+    in4.read((char*)inEdges, size);
+    in4.close();
+
+    ifstream in5(ridxFile,ifstream::in | ios::binary); //stored as longs
+    in5.seekg(0, ios::end);
+    size = in5.tellg();
+    in5.seekg(0);
+    if(n != size/sizeof(intT)) { 
+      cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+      cout << "ridx: File size wrong\n"; abort(); 
+    }
+    in5.read((char*)offsets,size);
+    in5.close();
+
     {parallel_for(long i=0;i<n;i++){
-      uintT o = tOffsets[i];
-      uintT l = ((i == n-1) ? m : tOffsets[i+1])-tOffsets[i];
+      uintT o = offsets[i];
+      uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setInDegree(l);
 #ifndef WEIGHTED
       v[i].setInNeighbors((uintE*)inEdges+o);
 #else
       v[i].setInNeighbors((intE*)(inEdges+2*o));
 #endif
-      }}
-    free(tOffsets);
-#ifndef WEIGHTED
-    Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges,inEdges);
-    return graph<vertex>(v,n,m,mem);
-#else
-    Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights,inEdges);
-    return graph<vertex>(v,n,m,mem);
-#endif
+    }}
   }
   free(offsets);
 #ifndef WEIGHTED
