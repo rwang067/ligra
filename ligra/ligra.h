@@ -474,6 +474,7 @@ int parallel_main(int argc, char* argv[]) {
   char* iFile = P.getArgument(0);
   bool symmetric = P.getOptionValue("-s");
   bool compressed = P.getOptionValue("-c");
+  bool chunk = P.getOptionValue("-chunk");
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
   //cout << "mmap = " << mmap << endl;
@@ -538,7 +539,7 @@ int parallel_main(int argc, char* argv[]) {
     } else {
 #ifndef HYPER
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk); //asymmetric graph
 #else
       hypergraph<asymmetricVertex> G =
         readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph

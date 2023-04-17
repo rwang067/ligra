@@ -298,10 +298,22 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
 #endif
 : inNeighbors(iN), outNeighbors(oN), inDegree(id), outDegree(od) {}
 #ifndef WEIGHTED
-  uintE* getInNeighbors () { return inNeighbors; }
-  const uintE* getInNeighbors () const { return inNeighbors; }
-  uintE* getOutNeighbors () { return outNeighbors; }
-  const uintE* getOutNeighbors () const { return outNeighbors; }
+  uintE* getInNeighbors () { 
+    if(inDegree<=2) return (uintE*)(&inNeighbors);
+    return inNeighbors; 
+  }
+  const uintE* getInNeighbors () const { 
+    if(inDegree<=2) return (uintE*)(&inNeighbors);
+    return inNeighbors; 
+  }
+  uintE* getOutNeighbors () { 
+    if(outDegree<=2) return (uintE*)(&outNeighbors);
+    return outNeighbors; 
+  }
+  const uintE* getOutNeighbors () const { 
+    if(outDegree<=2) return (uintE*)(&outNeighbors);
+    return outNeighbors; 
+  }
   uintE getInNeighbor(uintT j) const { return inNeighbors[j]; }
   uintE getOutNeighbor(uintT j) const { return outNeighbors[j]; }
   void setInNeighbor(uintT j, uintE ngh) { inNeighbors[j] = ngh; }

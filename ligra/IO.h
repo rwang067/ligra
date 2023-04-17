@@ -37,6 +37,8 @@
 #include "quickSort.h"
 #include "utils.h"
 #include "graph.h"
+#include "gettime.h"
+#include <cassert>
 using namespace std;
 
 typedef pair<uintE,uintE> intPair;
@@ -315,6 +317,193 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric, bool mmap) {
   }
 }
 
+#define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)
+template <typename T>
+void preada(int f, T * tbuf, size_t nbytes, size_t off = 0) {
+    size_t nread = 0;
+    T * buf = (T*)tbuf;
+    while(nread<nbytes) {
+        ssize_t a = pread(f, buf, nbytes - nread, off + nread);
+        if (a == (-1)) {
+            std::cout << "Error, could not read: " << strerror(errno) << "; file-desc: " << f << std::endl;
+            std::cout << "Pread arguments: " << f << " tbuf: " << tbuf << " nbytes: " << nbytes << " off: " << off << std::endl;
+            exit(-1);
+        }
+        buf += a/sizeof(T);
+        nread += a;
+    }
+    assert(nread <= nbytes);
+}
+
+struct pvertex_t {
+    uintE out_deg;
+    uint64_t residue;
+}; 
+char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
+  char* addr = 0;
+  if(!isMmap){
+    ifstream in(filename,ifstream::in | ios::binary); //stored as uints
+    in.seekg(0, ios::end);
+    long size1 = in.tellg();
+    in.seekg(0);
+    if(size1 != size){ 
+      cout << size1 << " " << size << std::endl;
+      cout << "Filename size wrong for :" << filename << std::endl; 
+      cout << "Specified size = " << size << ", read size = " << size1 << std::endl;
+      abort(); 
+    }
+    addr = (char *) malloc(size);
+    in.read(addr,size);
+    in.close();
+  } else {
+    int fd = open(filename, O_RDWR|O_CREAT, 00777);
+    if(fd == -1){
+      std::cout << "Could not open file for :" << filename << " error: " << strerror(errno) << std::endl;
+      exit(1);
+    }
+    if(ftruncate(fd, size) == -1){
+      std::cout << "Could not ftruncate file for :" << filename << " error: " << strerror(errno) << std::endl;
+      close(fd);
+      exit(1);
+    }
+    addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+    // // mmap with 2MB huge pages
+    // addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_HUGETLB|MAP_HUGE_2MB, 0, 0);
+    if(addr == MAP_FAILED) {	
+      std::cout << "Could not mmap file for :" << filename << " error: " << strerror(errno) << std::endl;
+      close(fd);
+      exit(1);
+    } else {
+      std::cout << "mmap succeeded, size = " << size << ",filename = " << filename << std::endl;
+    }
+    preada(fd, addr, size, 0);
+  }
+  return addr;
+}
+
+uint32_t getLevel(uintE d, long level, long* end_deg) {
+  for (uint32_t i = 0; i < level; i++) {
+    if (d <= end_deg[i]) {
+      return i;
+    }
+  }
+  perror("Illegal degree");
+  exit(1);
+}
+
+template <class vertex>
+graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric) {
+  string baseFile = iFile;
+  string configFile = baseFile + ".config";
+  string vertFile = baseFile + ".vertex";
+  string adjSvFile = baseFile + ".adj.sv";
+  string adjChunkFiles = baseFile + ".adj.chunk";
+
+  timer t;
+  t.start();
+
+  bool debug = 1;
+  bool isMmap = 0;
+
+  long n, m, level, sv_size;
+  long *end_deg, *chunk_sz, *nchunks, *level_sz;
+
+  ifstream in(configFile.c_str(), ifstream::in);
+  in >> n >> m >> level >> sv_size;
+  end_deg = new long[level];
+  chunk_sz = new long[level];
+  nchunks = new long[level];
+  level_sz = new long[level];
+
+  for(int i = 0; i < level; i++) {
+    in >> end_deg[i] >> chunk_sz[i] >> nchunks[i];
+    level_sz[i] = nchunks[i] * chunk_sz[i];
+  }
+  in.close();
+
+  if(debug){
+    cout << "ConfigFile: " << configFile << endl; 
+    cout << "n = " << n << ", m = " << m << ", level = " << level << ", sv_size = " << sv_size << endl;
+    for(int i = 0; i < level; i++) {
+      cout << "end_deg[" << i << "] = " << end_deg[i] << ", chunk_sz[" << i << "] = " << chunk_sz[i] << ", nchunks[" << i << "] = " << nchunks[i] << ", level_sz[" << i << "] = " << level_sz[i] << endl;
+    }
+  }
+
+  char** cbuffs = new char*[level];
+  for(int i = 0; i < level; i++) {
+    string adjChunkFile = adjChunkFiles + to_string(i);
+    cbuffs[i] = getFileData(adjChunkFile.c_str(), level_sz[i], 0); // -m for read file by mmap
+    t.reportNext("Load Chunk_" + to_string(i) + " Adjlist Time");
+  }
+
+  char* edges_sv = 0;
+  if(sv_size > 0) edges_sv = getFileData(adjSvFile.c_str(), sv_size, 0); // -m for read file by mmap
+  t.reportNext("Load Supervertex Adjlist Time");
+  pvertex_t* offsets = (pvertex_t*) getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
+  t.reportNext("Load MetaData Time");
+
+  vertex* v = newA(vertex,n);
+  // setWorkers(16);
+  {parallel_for(long i=0;i<n;i++) {
+    uintE d = offsets[i].out_deg;
+    uint64_t r = offsets[i].residue;
+      // cout << i << " " << d << " " << r << endl; // correct
+      v[i].setOutDegree(d);
+      if(d==0){
+        v[i].setOutNeighbors(0);
+      } else if(d<=2){
+        v[i].setOutNeighbors((uintE*)(r));
+      } else if(d<=end_deg[level-1]){
+        uint32_t cid = r >> 32;
+        uint32_t coff = r & 0xFFFFFFFF;
+        uint32_t lv = getLevel(d, level, end_deg);
+        uint64_t offset = cid * chunk_sz[lv] + coff;
+        uintE* nebrs = (uintE*)(cbuffs[lv]+offset);
+        v[i].setOutNeighbors(nebrs);
+      } else{
+        uintE* nebrs = (uintE*)(edges_sv+r);//+8); // 8B for pblk header (max_count/count) in HG, removed
+        v[i].setOutNeighbors(nebrs);
+      }
+    }}
+  t.reportNext("Load OutNeighbors Time");
+  if(!isSymmetric) {
+    {parallel_for(long i=0;i<n;i++) {
+    uintE d = offsets[n+i].out_deg;
+    uint64_t r = offsets[n+i].residue;
+      // cout << i << " " << d << " " << r << endl; // correct
+      v[i].setInDegree(d);
+      if(d==0){
+        v[i].setInNeighbors(0);
+      } else if(d<=2){
+        v[i].setInNeighbors((uintE*)(r));
+      } else if(d<=end_deg[level-1]){
+        uint32_t cid = r >> 32;
+        uint32_t coff = r & 0xFFFFFFFF;
+        uint32_t lv = getLevel(d, level, end_deg);
+        uint64_t offset = cid * chunk_sz[lv] + coff;
+        uintE* nebrs = (uintE*)(cbuffs[lv]+offset);
+        v[i].setInNeighbors(nebrs);
+      } else{
+        uintE* nebrs = (uintE*)(edges_sv+r);//+8); // 8B for pblk header (max_count/count) in HG, removed
+        v[i].setInNeighbors(nebrs);
+      }
+    }}}
+  free(offsets);
+  t.reportNext("Load InNeighbors Time");
+
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,0,edges_sv);
+  t.stop();
+  t.reportTotal("Read Graph Time");
+  cout << "readGraphFromBinaryChunkBuff end.\n" << endl;
+
+  delete[] end_deg;
+  delete[] chunk_sz;
+  delete[] nchunks;
+  delete[] level_sz;
+  
+  return graph<vertex>(v,n,m,mem);
+}
+
 template <class vertex>
 graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
   char* config = (char*) ".config";
@@ -443,8 +632,11 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 }
 
 template <class vertex>
-graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap) {
-  if(binary) return readGraphFromBinary<vertex>(iFile,symmetric);
+graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0) {
+  if (binary) {
+    if (chunk) return readGraphFromChunk<vertex>(iFile,symmetric);
+    return readGraphFromBinary<vertex>(iFile,symmetric);
+  }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
 }
 
