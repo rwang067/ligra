@@ -73,10 +73,8 @@ struct Deg_AtLeast_K {
 // 3) stop once no vertices are removed. Vertices remaining are in the k-core.
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-    setWorkers(96);
     const long n = GA.n;
     std::cout << "=======KCore=======" << std::endl;
-    startTime();
     bool* active = newA(bool,n);
     {parallel_for(long i=0;i<n;i++) active[i] = 1;}
     vertexSubset Frontier(n, n, active);
@@ -104,12 +102,15 @@ void Compute(graph<vertex>& GA, commandLine P) {
     toRemove.del();
         }
       }
-      std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+#ifdef DEBUG_EN
+      size_t vm, rss;
+      pid_t pid = getpid();
+      process_mem_usage(pid, vm, rss);
+      std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros()
+                << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+#endif
       if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
     }
     cout << "largestCore was " << largestCore << endl;
     Frontier.del(); free(coreNumbers); free(Degrees);
-    double time = nextTime("Running time");
-    reportTimeToFile(time);
-    reportEnd();
 }

@@ -78,7 +78,6 @@ struct initF { //for vertexMap to initial counts and sort neighbors for merging
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  setWorkers(96);
   uintT n = GA.n;
   std::cout << "=======Triangle=======" << std::endl;
   startTime();
@@ -92,7 +91,4 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long count = sequence::plusReduce(counts,n);
   cout << "triangle count = " << count << endl;
   Frontier.del(); free(counts);
-  double time = nextTime("Running time");
-  reportTimeToFile(time);
-  reportEnd();
 }

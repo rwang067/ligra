@@ -51,10 +51,8 @@ struct CC_Vertex_F {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-    setWorkers(96);
     long n = GA.n;
     std::cout << "=======CC=======" << std::endl;
-    startTime();
     uintE* IDs = newA(uintE,n), *prevIDs = newA(uintE,n);
     {parallel_for(long i=0;i<n;i++) IDs[i] = i;} //initialize unique IDs
     bool* fron = newA(bool,n);
@@ -62,14 +60,17 @@ void Compute(graph<vertex>& GA, commandLine P) {
     vertexSubset FrontierCC(n,n,fron); //initial frontier contains all vertices
     uint32_t level = 0;
     while(!FrontierCC.isEmpty()){ //iterate until IDS converge
-      std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << FrontierCC.numNonzeros() << std::endl;
+#ifdef DEBUG_EN
+      size_t vm, rss;
+      pid_t pid = getpid();
+      process_mem_usage(pid, vm, rss);
+      std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << FrontierCC.numNonzeros()
+                << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+#endif
       vertexMap(FrontierCC,CC_Vertex_F(IDs,prevIDs));
       vertexSubset output = edgeMap(GA, FrontierCC, CC_F(IDs,prevIDs));
       FrontierCC.del();
       FrontierCC = output;
     }
     FrontierCC.del(); free(IDs); free(prevIDs);
-    double time = nextTime("Running time");
-    reportTimeToFile(time);
-    reportEnd();
 }

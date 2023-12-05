@@ -68,10 +68,8 @@ struct PR_Vertex_Reset {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-    setWorkers(96);
     const intE n = GA.n;
     std::cout << "=======PageRank=======" << std::endl;
-    startTime();
     long maxIters = P.getOptionLongValue("-maxiters",10);
     const double damping = 0.85, epsilon = 0.0000001;
     double one_over_n = 1/(double)n;
@@ -91,14 +89,17 @@ void Compute(graph<vertex>& GA, commandLine P) {
         p_curr[i] = fabs(p_curr[i]-p_next[i]);
         }}
         double L1_norm = sequence::plusReduce(p_curr,n);
-        std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm << std::endl;
+#ifdef DEBUG_EN
+        size_t vm, rss;
+        pid_t pid = getpid();
+        process_mem_usage(pid, vm, rss);
+        std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm
+                  << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+#endif
         if(L1_norm < epsilon) break;
         //reset p_curr
         vertexMap(Frontier_PR,PR_Vertex_Reset(p_curr));
         swap(p_curr,p_next);
     }
     Frontier_PR.del(); free(p_curr); free(p_next);
-    double time = nextTime("Running time");
-    reportTimeToFile(time);
-    reportEnd();
 }

@@ -39,12 +39,8 @@ struct BFS_F {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-    setWorkers(96);
-    long n = GA.n;
-    std::cout << "=======BFS=======" << std::endl;
-    startTime();
     long start = P.getOptionLongValue("-r",0);
-    // long start = rounds == 4 ? P.getOptionLongValue("-r3",0) : (rounds == 3 ? P.getOptionLongValue("-r2",0) : P.getOptionLongValue("-r1",0));
+    long n = GA.n;
     //creates Parents array, initialized to all -1, except for start
     uintE* Parents = newA(uintE,n);
     parallel_for(long i=0;i<n;i++) Parents[i] = UINT_E_MAX;
@@ -52,14 +48,17 @@ void Compute(graph<vertex>& GA, commandLine P) {
     vertexSubset Frontier_BFS(n,start); //creates initial frontier
     uint32_t level = 0;
     while(!Frontier_BFS.isEmpty()){ //loop until frontier is empty
-      std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << Frontier_BFS.numNonzeros() << std::endl;
+#ifdef DEBUG_EN
+      size_t vm, rss;
+      pid_t pid = getpid();
+      process_mem_usage(pid, vm, rss);
+      std::cout << "level = " << level++ << ", number of activated vertices = " << Frontier_BFS.numNonzeros()
+                << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+#endif
       vertexSubset output = edgeMap(GA, Frontier_BFS, BFS_F(Parents));    
       Frontier_BFS.del();
       Frontier_BFS = output; //set new frontier
     } 
     Frontier_BFS.del();
     free(Parents);
-    double time = nextTime("Running time");
-    reportTimeToFile(time);
-    reportEnd();
 }

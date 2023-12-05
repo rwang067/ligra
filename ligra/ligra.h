@@ -43,6 +43,7 @@
 using namespace std;
 
 //*****START FRAMEWORK*****
+#define DEBUG_EN
 
 typedef uint32_t flags;
 const flags no_output = 1;
@@ -477,8 +478,9 @@ int parallel_main(int argc, char* argv[]) {
   bool chunk = P.getOptionValue("-chunk");
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
+  long nthreads = P.getOptionLongValue("-t",48);
   //cout << "mmap = " << mmap << endl;
-  long rounds = P.getOptionLongValue("-rounds",3);
+  long rounds = P.getOptionLongValue("-rounds",1);
 
   reportInit();
   reportTitle(argv[0], iFile);
@@ -538,23 +540,32 @@ int parallel_main(int argc, char* argv[]) {
       G.del();
     } else {
 #ifndef HYPER
+      pid_t pid = getpid();
+      vm_reporter reporter(pid);
+      startTime();
       graph<asymmetricVertex> G =
         readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,chunk); //asymmetric graph
+      double time = nextTime("Preload time");
+      reportTimeToFile(time);
+      reporter.reportNext("Preload space");
 #else
       hypergraph<asymmetricVertex> G =
         readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
 #endif
-      Compute(G,P);
+      // Compute(G,P);
       // if(G.transposed) G.transpose();
-      // for(int r=0;r<rounds;r++) {
-      //   startTime();
-      //   Compute(G,P);
-      //   nextTime("Running time");
-      //   if(G.transposed) G.transpose();
-      // }
+      setWorkers(nthreads);
+      for(int r=0;r<rounds;r++) {
+        startTime();
+        Compute(G,P);
+        double time = nextTime("Running time");
+        reportTimeToFile(time);
+        if(G.transposed) G.transpose();
+      }
       G.del();
     }
   }
+  reportEnd();
 #ifdef PROFILE_EN
   profiler.print_page_miss_ratio();
 #endif

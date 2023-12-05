@@ -27,7 +27,7 @@
 #include <iomanip>
 #include <iostream>
 
-std::string statistic_filename = "ligra_swap_query_time.csv";
+std::string statistic_filename = "../results/ligra_swap_query_time.csv";
 std::ofstream _ofs;
 
 void reportInit() {

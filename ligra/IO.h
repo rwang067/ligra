@@ -366,7 +366,8 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
       close(fd);
       exit(1);
     }
-    addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+    // addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+    addr = (char*)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
     // // mmap with 2MB huge pages
     // addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_HUGETLB|MAP_HUGE_2MB, 0, 0);
     if(addr == MAP_FAILED) {	
@@ -376,7 +377,18 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
     } else {
       std::cout << "mmap succeeded, size = " << size << ",filename = " << filename << std::endl;
     }
-    preada(fd, addr, size, 0);
+    // preada(fd, addr, size, 0);
+  }
+  return addr;
+}
+
+char* anonymousMmap(size_t size) {
+  char* addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+  if(addr == MAP_FAILED) {	
+    std::cout << "Could not mmap file for anonymous mmap, error: " << strerror(errno) << std::endl;
+    exit(1);
+  } else {
+    std::cout << "mmap succeeded, size = " << size << std::endl;
   }
   return addr;
 }
@@ -535,6 +547,7 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
   long m = size/sizeof(uint);
 #endif
   char* s = (char *) malloc(size);
+  
   in2.read(s,size);
   in2.close();
   uintE* edges = (uintE*) s;
@@ -632,10 +645,163 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 }
 
 template <class vertex>
+graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
+  char* config = (char*) ".config";
+  char* adj = (char*) ".adj";
+  char* idx = (char*) ".idx";
+  char configFile[strlen(iFile)+strlen(config)+1];
+  char adjFile[strlen(iFile)+strlen(adj)+1];
+  char idxFile[strlen(iFile)+strlen(idx)+1];
+  *configFile = *adjFile = *idxFile = '\0';
+  strcat(configFile,iFile);
+  strcat(adjFile,iFile);
+  strcat(idxFile,iFile);
+  strcat(configFile,config);
+  strcat(adjFile,adj);
+  strcat(idxFile,idx);
+
+  pid_t pid = getpid();
+  vm_reporter reporter(pid);
+  reporter.print("Start reading graph from binary file");
+
+  timer time;
+  time.start();
+
+  ifstream in(configFile, ifstream::in);
+  long n;
+  in >> n;
+  in.close();
+
+  time.reportNext("Load Config Time");
+  reporter.reportNext("Load Config Space");
+
+  ifstream in2(adjFile,ifstream::in | ios::binary); //stored as uints
+  in2.seekg(0, ios::end);
+  long size = in2.tellg();
+  in2.seekg(0);
+#ifdef WEIGHTED
+  long m = size/(2*sizeof(uint));
+#else
+  long m = size/sizeof(uint);
+#endif
+  in2.close();
+  time.reportNext("This shouldn't take long");
+  uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
+  time.reportNext("Load Adjlist Time");
+  reporter.reportNext("Load Adjlist Space");
+
+  ifstream in3(idxFile,ifstream::in | ios::binary); //stored as longs
+  in3.seekg(0, ios::end);
+  size = in3.tellg();
+  in3.seekg(0);
+  if(n+1 != size/sizeof(intT)) { 
+    cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+    cout << "File size wrong\n"; abort(); 
+  }
+
+  char* t = (char *) malloc(size);
+  in3.read(t,size);
+  in3.close();
+  uintT* offsets = (uintT*) t;
+  time.reportNext("Load Index Time");
+  reporter.reportNext("Load Index Space");
+
+  vertex* v = newA(vertex,n);
+  time.reportNext("Allocate vertex time");
+  reporter.reportNext("Allocate vertex space");
+#ifdef WEIGHTED
+  intE* edgesAndWeights = newA(intE,2*m);
+  {parallel_for(long i=0;i<m;i++) {
+    edgesAndWeights[2*i] = edges[i];
+    edgesAndWeights[2*i+1] = edges[i+m];
+    }}
+  //free(edges);
+#endif
+  {parallel_for(long i=0;i<n;i++) {
+    uintT o = offsets[i];
+    uintT l = offsets[i+1]-offsets[i];
+    // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
+      v[i].setOutDegree(l);
+#ifndef WEIGHTED
+      v[i].setOutNeighbors((uintE*)edges+o);
+#else
+      v[i].setOutNeighbors(edgesAndWeights+2*o);
+#endif
+    }}
+  time.reportNext("Load OutNeighbors Time");
+  reporter.reportNext("Load OutNeighbors Space");
+
+  if(!isSymmetric) {
+    char *suffix = (char*) ".radj"; 
+    char radjFile[strlen(iFile)+strlen(suffix)+1];
+    *radjFile = 0;
+    strcat(radjFile, iFile);
+    strcat(radjFile, suffix);
+    suffix = (char*) ".ridx"; 
+    char ridxFile[strlen(iFile)+strlen(suffix)+1];
+    *ridxFile = 0;
+    strcat(ridxFile, iFile);
+    strcat(ridxFile, suffix);
+
+#ifndef WEIGHTED
+    uintE* inEdges;
+#else
+    intE* inEdges = newA(intE,2*m);
+#endif
+    ifstream in4(radjFile,ifstream::in | ios::binary);
+    in4.seekg(0, ios::end);
+    size = in4.tellg();
+    in4.seekg(0);
+    in4.close();
+    time.reportNext("This shouldn't take long");
+
+    inEdges = (uintE*) getFileData(radjFile, size, 1); // -m for read file by mmap
+    time.reportNext("Load InEdges Time");
+    reporter.reportNext("Load InEdges Space");
+
+    ifstream in5(ridxFile,ifstream::in | ios::binary); //stored as longs
+    in5.seekg(0, ios::end);
+    size = in5.tellg();
+    in5.seekg(0);
+    if(n != size/sizeof(intT)) { 
+      cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+      cout << "ridx: File size wrong\n"; abort(); 
+    }
+    in5.read((char*)offsets,size);
+    in5.close();
+
+    time.reportNext("Load InIndex Time");
+    reporter.reportNext("Load InIndex Space");
+
+    {parallel_for(long i=0;i<n;i++){
+      uintT o = offsets[i];
+      uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
+      v[i].setInDegree(l);
+#ifndef WEIGHTED
+      v[i].setInNeighbors((uintE*)inEdges+o);
+#else
+      v[i].setInNeighbors((intE*)(inEdges+2*o));
+#endif
+    }}
+    time.reportNext("Load InNeighbors Time");
+    reporter.reportNext("Load InNeighbors Space");
+  }
+  free(offsets);
+#ifndef WEIGHTED
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
+  return graph<vertex>(v,n,m,mem);
+#else
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
+  return graph<vertex>(v,n,m,mem);
+#endif
+}
+
+template <class vertex>
 graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, bool chunk=0) {
   if (binary) {
     if (chunk) return readGraphFromChunk<vertex>(iFile,symmetric);
-    return readGraphFromBinary<vertex>(iFile,symmetric);
+    // return readGraphFromBinary<vertex>(iFile,symmetric);
+    return readGraphFromBinarymmap<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
 }

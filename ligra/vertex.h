@@ -183,7 +183,6 @@ namespace decode_uncompressed {
       return k;
     }
   }
-
 }
 
 struct symmetricVertex {

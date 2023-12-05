@@ -26,6 +26,8 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
 #include "parallel.h"
 using namespace std;
 
@@ -550,5 +552,84 @@ namespace pbbs {
     return a;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+#define KB      (1024)
+#define MB      (1024*KB)
+#define GB      (1024*MB)
+#define PAGE_SIZE          (4*KB)
+
+inline double B2GB(size_t x){
+    return (double)(x * 1.0 / GB);
+}
+
+void process_mem_usage(pid_t proc_id, size_t& vm_usage, size_t& resident_set)
+{
+   using std::ios_base;
+   using std::ifstream;
+   using std::string;
+
+   vm_usage     = 0;
+   resident_set = 0;
+
+   // 'file' stat seems to give the most reliable results
+   //
+   ifstream stat_stream("/proc/"+std::to_string(proc_id)+"/stat",ios_base::in);
+
+   // dummy vars for leading entries in stat that we don't care about
+   //
+   string pid, comm, state, ppid, pgrp, session, tty_nr;
+   string tpgid, flags, minflt, cminflt, majflt, cmajflt;
+   string utime, stime, cutime, cstime, priority, nice;
+   string O, itrealvalue, starttime;
+
+   // the two fields we want
+   //
+   unsigned long vsize;
+   long rss;
+
+   stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
+               >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
+               >> utime >> stime >> cutime >> cstime >> priority >> nice
+               >> O >> itrealvalue >> starttime >> vsize >> rss; // don't care about the rest
+
+   stat_stream.close();
+
+   long page_size = sysconf(_SC_PAGE_SIZE); // in case x86-64 is configured to use 2MB pages
+   vm_usage     = vsize;
+   resident_set = rss * page_size;
+}
+
+struct vm_reporter {
+  size_t vm_start;
+  size_t rss_start;
+  size_t vm_end;
+  size_t rss_end;
+  pid_t proc_id;
+
+  vm_reporter(pid_t _proc_id) : proc_id(_proc_id) {
+    process_mem_usage(proc_id, vm_start, rss_start);
+    vm_end = vm_start;
+    rss_end = rss_start;
+  }
+
+  void update() {
+    process_mem_usage(proc_id, vm_end, rss_end);
+  }
+  void print(std::string str) {
+    std::cout << str << " : ";
+    // print VM and RSS usage in GB
+    std::cout << "VM: " << B2GB(vm_end) << " GB; RSS: " << B2GB(rss_end) << " GB" << std::endl;
+  }
+  void print_delta(std::string str) {
+    std::cout << str << " : ";
+    // print VM and RSS usage in GB
+    std::cout << "VM: " << B2GB(vm_end-vm_start) << " GB; RSS: " << B2GB(rss_end-rss_start) << " GB" << std::endl;
+  }
+  void reportNext(std::string str) {
+    update();
+    print(str);
+  }
+};
 
 #endif
