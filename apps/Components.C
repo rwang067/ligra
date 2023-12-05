@@ -63,7 +63,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
   while(!Frontier.isEmpty()){ //iterate until IDS converge
     vertexMap(Frontier,CC_Vertex_F(IDs,prevIDs));
 #ifdef DEBUG_EN
-  std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+  size_t vm, rss;
+  pid_t pid = getpid();
+  process_mem_usage(pid, vm, rss);
+  std::cout << "level = " << (uint32_t)level++ << ", number of activated vertices = " << Frontier.numNonzeros()
+            << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
 #endif
     vertexSubset output = edgeMap(GA, Frontier, CC_F(IDs,prevIDs));
     Frontier.del();

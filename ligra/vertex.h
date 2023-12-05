@@ -339,7 +339,9 @@ struct asymmetricVertex {
   // uintT inDegree;
   uint64_t outDegree:32;
   uint64_t inDegree:32;
-  void del() {free(inNeighbors); free(outNeighbors);}
+  void del() { 
+    // free(inNeighbors); free(outNeighbors);
+  }
 #ifndef WEIGHTED
 asymmetricVertex(uintE* iN, uintE* oN, uintT id, uintT od)
 #else

@@ -43,6 +43,7 @@
 using namespace std;
 
 //*****START FRAMEWORK*****
+#define DEBUG_EN
 
 typedef uint32_t flags;
 const flags no_output = 1;
@@ -492,7 +493,7 @@ int parallel_main(int argc, char* argv[]) {
   bool binary = P.getOptionValue("-b");
   bool mmap = P.getOptionValue("-m");
   long job = P.getOptionLongValue("-j",0);
-  long nthreads = P.getOptionLongValue("-t",96);
+  long nthreads = P.getOptionLongValue("-t",48);
   bool chunk = P.getOptionValue("-chunk");
   bool update = P.getOptionValue("-update");
   bool debug = P.getOptionValue("-debug");
@@ -503,6 +504,9 @@ int parallel_main(int argc, char* argv[]) {
 
   reportInit();
   reportTitle(argv[0], iFile, buffer);
+
+  size_t vm, rss;
+  pid_t pid = getpid();
 
   if (compressed) {
     if (symmetric) {
@@ -560,10 +564,15 @@ int parallel_main(int argc, char* argv[]) {
     } else {
 #ifndef HYPER
       startTime();
+      process_mem_usage(pid, vm, rss);
+      std::cout << "before read graph: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
       graph<asymmetricVertex> G =
         readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer); //asymmetric graph
       double time = nextTime("Preload time");
       reportTimeToFile(time);
+      process_mem_usage(pid, vm, rss);
+      std::cout << "after read graph: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
+    
       // graph<asymmetricVertex> G1 =
       //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case4kb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
       // graph<asymmetricVertex> G2 =
@@ -576,10 +585,15 @@ int parallel_main(int argc, char* argv[]) {
       // if(G.transposed) G.transpose();
       setWorkers(nthreads);
       for(int r=0;r<rounds;r++) {
+        process_mem_usage(pid, vm, rss);
+        std::cout << "before compute: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
         startTime();
         Compute(G,P);
         double time = nextTime("Running time");
         reportTimeToFile(time);
+        process_mem_usage(pid, vm, rss);
+        std::cout << "after compute: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
+
         if(G.transposed) G.transpose();
       }
       G.del();

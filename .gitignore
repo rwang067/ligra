@@ -11,8 +11,15 @@ apps/BFS
 apps/Components
 apps/KCore
 apps/PageRank
+apps/BC
+apps/MIS
+apps/Radii
 apps/TestAll
 apps/perf.*
 
+*.perf
+*.perf.old
+*.snoop
 scripts/*
 apps/hierg_query_time.csv
+results/*

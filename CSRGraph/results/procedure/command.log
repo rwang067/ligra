@@ -1,0 +1,52 @@
+==========================
+2023-11-14 16:54:50 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Twitter/
+root: 12
+memory bound: 17179869184
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 1
+data: twitter_testcase1.out
+pid: 794915
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 2
+data: twitter_testcase2.out
+pid: 797345
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 3
+data: twitter_testcase3.out
+pid: 797788
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 4
+data: twitter_testcase4.out
+pid: 798349
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 17:21:11 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Twitter/
+root: 12
+memory bound: 17179869184
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 1
+data: twitter_testcase1.out
+pid: 818617
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 2
+data: twitter_testcase2.out
+pid: 818932
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 3
+data: twitter_testcase3.out
+pid: 819381
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 4
+data: twitter_testcase4.out
+pid: 819780
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================

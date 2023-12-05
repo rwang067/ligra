@@ -27,7 +27,7 @@
 #include <iomanip>
 #include <iostream>
 
-std::string statistic_filename = "hierg_query_time.csv";
+std::string statistic_filename = "../results/hierg_query_time.csv";
 std::ofstream _ofs;
 
 void reportInit() {

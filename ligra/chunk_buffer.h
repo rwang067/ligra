@@ -41,6 +41,46 @@ void preada(int f, T * tbuf, size_t nbytes, size_t off = 0) {
     assert(nread <= nbytes);
 }
 
+char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
+  char* addr = 0;
+  if(!isMmap){
+    ifstream in(filename,ifstream::in | ios::binary); //stored as uints
+    in.seekg(0, ios::end);
+    long size1 = in.tellg();
+    in.seekg(0);
+    if(size1 != size){ 
+      cout << size1 << " " << size << std::endl;
+      cout << "Filename size wrong for :" << filename << std::endl; 
+      cout << "Specified size = " << size << ", read size = " << size1 << std::endl;
+      abort(); 
+    }
+    addr = (char *) malloc(size);
+    in.read(addr,size);
+    in.close();
+  } else {
+    int fd = open(filename, O_RDWR|O_CREAT, 00777);
+    if(fd == -1){
+      std::cout << "Could not open file for :" << filename << " error: " << strerror(errno) << std::endl;
+      exit(1);
+    }
+    if(ftruncate(fd, size) == -1){
+      std::cout << "Could not ftruncate file for :" << filename << " error: " << strerror(errno) << std::endl;
+      close(fd);
+      exit(1);
+    }
+    // addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+    addr = (char*)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+    if(addr == MAP_FAILED) {	
+      std::cout << "Could not mmap file for :" << filename << " error: " << strerror(errno) << std::endl;
+      close(fd);
+      exit(1);
+    } else {
+      std::cout << "mmap succeeded, size = " << size << ",filename = " << filename << std::endl;
+    }
+  }
+  return addr;
+}
+
 typedef uint32_t cid_t; //chunk_id
 typedef uint32_t hot_t; //chunk_id
 struct Chunk_t{
@@ -339,3 +379,233 @@ public:
     }
   }
 }; 
+
+#define HUGE_PAGE_SIZE 2097152 // 2MB
+#define DIRECT_GRAPH 2
+
+struct TriLevelReader {
+  long n, m, level;
+  std::string chunkFile, rchunkFile;
+  long *end_deg, *chunk_sz, *nchunks;
+  long *rend_deg, *rchunk_sz, *rnchunks;
+  std::string svFile, rsvFile;
+  long sv_size, rsv_size;
+  std::string configFile;
+  std::string vertFile;
+
+  void readConfig(char* iFile, bool debug = false) {
+    string baseFile = iFile;
+    configFile = baseFile + ".config";
+    vertFile = baseFile + ".vertex";
+    chunkFile = baseFile + ".adj.chunk";
+    rchunkFile = baseFile + ".radj.chunk";
+    svFile = baseFile + ".adj.sv";
+    rsvFile = baseFile + ".radj.sv";
+
+    ifstream in(configFile.c_str(), ifstream::in);
+    in >> n >> m >> level;
+
+    end_deg = new long[level];
+    chunk_sz = new long[level];
+    nchunks = new long[level];
+    
+    in >> sv_size;
+    for (int i = 0; i < level; i++) {
+      in >> end_deg[i] >> chunk_sz[i] >> nchunks[i];
+    }
+    
+    rend_deg = new long[level];
+    rchunk_sz = new long[level];
+    rnchunks = new long[level];
+    
+    in >> rsv_size;
+    for (int i = 0; i < level; i++) {
+      in >> rend_deg[i] >> rchunk_sz[i] >> rnchunks[i];
+    }
+    in.close();
+
+    if (debug) {
+      cout << "ConfigFile: " << configFile << endl; 
+      cout << "n = " << n << ", m = " << m << ", level = " << level << endl;
+      cout << "sv_size = " << sv_size << endl;
+      for (int i = 0; i < level; i++)
+        std::cout << "level = " << i << ", end_deg = " << end_deg[i] << ", chunk_sz = " << chunk_sz[i] << ", nchunks = " << nchunks[i] << std::endl;
+      cout << "rsv_size = " << rsv_size << endl;
+      for (int i = 0; i < level; i++)
+        std::cout << "level = " << i << ", rend_deg = " << rend_deg[i] << ", rchunk_sz = " << rchunk_sz[i] << ", rnchunks = " << rnchunks[i] << std::endl;
+    }
+  }
+};
+
+class ChunkManager {
+private:
+  std::string chunkFile;
+  long chunk_sz = 0;
+  long nchunks = 0;
+  long level = 0;
+  void* addr = 0;
+  long nbuff = 0;
+  int chunk_fd = 0;
+
+public:
+  ChunkManager() {}
+  ChunkManager(std::string iFile, long s, long n, long l) : chunkFile(iFile), chunk_sz(s), nchunks(n), level(l) {}
+
+  inline void loadWithMalloc() {
+    addr = (char*)getFileData(chunkFile.c_str(), chunk_sz * nchunks, 0);
+  }
+
+  inline void loadWithmmap() {
+    addr = (char*)getFileData(chunkFile.c_str(), chunk_sz * nchunks, 1);
+  }
+  inline uintE* getWithmmap(cid_t cid, uint32_t coff) {
+    return (uintE*)((char*)addr + cid * chunk_sz + coff);
+  }
+
+  inline void loadWithDIO() {
+    chunk_fd = open(chunkFile.c_str(), O_RDONLY | O_DIRECT | O_NOATIME);
+    if(chunk_fd == -1) {
+      fprintf(stdout,"Wrong open %s\n", chunkFile.c_str());
+      perror("open");
+      exit(-1);
+    }
+    cout << "Open file " << chunkFile << ", chunk_fd = " << chunk_fd << endl;
+
+    addr = 0;
+    if (chunk_sz >= HUGE_PAGE_SIZE) {
+      addr = (char*)mmap(NULL, chunk_sz*nbuff, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+      if (addr == MAP_FAILED) {	
+        perror("mmap");
+        addr = 0;
+      }
+    }
+    if (addr == 0) {
+      addr = (char*)calloc(nbuff, chunk_sz);
+    }
+
+    int ret;
+    /* allocate 1 KB along a 256-byte boundary */
+    // ret = posix_memalign (&buf, 256, 1024);
+    ret = posix_memalign(&addr, chunk_sz, chunk_sz*nchunks);
+    if (ret) {
+      fprintf (stderr, "posix_memalign: %s\n", strerror(ret));
+      exit(-1);
+    }
+    memset(addr, 0, chunk_sz*nchunks);
+  }
+
+  inline uintE* getWithDIO(cid_t cid, uint32_t coff) {
+    // choose a position to load chunk (FIFO)
+    // todo
+    // load chunk using preada
+    // todo
+    return 0;
+  }
+
+  inline long getChunkSize() { return chunk_sz; }
+  inline long getChunkNum() { return nchunks; }
+  inline long getLevel() { return level; }
+
+  inline void readGraph() {
+    loadWithmmap();
+  }
+
+  inline uintE* getChunkNeighbors(cid_t cid, uint32_t coff) {
+    return getWithmmap(cid, coff);
+  }
+};
+
+class SuperVertexManager {
+private:
+  std::string svFile;
+  long sv_size = 0;
+  char* addr = 0;
+
+public:
+  SuperVertexManager() {}
+  SuperVertexManager(std::string iFile, long s) : svFile(iFile), sv_size(s) {}
+
+  ~SuperVertexManager() {
+    if (addr != 0) free(addr);
+  }
+
+  inline void loadWithMalloc() {
+    addr = getFileData(svFile.c_str(), sv_size, 0);
+  }
+
+  inline void loadWithmmap() {
+    addr = getFileData(svFile.c_str(), sv_size, 1);
+  }
+
+  inline void readGraph() {
+    loadWithmmap();
+  }
+
+  inline long getSVSize() { return sv_size; }
+  inline char* getSVAddr() { return addr; }
+};
+
+class TriLevelManager {
+private:
+  TriLevelReader* reader;
+  // level chunk
+  ChunkManager** chunkManager[DIRECT_GRAPH];
+  SuperVertexManager* svManager[DIRECT_GRAPH];
+
+public:
+  TriLevelManager() {
+    reader = new TriLevelReader();
+  }
+
+  ~TriLevelManager() {
+    delete reader;
+    for (long i = 0; i < reader->level; i++) {
+      delete chunkManager[0][i];
+      delete chunkManager[1][i];
+    }
+    delete svManager[0];
+    delete svManager[1];
+  }
+
+  void init() {
+    // read OutGraph
+    chunkManager[0] = (ChunkManager**)calloc(reader->level, sizeof(ChunkManager*));
+    for (long i = 0; i < reader->level; i++) {
+      std::string chunkFile = reader->chunkFile + std::to_string(i);
+      std::cout << "chunkFile = " << chunkFile << std::endl;
+      chunkManager[0][i] = new ChunkManager(chunkFile, reader->chunk_sz[i], reader->nchunks[i], i);
+      chunkManager[0][i]->readGraph();
+    }
+    
+    svManager[0] = new SuperVertexManager(reader->svFile, reader->sv_size);
+    svManager[0]->readGraph();
+
+    // read InGraph
+    chunkManager[1] = (ChunkManager**)calloc(reader->level, sizeof(ChunkManager*));
+    for (long i = 0; i < reader->level; i++) {
+      std::string chunkFile = reader->rchunkFile + std::to_string(i);
+      std::cout << "chunkFile = " << chunkFile << std::endl;
+      chunkManager[1][i] = new ChunkManager(chunkFile, reader->rchunk_sz[i], reader->rnchunks[i], i);
+      chunkManager[1][i]->readGraph();
+    }
+
+    svManager[1] = new SuperVertexManager(reader->rsvFile, reader->rsv_size);
+    svManager[1]->readGraph();
+  }
+
+  inline TriLevelReader* getReader() { return reader; }
+  inline char* getSVAddr(bool inGraph) { return svManager[inGraph]->getSVAddr(); }
+
+  inline uintE* getChunkNeighbors(cid_t cid, uint32_t coff, long level, uint32_t d, bool inGraph=0) {
+    return chunkManager[inGraph][level]->getChunkNeighbors(cid, coff);
+  }
+
+  inline void transpose() {
+    ChunkManager** tmp = chunkManager[0];
+    chunkManager[0] = chunkManager[1];
+    chunkManager[1] = tmp;
+    SuperVertexManager* tmp1 = svManager[0];
+    svManager[0] = svManager[1];
+    svManager[1] = tmp1;
+  }
+};

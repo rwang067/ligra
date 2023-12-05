@@ -1,0 +1,27 @@
+==========================
+2023-11-14 14:32:30 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Twitter/
+root: 12
+memory bound: 17179869184
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -q 1 -j 1
+data: twitter_testcase1.out
+pid: 732519
+732519
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -q 1 -j 2
+data: twitter_testcase2.out
+pid: 733180
+733180
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -q 1 -j 3
+data: twitter_testcase3.out
+pid: 734878
+734878
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -q 1 -j 4
+data: twitter_testcase4.out
+pid: 735657
+735657
+==========================
+==========================

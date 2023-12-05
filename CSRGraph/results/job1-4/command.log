@@ -1,0 +1,182 @@
+==========================
+2023-11-14 21:52:43 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Twitter/
+root: 12
+memory bound: 17179869184
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 1
+data: twitter_testcase1.out
+pid: 932297
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 2
+data: twitter_testcase2.out
+pid: 932475
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 3
+data: twitter_testcase3.out
+pid: 932657
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 4
+data: twitter_testcase4.out
+pid: 932829
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 21:58:40 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Friendster/
+root: 26737282
+memory bound: 17179869184
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Friendster/ --prefix friendster --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 26737282 -t 4 -q 1 -j 1
+data: friendster_testcase1.out
+pid: 932997
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Friendster/ --prefix friendster --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 26737282 -t 4 -q 1 -j 2
+data: friendster_testcase2.out
+pid: 933144
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Friendster/ --prefix friendster --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 26737282 -t 4 -q 1 -j 3
+data: friendster_testcase3.out
+pid: 933370
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Friendster/ --prefix friendster --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 26737282 -t 4 -q 1 -j 4
+data: friendster_testcase4.out
+pid: 933570
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 22:14:43 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Ukdomain/
+root: 5699262
+memory bound: 17179869184
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Ukdomain/ --prefix ukdomain --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 5699262 -t 4 -q 1 -j 1
+data: ukdomain_testcase1.out
+pid: 934144
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Ukdomain/ --prefix ukdomain --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 5699262 -t 4 -q 1 -j 2
+data: ukdomain_testcase2.out
+pid: 934333
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Ukdomain/ --prefix ukdomain --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 5699262 -t 4 -q 1 -j 3
+data: ukdomain_testcase3.out
+pid: 938562
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Ukdomain/ --prefix ukdomain --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 5699262 -t 4 -q 1 -j 4
+data: ukdomain_testcase4.out
+pid: 939693
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 22:18:04 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Kron28/
+root: 254655025
+memory bound: 51539607552
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron28/ --prefix kron28 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 254655025 -t 4 -q 1 -j 1
+data: kron28_testcase1.out
+pid: 939813
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron28/ --prefix kron28 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 254655025 -t 4 -q 1 -j 2
+data: kron28_testcase2.out
+pid: 939876
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron28/ --prefix kron28 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 254655025 -t 4 -q 1 -j 3
+data: kron28_testcase3.out
+pid: 939949
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron28/ --prefix kron28 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 254655025 -t 4 -q 1 -j 4
+data: kron28_testcase4.out
+pid: 940014
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 22:21:39 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Kron29/
+root: 310059974
+memory bound: 51539607552
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron29/ --prefix kron29 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 310059974 -t -q 1 -j 1
+data: kron29_testcase1.out
+pid: 940079
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron29/ --prefix kron29 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 310059974 -t -q 1 -j 2
+data: kron29_testcase2.out
+pid: 940186
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron29/ --prefix kron29 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 310059974 -t -q 1 -j 3
+data: kron29_testcase3.out
+pid: 940276
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron29/ --prefix kron29 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 310059974 -t -q 1 -j 4
+data: kron29_testcase4.out
+pid: 940375
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 22:30:01 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Kron30/
+root: 233665123
+memory bound: 68719476736
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron30/ --prefix kron30 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 233665123 -t -q 1 -j 1
+data: kron30_testcase1.out
+pid: 940456
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron30/ --prefix kron30 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 233665123 -t -q 1 -j 2
+data: kron30_testcase2.out
+pid: 940553
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron30/ --prefix kron30 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 233665123 -t -q 1 -j 3
+data: kron30_testcase3.out
+pid: 940698
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Kron30/ --prefix kron30 --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 233665123 -t -q 1 -j 4
+data: kron30_testcase4.out
+pid: 940862
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================
+==========================
+2023-11-14 22:56:01 Test Query Performace
+data: /mnt/nvme1/zorax/datasets/csr_bin/Yahoo/
+root: 35005211
+memory bound: 68719476736
+Test Job 1
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Yahoo/ --prefix yahoo --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 35005211 -t -q 1 -j 1
+data: yahoo_testcase1.out
+pid: 941048
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 2
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Yahoo/ --prefix yahoo --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 35005211 -t -q 1 -j 2
+data: yahoo_testcase2.out
+pid: 941155
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 3
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Yahoo/ --prefix yahoo --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 35005211 -t -q 1 -j 3
+data: yahoo_testcase3.out
+pid: 941247
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+Test Job 4
+command: ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Yahoo/ --prefix yahoo --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 35005211 -t -q 1 -j 4
+data: yahoo_testcase4.out
+pid: 941331
+cgroup tasks: /sys/fs/cgroup/memory/chunkgraph/tasks
+==========================

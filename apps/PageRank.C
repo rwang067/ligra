@@ -92,7 +92,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
       }}
     double L1_norm = sequence::plusReduce(p_curr,n);
 #ifdef DEBUG_EN
-    std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm << std::endl;
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
 #endif
     if(L1_norm < epsilon) break;
     //reset p_curr

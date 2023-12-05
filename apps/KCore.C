@@ -103,7 +103,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
       }
     }
 #ifdef DEBUG_EN
-    std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros() << std::endl;
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros()
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
 #endif
     if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
   }

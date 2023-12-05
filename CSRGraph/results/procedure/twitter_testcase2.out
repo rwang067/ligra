@@ -1,0 +1,136 @@
+2023-11-14 17:22:29 profile run with command:  ./bin/main -f /mnt/nvme1/zorax/datasets/csr_bin/Twitter/ --prefix twitter --ssd /mnt/nvme1/zorax/testCSRGraph/ --source 12 -t 16 -q 1 -j 2
+Print config information:
+  Graph info: 
+	 - filepath = /mnt/nvme1/zorax/datasets/csr_bin/Twitter/
+	 - PREFIX = twitter
+	 - nverts = 68349467
+	 - nedges = 0 (0 for processing all edges in the filepath) 
+  System info: 
+	 - JOB = 2
+	 - THD_COUNT = 16
+	 - QUERY_THD_COUNT = 96
+	 - SSDPATH = /mnt/nvme1/zorax/testCSRGraph/
+  Graph query benchmark: 
+	 - QUERY = 1
+	 - source = 12
+  Chunk allocator: 
+	 - SBLK_POOL_SIZE = 137438953472
+	 - sblk_name = sblk
+	 - MAX_LEVEL = 1
+	 - MEM_BULK_SIZE = 33554432
+
+import csr for out graph
+Allocated 0.458795GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Twitter//twitter.idx
+Allocated 5.47009GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Twitter//twitter.adj
+nverts = 61578415, nedges = 1468365182, average degree = 23.8455
+[1;33mDEBUG:    chunk_allocator.hpp(init:28): sblk_pools[0] allocated 64GB on SSD, start = 0x7f0054e34000
+[0msblklevel0
+mempool_align=4096
+mempool_size=68719476736
+mempool_start=0x7f0054e34000
+mempool_cur=0x7f0054e34000
+mempool_end=0x7f1054e34000
+mempool_free_block=(nil)
+
+max threads = 16
+tid = 0, chunkID = 1655013
+tid = 1, chunkID = 1638616
+tid = 2, chunkID = 1630641
+tid = 3, chunkID = 1589361
+tid = 4, chunkID = 1663366
+tid = 5, chunkID = 1569985
+tid = 6, chunkID = 1671227
+tid = 7, chunkID = 1578000
+tid = 8, chunkID = 1605991
+tid = 9, chunkID = 1614399
+tid = 10, chunkID = 1597695
+tid = 11, chunkID = 1561200
+tid = 12, chunkID = 1647061
+tid = 13, chunkID = 1581162
+tid = 14, chunkID = 1679656
+tid = 15, chunkID = 1622259
+max_chunkID = 1679656
+The number of non-zero degree vertices: 38326903
+Freed 0.458795GB for local_buf.
+Freed 5.47009GB for local_buf.
+import csr for in graph
+Allocated 0.458795GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Twitter//twitter.ridx
+Allocated 5.47009GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Twitter//twitter.radj
+[1;33mDEBUG:    chunk_allocator.hpp(init:28): sblk_pools[0] allocated 64GB on SSD, start = 0x7eefd3ffc000
+[0msblklevel0
+mempool_align=4096
+mempool_size=68719476736
+mempool_start=0x7eefd3ffc000
+mempool_cur=0x7eefd3ffc000
+mempool_end=0x7effd3ffc000
+mempool_free_block=(nil)
+
+max threads = 16
+tid = 0, chunkID = 1688173
+tid = 1, chunkID = 1637971
+tid = 2, chunkID = 1758068
+tid = 3, chunkID = 1741429
+tid = 4, chunkID = 1639633
+tid = 5, chunkID = 1663951
+tid = 6, chunkID = 1696160
+tid = 7, chunkID = 1746561
+tid = 8, chunkID = 1705376
+tid = 9, chunkID = 1647571
+tid = 10, chunkID = 1671263
+tid = 11, chunkID = 1655351
+tid = 12, chunkID = 1720343
+tid = 13, chunkID = 1679546
+tid = 14, chunkID = 1728959
+tid = 15, chunkID = 1712896
+max_chunkID = 1758068
+The number of non-zero degree vertices: 35494433
+Freed 0.458795GB for local_buf.
+Freed 5.47009GB for local_buf.
+out degree of 12 is 1001061
+The top 100 in neighbors of 12 are: 334 2542 5151 9337 150 12440 23833 53793 249713 618053 653573 693183 1814 731573 4737 757556 7846 771951 11848 786752 14893 800633 48243 814310 99723 829771 609353 915281 645343 994801 684913 1099551 722503 1228091 755296 1328021 768622 1481461 784124 1683071 796908 1857101 38 811462 2063911 1102 2292031 822647 2569831 893211 2857721 972961 3106861 1062791 3343111 1189021 3561421 1302211 3825931 1448321 4127661 1633191 4463391 1798331 4913781 2026291 5253271 2234241 5444372 2500901 5548202 2788841 5659702 3043001 5771872 3273211 5854922 3510601 5963222 3752691 6070882 4070381 6181842 4402921 6296572 4804801 6425142 5187481 6529302 5416472 6642422 5522882 6754392 5636242 6862832 5748742 7004112 5830702 7109072 5934882 
+out degree of 300 is 34
+The top 34 in neighbors of 300 are: 48137804 47547326 17274300 14676814 14387374 49868804 19634908 19489341 14206126 18523180 47516020 47516931 16277503 5891242 28338350 14998224 14389072 35006947 47515341 47546973 19185184 272 22125598 47547931 17300924 47517587 14795695 14456025 47516482 6806472 16472355 14984654 14836890 43507020 
+out degree of 1024 is 53
+The top 53 in neighbors of 1024 are: 19489341 5766862 49722997 18542474 17800408 16440882 18468074 8463402 49733409 27287050 24178779 49060857 14805828 17645842 16067957 44939132 49735550 21696746 24890778 51873894 30005585 43518501 39027180 15408341 19037578 44640773 49261613 17219296 20753010 21542417 618593 17879103 14411423 49615291 52036173 15438784 24352485 24854021 16605666 14150105 21071822 19788955 28338350 57860794 14882586 9325472 15287579 20243756 15341582 15978474 15582860 48910247 15625549 
+out degree of 65535 is 0
+out degree of 1023512 is 0
+in degree of 12 is 586
+The top 100 in neighbors of 12 are: 13 14 15 16 17 18 20 21 22 23 24 31 38 41 53 56 57 58 59 60 61 62 64 67 70 76 87 92 94 104 126 150 187 235 246 257 259 260 277 291 292 295 299 306 322 334 338 344 346 348 380 409 414 418 422 446 528 541 642 648 662 681 711 888 988 990 1004 1075 1084 1085 1153 1293 1497 1583 1668 1970 2172 2784 3114 3221 3475 3690 3839 3840 3922 4244 4489 4674 4737 4776 4902 5017 5061 5202 5215 5380 5574 5699 5844 6106 
+in degree of 300 is 2
+The top 2 in neighbors of 300 are: 23 272 
+in degree of 1024 is 14
+The top 14 in neighbors of 1024 are: 618593 5766862 9325472 13200092 13256542 14150105 14345811 19562228 19746623 20415883 24178779 33509898 44939132 45525769 
+in degree of 65535 is 0
+in degree of 1023512 is 0
+test_bfs...
+ Level = 1 count = 1
+ Level = 2 count = 1001061
+ Level = 3 count = 15607650
+ Level = 4 count = 15451355
+ Level = 5 count = 2660425
+ Level = 6 count = 264953
+ Level = 7 count = 27578
+ Level = 8 count = 2839
+ Level = 9 count = 303
+ Level = 10 count = 51
+ Level = 11 count = 7
+ Level = 12 count = 2
+ Level = 13 count = 1
+ bfs_summary of root 12 = 35016226
+test_bfs for 12, sum of frontier count = 35016226, BFS Time = 1.31355
+test_pagerank_pull...
+test_pagerank_pull for 10 iterations, PageRank Time = 5.35357
+test_connected_components...
+Skipping largest intermediate component (ID: 12, approx. 65% of the graph)
+5 biggest clusters
+12:41652230
+61578378:1
+61578368:1
+61578358:1
+61578348:1
+There are 19926186 components
+test_connect_component with neighbor_rounds = 2, Connect Component Time = 11.8605
