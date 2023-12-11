@@ -22,7 +22,7 @@ data[4]=${DATA_PATH}csr_bin/Kron29/kron29
 data[5]=${DATA_PATH}csr_bin/Kron30/kron30
 data[6]=${DATA_PATH}csr_bin/Yahoo/yahoo
 
-# roots:        TT       FS       UK      K28       K29       K30       YW       K31       CW
+# roots:        TT   FS     UK       K28       K29       K30       YW       K31       CW
 declare -a rts=(12 801109 5699262 254655025 310059974 233665123 35005211 691502068 739935047)
 # declare -a rts=(18225348 26737282 5699262 254655025 310059974 233665123 35005211 691502068 739935047)
 declare -a base_bound=(8 12 16 128)
@@ -60,13 +60,15 @@ profile_memory() {
 
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
 
+    log_dir="../results/logs/${log_time}"
+
     echo $cur_time "profile run with command: " $commandargs >> ../results/command.log
-    echo $cur_time "profile run with command: " $commandargs > ../results/logs/${log_time}/${filename}.txt
+    echo $cur_time "profile run with command: " $commandargs > ${log_dir}/${filename}.txt
 
     echo "memory bound: " $limit "GB" >> ../results/command.log
-    echo "memory bound: " $limit "GB" >> ../results/logs/${log_time}/${filename}.txt
+    echo "memory bound: " $limit "GB" >> ${log_dir}/${filename}.txt
 
-    nohup $commandargs >> ../results/logs/${log_time}/${filename}.txt &
+    nohup $commandargs >> ${log_dir}/${filename}.txt &
     pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
 
     echo "pid: " $pid >> ../results/command.log
@@ -78,8 +80,8 @@ profile_memory() {
 
     # monitor and record the amount of physical memory used for the process pid
 
-    echo "monitoring memory usage for pid:" $pid > ../results/logs/${log_time}/${filename}.memory
-    echo "VmSize VmRSS VmSwap" >> ../results/logs/${log_time}/${filename}.memory
+    echo "monitoring memory usage for pid:" $pid > ${log_dir}/${filename}.memory
+    echo "VmSize VmRSS VmSwap" >> ${log_dir}/${filename}.memory
     maxVmPeak=0
     maxVmHWM=0
     while :
@@ -88,8 +90,8 @@ profile_memory() {
         if [ -z "$pid" ]; then
             break
         fi
-        cat /proc/$pid/status | grep -E "VmSize|VmRSS|VmSwap" | awk '{printf("%s ", $2)}' >> ../results/logs/${log_time}/${filename}.memory
-        echo "" >> ../results/logs/${log_time}/${filename}.memory
+        cat /proc/$pid/status | grep -E "VmSize|VmRSS|VmSwap" | awk '{printf("%s ", $2)}' >> ${log_dir}/${filename}.memory
+        echo "" >> ${log_dir}/${filename}.memory
         # record and refresh the newest VmPeak VmHWM
         VmPeak=$(cat /proc/$pid/status | grep -E "VmPeak" | awk '{print $2}')
         VmHWM=$(cat /proc/$pid/status | grep -E "VmHWM" | awk '{print $2}')
@@ -101,10 +103,17 @@ profile_memory() {
         fi
         sleep 0.1
     done
-    echo "maxVmPeak: " $maxVmPeak >> ../results/logs/${log_time}/${filename}.memory
-    echo "maxVmHWM: " $maxVmHWM >> ../results/logs/${log_time}/${filename}.memory
+    echo "maxVmPeak: " $maxVmPeak >> ${log_dir}/${filename}.memory
+    echo "maxVmHWM: " $maxVmHWM >> ${log_dir}/${filename}.memory
+    echo "Peak virtual memory size: " $maxVmPeak "KB ("$(echo "scale=2; $maxVmPeak/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "Peak resident set size: " $maxVmHWM "KB ("$(echo "scale=2; $maxVmHWM/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
 
     wait $pid
+
+    res=$(awk 'NR>5 {sum+=$5} END {print sum}' ${log_dir}/${filename}.diskio)
+    # echo total bytes read in KB and convert to GB
+    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
 }
 
 profile_performance() {
@@ -260,43 +269,39 @@ if $cgroup_swap; then
     outputFile="../results/hierg_query_time.csv"
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     echo $cur_time "Test ChunkGraph-swap Query Performace" >> ${outputFile}
-    # for idx in {0,1};
-    for idx in 1;
+    for idx in {0,1};
+    # for idx in 1;
     do
         echo -n "Data: "
         echo ${data[$idx]}
         echo -n "Root: "
         echo ${rts[$idx]}
 
-        # make BFS
-        # for mem in {0,1,2,3};
-        # # for mem in 3;
-        # do
-        #     clear_pagecaches
-        #     commandargs="./BFS -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
-        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-        #     # echo ${memsw_bound[$idx]} > ${CGROUP_PATH}/memory.memsw.limit_in_bytes
-
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-        #     wait
-        # done
-
-        make BC
-        # for mem in {0,1,2,3};
-        for mem in 3;
+        make BFS
+        for mem in {0,1,2,3};
+        # for mem in 0;
         do
             clear_pagecaches
-            commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+            commandargs="./BFS -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-            # echo ${memsw_bound[$idx]} > ${CGROUP_PATH}/memory.memsw.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
             wait
         done
 
-        exit
+        make BC
+        for mem in {0,1,2,3};
+        # for mem in {2,3};
+        do
+            clear_pagecaches
+            commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
 
         make PageRank
         for mem in {0,1,2,3};
@@ -305,7 +310,6 @@ if $cgroup_swap; then
             commandargs="./PageRank -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-            # echo ${memsw_bound[$idx]} > ${CGROUP_PATH}/memory.memsw.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
             wait

@@ -43,7 +43,6 @@
 using namespace std;
 
 //*****START FRAMEWORK*****
-#define DEBUG_EN
 
 typedef uint32_t flags;
 const flags no_output = 1;
@@ -583,6 +582,14 @@ int parallel_main(int argc, char* argv[]) {
 #endif
       // Compute(G,P);
       // if(G.transposed) G.transpose();
+#ifdef DEBUG_EN
+      std::string command = "bash ../perf_diskio.sh " + std::to_string(pid);
+      int res = std::system(command.c_str());
+      if (res == -1) {
+        std::cout << "perf_diskio.sh failed" << std::endl;
+      }
+#endif
+
       setWorkers(nthreads);
       for(int r=0;r<rounds;r++) {
         process_mem_usage(pid, vm, rss);
