@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 // #define PROFILE_EN
-// #define DEBUG_EN
+#define DEBUG_EN
 
 class profiler_t {
 public:

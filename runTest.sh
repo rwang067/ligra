@@ -59,15 +59,15 @@ profile_memory() {
 
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     
-
+    log_dir="../results/logs/${log_time}"
 
     echo $cur_time "profile run with command: " $commandargs >> ../results/command.log
-    echo $cur_time "profile run with command: " $commandargs > ../results/logs/${log_time}/${filename}.txt
+    echo $cur_time "profile run with command: " $commandargs > ${log_dir}/${filename}.txt
 
     echo "memory bound: " $limit "GB" >> ../results/command.log
-    echo "memory bound: " $limit "GB" >> ../results/logs/${log_time}/${filename}.txt
+    echo "memory bound: " $limit "GB" >> ${log_dir}/${filename}.txt
 
-    nohup $commandargs >> ../results/logs/${log_time}/${filename}.txt &
+    nohup $commandargs >> ${log_dir}/${filename}.txt &
     pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
 
     echo "pid: " $pid >> ../results/command.log
@@ -79,8 +79,8 @@ profile_memory() {
 
     # monitor and record the amount of physical memory used for the process pid
 
-    echo "monitoring memory usage for pid:" $pid > ../results/logs/${log_time}/${filename}.memory
-    echo "VmSize VmRSS VmSwap" >> ../results/logs/${log_time}/${filename}.memory
+    echo "monitoring memory usage for pid:" $pid > ${log_dir}/${filename}.memory
+    echo "VmSize VmRSS VmSwap" >> ${log_dir}/${filename}.memory
     maxVmPeak=0
     maxVmHWM=0
     while :
@@ -89,8 +89,8 @@ profile_memory() {
         if [ -z "$pid" ]; then
             break
         fi
-        cat /proc/$pid/status | grep -E "VmSize|VmRSS|VmSwap" | awk '{printf("%s ", $2)}' >> ../results/logs/${log_time}/${filename}.memory
-        echo "" >> ../results/logs/${log_time}/${filename}.memory
+        cat /proc/$pid/status | grep -E "VmSize|VmRSS|VmSwap" | awk '{printf("%s ", $2)}' >> ${log_dir}/${filename}.memory
+        echo "" >> ${log_dir}/${filename}.memory
         # record and refresh the newest VmPeak VmHWM
         VmPeak=$(cat /proc/$pid/status | grep -E "VmPeak" | awk '{print $2}')
         VmHWM=$(cat /proc/$pid/status | grep -E "VmHWM" | awk '{print $2}')
@@ -102,13 +102,19 @@ profile_memory() {
         fi
         sleep 0.1
     done
-    echo "maxVmPeak: " $maxVmPeak >> ../results/logs/${log_time}/${filename}.memory
-    echo "maxVmHWM: " $maxVmHWM >> ../results/logs/${log_time}/${filename}.memory
+    echo "maxVmPeak: " $maxVmPeak >> ${log_dir}/${filename}.memory
+    echo "maxVmHWM: " $maxVmHWM >> ${log_dir}/${filename}.memory
+    echo "Peak virtual memory size: " $maxVmPeak "KB ("$(echo "scale=2; $maxVmPeak/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "Peak resident set size: " $maxVmHWM "KB ("$(echo "scale=2; $maxVmHWM/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
 
     # nohup /home/cxy/snoop-ligra/iosnoop.sh -p $pid > ../results/${filename}.snoop &
     # perf record -e major-faults, -p $pid -o ../result/${filename}.perf &
     # perf record -e major-faults,cache-misses -p $pid -o ../results/${filename}.perf &
     wait $pid
+
+    res=$(awk 'NR>5 {sum+=$5} END {print sum}' ${log_dir}/${filename}.diskio)
+    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
 
     # snoop_pid=$(ps -ef | grep trace_pipe | grep -v grep | awk '{print $2}')
     # echo $snoop_pid
@@ -131,31 +137,33 @@ if $cgroup_swap; then
     outputFile="../results/ligra_swap_query_time.csv"
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     echo $cur_time "Test Ligra-swap Query Performace" >> ${outputFile}
-    # for idx in {0,1};
-    for idx in 1;
+    for idx in {0,1};
+    # for idx in 1;
     do
         echo -n "Data: "
         echo ${data[$idx]}
         echo -n "Root: "
         echo ${rts[$idx]}
 
-        # make BFS
-        # for mem in {0,1,2,3};
-        # # for mem in 0;
-        # do
-        #     clear_pagecaches
-        #     commandargs="./BFS -b -r ${rts[$idx]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_ligra_swap_bfs_${base_bound[$mem]}"
-        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-        #     # echo ${memsw_bound[$idx]} > ${CGROUP_PATH}/memory.memsw.limit_in_bytes
+        make BFS
+        for mem in {0,1,2,3};
+        # for mem in 0;
+        do
+            clear_pagecaches
+            commandargs="./BFS -b -r ${rts[$idx]} ${data[${idx}]}"
+            filename="${name[${idx}]}_ligra_swap_bfs_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+            # echo ${memsw_bound[$idx]} > ${CGROUP_PATH}/memory.memsw.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-        #     wait
-        # done
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
 
+        exit
+        
         make BC
-        # for mem in {0,1,2,3};
-        for mem in 3;
+        for mem in {0,1,2,3};
+        # for mem in 3;
         do
             clear_pagecaches
             commandargs="./BC -b -r ${rts[$idx]} ${data[${idx}]}"
@@ -166,8 +174,6 @@ if $cgroup_swap; then
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
             wait
         done
-
-        exit
 
         make PageRank
         for mem in {0,1,2,3};
