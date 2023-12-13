@@ -27,7 +27,11 @@
 #include <iomanip>
 #include <iostream>
 
+#ifdef CHUNK
 std::string statistic_filename = "../results/hierg_query_time.csv";
+#else
+std::string statistic_filename = "../results/ligra_mmap_query_time.csv";
+#endif
 std::ofstream _ofs;
 
 void reportInit() {

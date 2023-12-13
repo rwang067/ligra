@@ -1,6 +1,5 @@
 export OPENMP := 1
 export LONG := 1
-export CHUNK := 1
 
 ifdef CHUNK
 CK = -DCHUNK

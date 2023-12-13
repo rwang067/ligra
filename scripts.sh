@@ -1,6 +1,11 @@
 #!/bin/bash
 
-DATA_PATH=/mnt/nvme1/zorax/chunks/
+USE_CHUNK=0
+# 0: ligra-mmap; 1: ligra-chunk
+
+[ $USE_CHUNK -eq 1 ] && export CHUNK=1
+
+[ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme1/zorax/chunks/ || DATA_PATH=/mnt/nvme1/zorax/datasets/
 CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
 TEST_CPU_SET="taskset --cpu-list 49-96:1"
 
@@ -14,13 +19,13 @@ name[4]=kron29
 name[5]=kron30
 name[6]=yahoo
 
-data[0]=${DATA_PATH}twitter/${name[0]}
-data[1]=${DATA_PATH}friendster/${name[1]}
-data[2]=${DATA_PATH}csr_bin/Ukdomain/ukdomain
-data[3]=${DATA_PATH}csr_bin/Kron28/kron28
-data[4]=${DATA_PATH}csr_bin/Kron29/kron29
-data[5]=${DATA_PATH}csr_bin/Kron30/kron30
-data[6]=${DATA_PATH}csr_bin/Yahoo/yahoo
+[ $USE_CHUNK -eq 1 ] && data[0]=${DATA_PATH}twitter/${name[0]} || data[0]=${DATA_PATH}csr_bin/Twitter/${name[0]}
+[ $USE_CHUNK -eq 1 ] && data[1]=${DATA_PATH}friendster/${name[1]} || data[1]=${DATA_PATH}csr_bin/Friendster/${name[1]}
+[ $USE_CHUNK -eq 1 ] && data[2]=${DATA_PATH}ukdomain/${name[2]} || data[2]=${DATA_PATH}csr_bin/Ukdomain/${name[2]}
+[ $USE_CHUNK -eq 1 ] && data[3]=${DATA_PATH}kron28/${name[3]} || data[3]=${DATA_PATH}csr_bin/Kron28/${name[3]}
+[ $USE_CHUNK -eq 1 ] && data[4]=${DATA_PATH}kron29/${name[4]} || data[4]=${DATA_PATH}csr_bin/Kron29/${name[4]}
+[ $USE_CHUNK -eq 1 ] && data[5]=${DATA_PATH}kron30/${name[5]} || data[5]=${DATA_PATH}csr_bin/Kron30/${name[5]}
+[ $USE_CHUNK -eq 1 ] && data[6]=${DATA_PATH}yahoo/${name[6]} || data[6]=${DATA_PATH}csr_bin/Yahoo/${name[6]}
 
 # roots:        TT   FS     UK       K28       K29       K30       YW       K31       CW
 declare -a rts=(12 801109 5699262 254655025 310059974 233665123 35005211 691502068 739935047)
@@ -110,7 +115,7 @@ profile_memory() {
 
     wait $pid
 
-    res=$(awk 'NR>5 {sum+=$5} END {print sum}' ${log_dir}/${filename}.diskio)
+    res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
     # echo total bytes read in KB and convert to GB
     echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
     echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
@@ -266,7 +271,7 @@ if $cgroup_swap; then
     memory_bound[2]=$((${base_bound[2]}*1024*1024*1024))
     memory_bound[3]=$((${base_bound[3]}*1024*1024*1024))
 
-    outputFile="../results/hierg_query_time.csv"
+    [ $USE_CHUNK -eq 1 ] && outputFile="../results/hierg_query_time.csv" || outputFile="../results/ligra_mmap_query_time.csv"
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     echo $cur_time "Test ChunkGraph-swap Query Performace" >> ${outputFile}
     for idx in {0,1};
@@ -282,8 +287,8 @@ if $cgroup_swap; then
         # for mem in 0;
         do
             clear_pagecaches
-            commandargs="./BFS -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
+            [ $USE_CHUNK -eq 1 ] && commandargs="./BFS -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./BFS -b -r ${rts[$idx]} ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_bfs_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
@@ -295,8 +300,8 @@ if $cgroup_swap; then
         # for mem in {2,3};
         do
             clear_pagecaches
-            commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+            [ $USE_CHUNK -eq 1 ] && commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./BC -b -r ${rts[$idx]} ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_bc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
@@ -307,8 +312,8 @@ if $cgroup_swap; then
         for mem in {0,1,2,3};
         do
             clear_pagecaches
-            commandargs="./PageRank -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}"
+            [ $USE_CHUNK -eq 1 ] && commandargs="./PageRank -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./PageRank -b ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_pr_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
@@ -319,8 +324,8 @@ if $cgroup_swap; then
         for mem in {0,1,2,3};
         do
             clear_pagecaches
-            commandargs="./Components -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
+            [ $USE_CHUNK -eq 1 ] && commandargs="./Components -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./Components -b ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_cc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
@@ -331,8 +336,8 @@ if $cgroup_swap; then
         for mem in {0,1,2,3};
         do
             clear_pagecaches
-            commandargs="./KCore -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_kc_${base_bound[$mem]}"
+            [ $USE_CHUNK -eq 1 ] && commandargs="./KCore -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./KCore -b ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_kc_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_kc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
@@ -343,8 +348,8 @@ if $cgroup_swap; then
         for mem in {0,1,2,3};
         do
             clear_pagecaches
-            commandargs="./Radii -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_radii_${base_bound[$mem]}"
+            [ $USE_CHUNK -eq 1 ] && commandargs="./Radii -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./Radii -b ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_radii_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_radii_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
             profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
