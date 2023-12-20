@@ -90,6 +90,20 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   vertexSubset Frontier(n,sampleSize,starts); //initial frontier of size 64
 
+#ifdef DEBUG_EN
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(intE) * n; // radii
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(long) * n;  // Visited, NextVisited
+  memory_profiler.memory_usage[item] += size;
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(uintE) * sampleSize;  // starts
+  memory_profiler.memory_usage[item] += size;
+  
+  size_t max_size = Frontier.getMemorySize();
+#endif
+
   intE round = 0;
   while(!Frontier.isEmpty()){
 #ifdef DEBUG_EN
@@ -97,7 +111,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
     pid_t pid = getpid();
     process_mem_usage(pid, vm, rss);
     std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros()
-              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
 #endif
     round++;
     vertexMap(Frontier, Radii_Vertex_F(Visited,NextVisited));
@@ -105,5 +121,20 @@ void Compute(graph<vertex>& GA, commandLine P) {
     Frontier.del();
     Frontier = output;
   }
+
+#ifdef DEBUG_EN
+  std::cout << "Frontier maximum memory usage = " << B2GB(max_size) << "GB" << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
+
   free(Visited); free(NextVisited); Frontier.del(); free(radii); 
+
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+#endif
 }

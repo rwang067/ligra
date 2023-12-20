@@ -24,6 +24,8 @@
 #include "ligra.h"
 #include <vector>
 
+#define BC_DEBUG_EN
+
 typedef double fType;
 
 struct BC_F {
@@ -94,6 +96,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
   long start = P.getOptionLongValue("-r",0);
   long n = GA.n;
 
+#ifdef BC_DEBUG_EN
+  // print out the current datatime
+  time_t now = time(0);
+  char* dt = ctime(&now);
+  std::cout << "The local date and time is: " << dt;
+#endif
+
   fType* NumPaths = newA(fType,n);
   {parallel_for(long i=0;i<n;i++) NumPaths[i] = 0.0;}
   NumPaths[start] = 1.0;
@@ -106,6 +115,17 @@ void Compute(graph<vertex>& GA, commandLine P) {
   vector<vertexSubset> Levels;
   Levels.push_back(Frontier);
 
+#ifdef DEBUG_EN
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(fType) * n;  // NumPaths
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(bool) * n;  // Visited
+  memory_profiler.memory_usage[item] += size;
+
+  size_t max_size = Frontier.getMemorySize();
+#endif
+
   long round = 0;
   while(!Frontier.isEmpty()){ //first phase
     round++;
@@ -114,7 +134,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
     pid_t pid = getpid();
     process_mem_usage(pid, vm, rss);
     std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros()
-              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
 #endif
     vertexSubset output = edgeMap(GA, Frontier, BC_F(NumPaths,Visited));
     vertexMap(output, BC_Vertex_F(Visited)); //mark visited
@@ -124,6 +146,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   fType* Dependencies = newA(fType,n);
   {parallel_for(long i=0;i<n;i++) Dependencies[i] = 0.0;}
+
+#ifdef DEBUG_EN
+  size = sizeof(fType) * n; // Dependencies
+  memory_profiler.memory_usage[item] += size;
+#endif
 
   //invert numpaths
   fType* inverseNumPaths = NumPaths;
@@ -135,6 +162,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
   Frontier = Levels[round-1];
   vertexMap(Frontier,BC_Back_Vertex_F(Visited,Dependencies,inverseNumPaths));
 
+#ifdef BC_DEBUG_EN
+  // print out the current datatime
+  now = time(0);
+  dt = ctime(&now);
+  std::cout << "The local date and time is: " << dt;
+#endif
+
   //tranpose graph
   GA.transpose();
   for(long r=round-2;r>=0;r--) { //backwards phase
@@ -143,7 +177,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
     pid_t pid = getpid();
     process_mem_usage(pid, vm, rss);
     std::cout << "round = " << r << ", number of activated vertices = " << Frontier.numNonzeros()
-              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
 #endif
     edgeMap(GA, Frontier, BC_Back_F(Dependencies,Visited), -1, no_output);
     Frontier.del();
@@ -154,6 +190,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
   
   Frontier.del();
 
+#ifdef DEBUG_EN
+  std::cout << "Frontier maximum memory usage = " << B2GB(max_size) << "GB" << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
+
   //Update dependencies scores
   parallel_for(long i=0;i<n;i++) {
     Dependencies[i]=(Dependencies[i]-inverseNumPaths[i])/inverseNumPaths[i];
@@ -161,4 +202,21 @@ void Compute(graph<vertex>& GA, commandLine P) {
   free(inverseNumPaths);
   free(Visited);
   free(Dependencies);
+
+#ifdef BC_DEBUG_EN
+  // print out the current datatime
+  now = time(0);
+  dt = ctime(&now);
+  std::cout << "The local date and time is: " << dt;
+#endif
+
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+#endif
+
 }

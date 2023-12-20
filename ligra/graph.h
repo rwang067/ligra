@@ -322,6 +322,7 @@ struct graph {
       neighbors = (uintE*) v->getInNeighbors();
     }
     #ifdef CHUNK
+    #ifndef CHUNK_MMAP
     if (!inGraph) {
       long* end_deg = manager->getReader()->end_deg;
       long level = manager->getReader()->level;
@@ -346,7 +347,37 @@ struct graph {
       }
     }
     #endif
+    #endif
+
+    #ifdef DEBUG_EN
+    int thread_id = getWorkersID();
+    #ifdef CHUNK
+    if (d > 2) memory_profiler.edge_memory_usage[thread_id] += d * sizeof(uintE);
+    #else
+    memory_profiler.edge_memory_usage[thread_id] += d * sizeof(uintE);
+    #endif
+    edge_profiler.edge_access[thread_id] += d;
+    if (!inGraph) edge_profiler.out_edge_access[thread_id] += d;
+    else edge_profiler.in_edge_access[thread_id] += d;
+    #endif
+    
     return neighbors;
+  }
+
+  inline bool isReorderListEnabled() {
+    #ifdef CHUNK
+    return manager->getReorderListEnable();
+    #else
+    return false;
+    #endif
+  }
+
+  inline uintE getReorderID(bool inGraph, uintE i) {
+    #ifdef CHUNK
+    return manager->getReorderListElement(inGraph, i);
+    #else
+    return i;
+    #endif
   }
 };
 

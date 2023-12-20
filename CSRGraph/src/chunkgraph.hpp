@@ -266,6 +266,23 @@ public:
         delete in_graph;
     }
 
+    void convert_graph_without_reorder() {
+        double start = mywtime();
+        load_csr(true);
+        out_graph->init_chunk_allocator();
+        // out_graph->convert_graph(csr_idx, csr_adj);
+        out_graph->convert_without_reorder(csr_idx, csr_adj);
+        free_csr(true);
+
+        load_csr(false);
+        in_graph->init_chunk_allocator();
+        // in_graph->convert_graph(csr_idx_in, csr_adj_in);
+        in_graph->convert_without_reorder(csr_idx_in, csr_adj_in);
+        free_csr(false);
+        double end = mywtime();
+        ofs << "convert graph time = " << end - start << std::endl;
+    }
+
     void convert_graph() {
         double start = mywtime();
         load_csr(true);
@@ -295,4 +312,47 @@ public:
 private:
     trigraph_t* out_graph;
     trigraph_t* in_graph;
+};
+
+class ReorderGraph : public ConvertGraph {
+public:
+    ReorderGraph() {
+        this->out_graph = new reordergraph_t(nverts, nedges, true);
+        this->in_graph = new reordergraph_t(nverts, nedges, false);
+    }
+    ~ReorderGraph() {
+        delete out_graph;
+        delete in_graph;
+    }
+
+    void convert_graph() {
+        double start = mywtime();
+        load_csr(true);
+        load_csr(false);
+        out_graph->init_chunk_allocator();
+        out_graph->convert_graph(csr_idx, csr_adj);
+        
+        in_graph->init_chunk_allocator();
+        in_graph->convert_graph(csr_idx_in, csr_adj_in);
+        free_csr(true);
+        free_csr(false);
+        double end = mywtime();
+        ofs << "convert graph time = " << end - start << std::endl;
+        std::cout << "convert graph time = " << end - start << std::endl;
+    }
+
+    void save_graph() {
+        out_graph->save_graph();
+        in_graph->save_graph();
+    }
+
+    vid_t get_vcount() { return out_graph->get_vcount(); }
+    index_t get_ecount() { return out_graph->get_ecount(); }
+    degree_t get_out_degree(vid_t vid) { return out_graph->get_out_degree(vid); }
+    degree_t get_out_nebrs(vid_t vid, vid_t* nebrs) { return out_graph->get_out_nebrs(vid, nebrs); }
+    degree_t get_in_degree(vid_t vid) { return in_graph->get_out_degree(vid); }
+    degree_t get_in_nebrs(vid_t vid, vid_t* nebrs) { return in_graph->get_out_nebrs(vid, nebrs); }
+private:
+    reordergraph_t* out_graph;
+    reordergraph_t* in_graph;
 };

@@ -827,6 +827,39 @@ public:
         reorder_list = NULL;
     }
 
+    void convert_without_reorder(index_t* csr_idx, vid_t* csr_adj) {
+        #ifdef MONITOR
+        degree_t nzvcount = 0;
+        #endif
+        
+        for (vid_t vid = 0; vid < nverts; ++vid) {
+            degree_t deg = csr_idx[vid+1] - csr_idx[vid];
+            if (deg) {
+                #ifdef MONITOR
+                ++nzvcount;
+                #endif
+                vertex_t* vert = vertices[vid];
+                vert = new_vertex();
+                set_vertex(vid, vert);
+
+                vert->set_out_degree(deg);
+                
+                if (deg <= 2) {
+                    for (degree_t d = 0; d < deg; ++d) {
+                        vert->add_nebr(csr_adj[csr_idx[vid]+d]);
+                    }
+                } else {
+                    // allocate vertex to a chunk
+                    vid_t* adjlist = NULL;
+                    cpos_t cpos = chunk_allocator->allocate(deg, &adjlist);
+                    vert->set_cpos(cpos);
+                    // copy adjlist to chunk
+                    memcpy(adjlist, csr_adj+csr_idx[vid], deg*sizeof(vid_t));
+                }
+            }
+        }
+    }
+
     inline degree_t get_out_degree(vid_t vid) { 
         if (vertices[vid] == NULL) return 0;
         return vertices[vid]->get_out_degree(); 
@@ -874,4 +907,231 @@ public:
         chunk_allocator->persist();
     }
 
+};
+
+class reordergraph_t : public graph_t {
+private:
+    // chunk allocator
+    chunk_allocator_trilevel_t* chunk_allocator;
+    vid_t* visited;
+    vid_t* reorder_list;
+
+public:
+    reordergraph_t(vid_t nverts, index_t nedges, bool is_out_graph) {
+        this->is_out_graph = is_out_graph;
+        this->chunk_allocator = new chunk_allocator_trilevel_t(is_out_graph);
+    }
+
+    ~reordergraph_t() {
+        if (visited) free(visited);
+        if (reorder_list) free(reorder_list);
+        delete chunk_allocator;
+    }
+
+    inline void init_chunk_allocator() {
+        std::string pool_name = sblk_name;
+        if (is_out_graph) pool_name += "_out_";
+        else pool_name += "_in_";
+        chunk_allocator->init(pool_name);
+    }
+
+    inline vid_t re_order(index_t* csr_idx, vid_t* csr_adj, vid_t root = 12) {
+        // run preprocess BFS
+        reorder_list[0] = root;
+        visited[root] = 1;
+        vid_t reorder_list_tail = 1;
+
+        for (vid_t i = 0; i < reorder_list_tail; ++i) {
+            vid_t vid = reorder_list[i];
+            degree_t degree = csr_idx[vid+1] - csr_idx[vid];
+            vid_t* nebrs = csr_adj+csr_idx[vid];
+            for (degree_t d = 0; d < degree; ++d) {
+                vid_t nebr = nebrs[d];
+                if (visited[nebr] == 0) {
+                    visited[nebr] = 1;
+                    reorder_list[reorder_list_tail++] = nebr;
+                }
+            }
+        }
+        #ifdef MONITOR
+        std::cout << "reorder_list_tail = " << reorder_list_tail << std::endl;
+        #endif
+        return reorder_list_tail;
+    }
+
+    void convert_graph(index_t* csr_idx, vid_t* csr_adj) {
+        // reorder
+        visited = (vid_t*)calloc(sizeof(vid_t), nverts);
+        reorder_list = (vid_t*)calloc(sizeof(vid_t), nverts);
+        vid_t num_reorder = re_order(csr_idx, csr_adj, source);
+
+        #ifdef MONITOR
+        degree_t nzvcount = 0;
+        #endif
+        
+        // #pragma omp for schedule (dynamic, 256*256) nowait
+        for (vid_t i = 0; i < num_reorder; ++i) {
+            vid_t vid = reorder_list[i];
+            degree_t deg = csr_idx[vid+1] - csr_idx[vid];
+            if (deg) {
+                #ifdef MONITOR
+                ++nzvcount;
+                #endif
+                vertex_t* vert = vertices[vid];
+                vert = new_vertex();
+                set_vertex(vid, vert);
+
+                vert->set_out_degree(deg);
+                
+                if (deg <= 2) {
+                    for (degree_t d = 0; d < deg; ++d) {
+                        vert->add_nebr(csr_adj[csr_idx[vid]+d]);
+                    }
+                } else {
+                    // allocate vertex to a chunk
+                    vid_t* adjlist = NULL;
+                    cpos_t cpos = chunk_allocator->allocate(deg, &adjlist);
+                    vert->set_cpos(cpos);
+                    // copy adjlist to chunk
+                    memcpy(adjlist, csr_adj+csr_idx[vid], deg*sizeof(vid_t));
+                }
+            }
+        }
+
+        vid_t total_num_reorder = num_reorder;
+
+        for (vid_t vid = 0; vid < nverts; ++vid) {
+            if (visited[vid]) continue;
+            degree_t deg = csr_idx[vid+1] - csr_idx[vid];
+            if (deg) {
+                #ifdef MONITOR
+                ++nzvcount;
+                #endif
+                vertex_t* vert = vertices[vid];
+                vert = new_vertex();
+                set_vertex(vid, vert);
+
+                vert->set_out_degree(deg);
+                
+                if (deg <= 2) {
+                    for (degree_t d = 0; d < deg; ++d) {
+                        vert->add_nebr(csr_adj[csr_idx[vid]+d]);
+                    }
+                } else {
+                    // allocate vertex to a chunk
+                    vid_t* adjlist = NULL;
+                    cpos_t cpos = chunk_allocator->allocate(deg, &adjlist);
+                    vert->set_cpos(cpos);
+                    // copy adjlist to chunk
+                    memcpy(adjlist, csr_adj+csr_idx[vid], deg*sizeof(vid_t));
+                }
+            }
+            reorder_list[total_num_reorder++] = vid;
+        }
+
+        #ifdef MONITOR
+        max_chunkID = chunk_allocator->get_max_chunkID();
+        max_offset = chunk_allocator->get_max_offset();
+        std::cout << "max_chunkID = " << max_chunkID << std::endl;
+        std::cout << "max_offset = " << max_offset / GB << "(GB)" << std::endl;
+        std::cout << "The number of non-zero degree vertices: " << nzvcount << std::endl;
+        std::cout << "total_num_reorder = " << total_num_reorder << std::endl;
+        for (vid_t i = 0; i < 5; ++i) {
+            std::cout << reorder_list[i] << " ";
+        }
+        std::cout << std::endl;
+        #endif
+                
+        free(visited);
+        visited = NULL;
+    }
+
+    inline degree_t get_out_degree(vid_t vid) { 
+        if (vertices[vid] == NULL) return 0;
+        return vertices[vid]->get_out_degree(); 
+    }
+
+    inline degree_t get_out_nebrs(vid_t vid, vid_t* nebrs) { 
+        if (vertices[vid] == NULL) return 0;
+        degree_t degree = vertices[vid]->get_out_degree();
+        if (degree == 0) return degree;
+        if (degree <= 2) {
+            vid_t* csr = vertices[vid]->get_nebrs();
+            for (degree_t d = 0; d < degree; ++d) {
+                nebrs[d] = csr[d];
+            }
+            #ifdef MONITOR
+            query_record.record_inplace();
+            #endif
+        } else {
+            vid_t* csr = chunk_allocator->convert_addr(vertices[vid]->get_cpos(), degree);
+            for (degree_t d = 0; d < degree; ++d) {
+                nebrs[d] = csr[d];
+            }
+            #ifdef MONITOR
+            query_record.record_chunk(vertices[vid]->get_cpos() >> 32);
+            #endif
+        }
+        return degree;
+    }
+
+    void save_reorder_list() {
+        std::string reorder_list_file = SSDPATH + "/" + PREFIX + ".reorder";
+        size_t size = nverts * sizeof(vid_t) * 2;
+        int fd = open(reorder_list_file.c_str(), O_RDWR | O_CREAT, 00777);
+        if (fd == -1) {
+            std::cout << "open file error" << std::endl;
+            exit(1);
+        }
+        if (ftruncate(fd, size) == -1) {
+            std::cout << "ftruncate error" << std::endl;
+            exit(1);
+        }
+        vid_t* addr = (vid_t*)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (addr == MAP_FAILED) {
+            std::cout << "mmap error" << std::endl;
+            exit(1);
+        }
+
+        if (is_out_graph) {
+            memcpy(addr, reorder_list, nverts * sizeof(vid_t));
+            // debug. print out the first hundred elements
+            std::cout << "reorder_list for out graph: ";
+            for (vid_t i = 0; i < 100; ++i) {
+                std::cout << addr[i] << " ";
+            }
+            std::cout << std::endl;
+        } else {
+            memcpy(addr + nverts, reorder_list, nverts * sizeof(vid_t));
+            // debug. print out the first hundred elements
+            std::cout << "reorder_list for in graph: ";
+            for (vid_t i = 0; i < 100; ++i) {
+                std::cout << addr[i+nverts] << " ";
+            }
+            std::cout << std::endl;
+        }
+        msync(addr, size, MS_SYNC);
+        munmap(addr, size);
+        close(fd);
+    }
+
+    void save_graph() {
+        // save config
+        std::ofstream ofs(SSDPATH + "/" + PREFIX + ".config", std::ofstream::out | std::ofstream::app);
+        if (is_out_graph) {
+            // nverts   nedges  max_chunk_level
+            ofs << nverts << " " << nedges << " " << MAX_LEVEL - 1 << std::endl;
+        }
+        // super block size
+        ofs << chunk_allocator->get_max_offset() << std::endl;
+        //      level max degree     level chunk size     chunk_number
+        ofs << chunk_allocator->get_threshold() << " " << chunk_allocator->get_chunk_size() << " " << chunk_allocator->get_max_chunkID() + 1 << std::endl;
+        ofs.close();
+        // save vertex
+        save_vertices();
+        // save chunk and hub
+        chunk_allocator->persist();
+        // save reorder list using mmap
+        save_reorder_list();
+    }
 };

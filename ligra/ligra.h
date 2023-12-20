@@ -43,6 +43,7 @@
 using namespace std;
 
 //*****START FRAMEWORK*****
+#define CHUNK_MMAP
 
 typedef uint32_t flags;
 const flags no_output = 1;
@@ -60,27 +61,55 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
   using D = tuple<bool, data>;
   long n = GA.n;
   vertex *G = GA.V;
+  // std::cout << "edgeMapDense" << std::endl;
   if (should_output(fl)) {
     D* next = newA(D, n);
     auto g = get_emdense_gen<data>(next);
-    parallel_for (long v=0; v<n; v++) {
-      std::get<0>(next[v]) = 0;
-      if (f.cond(v)) {
-        // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
-        uintE d = G[v].getInDegree();
-        uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
-        G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+    if (GA.isReorderListEnabled()) {
+      // std::cout << "reorder list enabled" << std::endl;
+      parallel_for (long i=0; i<n; i++) {
+        long v = GA.getReorderID(1, i);
+        std::get<0>(next[v]) = 0;
+        if (f.cond(v)) {
+          // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+          uintE d = G[v].getInDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+          G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+        }
+      }
+    } else {
+      parallel_for (long v=0; v<n; v++) {
+        std::get<0>(next[v]) = 0;
+        if (f.cond(v)) {
+          // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+          uintE d = G[v].getInDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+          G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+        }
       }
     }
     return vertexSubsetData<data>(n, next);
   } else {
     auto g = get_emdense_nooutput_gen<data>();
-    parallel_for (long v=0; v<n; v++) {
-      if (f.cond(v)) {
-        // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
-        uintE d = G[v].getInDegree();
-        uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
-        G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+    if (GA.isReorderListEnabled()) {
+      // std::cout << "reorder list enabled" << std::endl;
+      parallel_for (long i=0; i<n; i++) {
+        long v = GA.getReorderID(1, i);
+        if (f.cond(v)) {
+          // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+          uintE d = G[v].getInDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+          G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+        }
+      }
+    } else {
+      parallel_for (long v=0; v<n; v++) {
+        if (f.cond(v)) {
+          // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+          uintE d = G[v].getInDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+          G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+        }
       }
     }
     return vertexSubsetData<data>(n);
@@ -271,6 +300,9 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
     if (outDegrees == 0) return vertexSubsetData<data>(numVertices);
   }
   if (!(fl & no_dense) && m + outDegrees > threshold) {
+    #ifdef DEBUG_EN
+      std::cout << ", Bottom-up dense" << std::endl;
+    #endif
     if(degrees) free(degrees);
     if(frontierVertices) free(frontierVertices);
     vs.toDense();
@@ -278,6 +310,9 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
       edgeMapDenseForward<data, vertex, VS, F>(GA, vs, f, fl) :
       edgeMapDense<data, vertex, VS, F>(GA, vs, f, fl);
   } else {
+    #ifdef DEBUG_EN
+      std::cout << ", Top-down sparse" << std::endl;
+    #endif
     auto vs_out =
       (should_output(fl) && fl & sparse_no_filter) ? // only call snof when we output
       edgeMapSparse_no_filter<data, vertex, VS, F>(GA, frontierVertices, vs, degrees, vs.numNonzeros(), f, fl) :
@@ -563,14 +598,10 @@ int parallel_main(int argc, char* argv[]) {
     } else {
 #ifndef HYPER
       startTime();
-      process_mem_usage(pid, vm, rss);
-      std::cout << "before read graph: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
       graph<asymmetricVertex> G =
         readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer); //asymmetric graph
       double time = nextTime("Preload time");
       reportTimeToFile(time);
-      process_mem_usage(pid, vm, rss);
-      std::cout << "after read graph: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
     
       // graph<asymmetricVertex> G1 =
       //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case4kb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph

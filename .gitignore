@@ -23,3 +23,5 @@ apps/perf.*
 scripts/*
 apps/hierg_query_time.csv
 results/*
+
+CSRGraph/bin/*

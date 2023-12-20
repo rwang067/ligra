@@ -41,7 +41,7 @@ void preada(int f, T * tbuf, size_t nbytes, size_t off = 0) {
     assert(nread <= nbytes);
 }
 
-char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
+char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0, bool isProfile = 0){
   char* addr = 0;
   if(!isMmap){
     ifstream in(filename,ifstream::in | ios::binary); //stored as uints
@@ -75,8 +75,12 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0){
       close(fd);
       exit(1);
     } else {
-      std::cout << "mmap succeeded, size = " << size << ",filename = " << filename << std::endl;
+      std::cout << "mmap succeeded, size = " << B2GB(size) << "GB, filename = " << filename << std::endl;
+      std::cout << "size = " << size << ", addr = " << (void*)addr << std::endl;
     }
+    // if (isProfile) {
+    //   preada(fd, addr, size, 0);
+    // }
   }
   return addr;
 }
@@ -392,6 +396,7 @@ struct TriLevelReader {
   long sv_size, rsv_size;
   std::string configFile;
   std::string vertFile;
+  std::string reorderListFile;
 
   void readConfig(char* iFile, bool debug = false) {
     string baseFile = iFile;
@@ -401,6 +406,7 @@ struct TriLevelReader {
     rchunkFile = baseFile + ".radj.chunk";
     svFile = baseFile + ".adj.sv";
     rsvFile = baseFile + ".radj.sv";
+    reorderListFile = baseFile + ".reorder";
 
     ifstream in(configFile.c_str(), ifstream::in);
     in >> n >> m >> level;
@@ -551,6 +557,9 @@ private:
   // level chunk
   ChunkManager** chunkManager[DIRECT_GRAPH];
   SuperVertexManager* svManager[DIRECT_GRAPH];
+  // reorder list
+  const bool reorderListEnable = 1;
+  uintE* reorderList[DIRECT_GRAPH];
 
 public:
   TriLevelManager() {
@@ -563,8 +572,14 @@ public:
       delete chunkManager[0][i];
       delete chunkManager[1][i];
     }
+    free(chunkManager[0]);
+    free(chunkManager[1]);
     delete svManager[0];
     delete svManager[1];
+    if (reorderListEnable) {
+      uintE* addr = reorderList[0] > reorderList[1] ? reorderList[1] : reorderList[0];
+      munmap(reorderList[0], reader->n * sizeof(uintE) * 2);
+    }
   }
 
   void init() {
@@ -591,6 +606,19 @@ public:
 
     svManager[1] = new SuperVertexManager(reader->rsvFile, reader->rsv_size);
     svManager[1]->readGraph();
+
+    // read reorder list
+    if (reorderListEnable) {
+      uintE* addr = (uintE*)getFileData(reader->reorderListFile.c_str(), reader->n * sizeof(uintE) * 2, 0, 1);
+      reorderList[0] = addr;
+      reorderList[1] = addr + reader->n;
+      #ifdef DEBUG_EN
+      std::string item = "Reorder MetaData";
+      size_t size = reader->n * sizeof(uintE) * 2;
+      memory_profiler.memory_usage[item] = size;
+      std::cout << "Allocate reorderList size: " << B2GB(size) << "GB" << std::endl;
+      #endif
+    }
   }
 
   inline TriLevelReader* getReader() { return reader; }
@@ -600,6 +628,10 @@ public:
     return chunkManager[inGraph][level]->getChunkNeighbors(cid, coff);
   }
 
+  inline bool getReorderListEnable() { return reorderListEnable; }
+  inline uintE* getReorderList(bool inGraph) { return reorderList[inGraph]; }
+  inline uintE getReorderListElement(bool inGraph, uintE i) { return reorderList[inGraph][i]; }
+  
   inline void transpose() {
     ChunkManager** tmp = chunkManager[0];
     chunkManager[0] = chunkManager[1];
@@ -607,5 +639,10 @@ public:
     SuperVertexManager* tmp1 = svManager[0];
     svManager[0] = svManager[1];
     svManager[1] = tmp1;
+    if (reorderListEnable) {
+      uintE* tmp2 = reorderList[0];
+      reorderList[0] = reorderList[1];
+      reorderList[1] = tmp2;
+    }
   }
 };

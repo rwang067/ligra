@@ -70,8 +70,8 @@ name[6]=yahoo
 
 swap=false
 cgroup_limit=false
-debug=true
-convert_chunk=false
+debug=false
+convert_chunk=true
 count_degree=false
 
 
@@ -141,15 +141,14 @@ fi
 if $convert_chunk; then
     SAVE_PATH=/mnt/nvme1/zorax/chunks/
     # for idx in {0,1};
-    for idx in 2;
+    for idx in 1;
     do
-        for job in 5;
+        for job in 6;
         do
             mkdir -p ${SSD_PATH}
             mkdir -p ${SAVE_PATH}${name[${idx}]}
             clear_ssd
-            # gdb --args 
-            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} -t 1 -q 1 -j ${job} > debug.txt
+            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} -t 1 -q 0 -j ${job} > debug.txt
             mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
         done
     done

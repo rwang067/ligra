@@ -84,6 +84,19 @@ void Compute(graph<vertex>& GA, commandLine P) {
       Degrees[i] = GA.V[i].getOutDegree();
     }}
   long largestCore = -1;
+
+#ifdef DEBUG_EN
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(bool) * n; // active
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(uintE) * n; // coreNumbers, Degrees
+  memory_profiler.memory_usage[item] += size;
+  memory_profiler.memory_usage[item] += size;
+
+  size_t max_size = Frontier.getMemorySize();
+#endif
+
   // long max_k = n > 10 ? 10 : n;
   long max_k = P.getOptionLongValue("-maxk", n > 10 ? 10 : n);
   for (long k = 1; k <= max_k; k++) {
@@ -93,6 +106,10 @@ void Compute(graph<vertex>& GA, commandLine P) {
       vertexSubset remaining = vertexFilter(Frontier,Deg_AtLeast_K<vertex>(GA.V,Degrees,k));
       Frontier.del();
       Frontier = remaining;
+#ifdef DEBUG_EN
+      size = sizeof(vertexSubset) + remaining.getMemorySize();
+      if (size > max_size) max_size = size;
+#endif
       if (0 == toRemove.numNonzeros()) { // fixed point. found k-core
 	toRemove.del();
         break;
@@ -107,10 +124,25 @@ void Compute(graph<vertex>& GA, commandLine P) {
     pid_t pid = getpid();
     process_mem_usage(pid, vm, rss);
     std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros()
-              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
 #endif
     if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
   }
   cout << "largestCore was " << largestCore << endl;
+
+#ifdef DEBUG_EN
+  std::cout << "max_size = " << max_size << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
+
   Frontier.del(); free(coreNumbers); free(Degrees);
+
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+#endif 
 }

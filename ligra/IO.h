@@ -536,6 +536,14 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
   vertex* v = newA(vertex,n);
   time.reportNext("Allocate vertex time");
   reporter.reportNext("Allocate vertex space");
+
+#ifdef DEBUG_EN
+  std::string item = "Vertex MetaData";
+  size = sizeof(vertex) * n;
+  memory_profiler.memory_usage[item] = size;
+  std::cout << "Allocate vertex metadata: " << B2GB(size) << "GB" << std::endl;
+#endif
+
 #ifdef WEIGHTED
   intE* edgesAndWeights = newA(intE,2*m);
   {parallel_for(long i=0;i<m;i++) {
@@ -762,20 +770,28 @@ graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric, bool isMmap, boo
   reader->readConfig(iFile, debug);
   long m = reader->m, n = reader->n, level = reader->level;
   t.reportNext("Load Config Time");
-  reporter.reportNext("Load Config Space");
+
+#ifdef DEBUG_EN
+  std::cout << "n = " << n << ", m = " << m << ", level = " << level << std::endl;
+#endif
   
   manager->init();
   t.reportNext("Load ChunkManager Time");
-  reporter.reportNext("Load ChunkManager Space");
 
   std::string vertFile = reader->vertFile;
   pvertex_t* offsets = (pvertex_t*)getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
   t.reportNext("Load MetaData Time");
-  reporter.reportNext("Load MetaData Space");
+  reporter.reportNext("Finish Loading File Offsets");
 
-  vertex* v = newA(vertex,n);
+  vertex* v = newA(vertex,n); // doesn't change rss
+#ifdef DEBUG_EN
+  std::string item = "Vertex MetaData";
+  size_t size = sizeof(vertex) * n;
+  memory_profiler.memory_usage[item] = size;
+  std::cout << "Allocate vertex size: " << B2GB(size) << "GB" << std::endl;
+  std::cout << "Allocate offset size: " << B2GB(sizeof(pvertex_t) * n * 2)  << "GB" << std::endl;
+#endif
   t.reportNext("Allocate Vertex Time");
-  reporter.reportNext("Allocate Vertex Space");
 
   char* edges_sv = manager->getSVAddr(0);
   char* redges_sv = manager->getSVAddr(1);
@@ -797,7 +813,6 @@ graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric, bool isMmap, boo
     }
   }}
   t.reportNext("Load OutNeighbors Time");
-  reporter.reportNext("Load OutNeighbors Space");
 
   if(!isSymmetric) {
     {parallel_for(long i=0;i<n;i++) {
@@ -814,9 +829,107 @@ graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric, bool isMmap, boo
       }
     }}
     t.reportNext("Load InNeighbors Time");
-    reporter.reportNext("Load InNeighbors Space");
+    reporter.reportNext("Finish Loading Vertex Metadata");
   }
-  free(offsets);
+
+  free(offsets);  // doesn't change rss
+
+  Uncompressed_ChunkMem<vertex>* mem = new Uncompressed_ChunkMem<vertex>(v,n,m);
+  t.stop();
+  t.reportTotal("Read Graph Time");
+  cout << "readGraphFromChunk end.\n" << endl;
+
+  return graph<vertex>(v,n,m,mem,manager);
+}
+
+template <class vertex>
+graph<vertex> readGraphFromChunkmmap(char* iFile, bool isSymmetric, bool isMmap, bool debug, 
+                                          long buffer, long job=0, bool update=0) {
+  timer t;
+  pid_t pid = getpid();
+  vm_reporter reporter(pid);
+
+  TriLevelManager* manager = new TriLevelManager();
+  TriLevelReader* reader = manager->getReader();
+
+  t.start();
+  reporter.reportNext("Start Read Graph Space");
+  reader->readConfig(iFile, debug);
+  long m = reader->m, n = reader->n, level = reader->level;
+  t.reportNext("Load Config Time");
+
+#ifdef DEBUG_EN
+  std::cout << "n = " << n << ", m = " << m << ", level = " << level << std::endl;
+#endif
+  
+  manager->init();
+  t.reportNext("Load ChunkManager Time");
+
+  std::string vertFile = reader->vertFile;
+  pvertex_t* offsets = (pvertex_t*)getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
+  t.reportNext("Load MetaData Time");
+  reporter.reportNext("Finish Loading File Offsets");
+
+  vertex* v = newA(vertex,n); // doesn't change rss
+#ifdef DEBUG_EN
+  std::string item = "Vertex MetaData";
+  size_t size = sizeof(vertex) * n;
+  memory_profiler.memory_usage[item] = size;
+  std::cout << "Allocate vertex size: " << B2GB(size) << "GB" << std::endl;
+  std::cout << "Allocate offset size: " << B2GB(sizeof(pvertex_t) * n * 2)  << "GB" << std::endl;
+#endif
+  t.reportNext("Allocate Vertex Time");
+
+  char* edges_sv = manager->getSVAddr(0);
+  char* redges_sv = manager->getSVAddr(1);
+
+  printf("edges_sv = %p, redges_sv = %p\n", edges_sv, redges_sv);
+
+  {parallel_for(long i=0;i<n;i++) {
+    uintE d = offsets[i].out_deg;
+    uint64_t r = offsets[i].residue;
+    // cout << i << " " << d << " " << r << endl; // correct
+    v[i].setOutDegree(d);
+    if (d == 0) {
+      v[i].setOutNeighbors(0);
+    } else if (d <= 2) {
+      v[i].setOutNeighbors((uintE*)r);
+    } else if (d <= reader->end_deg[level-1]) {
+      uint32_t cid = r >> 32;
+      uint32_t coff = r & 0xFFFFFFFF;
+      uintE* nebrs = manager->getChunkNeighbors(cid, coff, level-1, d, 0);
+      v[i].setOutNeighbors(nebrs);
+    } else {
+      uintE* nebrs = (uintE*)(edges_sv+r);
+      v[i].setOutNeighbors(nebrs);
+    }
+  }}
+  t.reportNext("Load OutNeighbors Time");
+
+  if(!isSymmetric) {
+    {parallel_for(long i=0;i<n;i++) {
+      uintE d = offsets[n+i].out_deg;
+      uint64_t r = offsets[n+i].residue;
+      v[i].setInDegree(d);
+      if (d==0) {
+        v[i].setInNeighbors(0);
+      } else if (d <= 2) {
+        v[i].setInNeighbors((uintE*)r);
+      } else if (d <= reader->rend_deg[level-1]) {
+        uint32_t cid = r >> 32;
+        uint32_t coff = r & 0xFFFFFFFF;
+        uintE* nebrs = manager->getChunkNeighbors(cid, coff, level-1, d, 1);
+        v[i].setInNeighbors(nebrs);
+      } else {
+        uintE* nebrs = (uintE*)(redges_sv+r);
+        v[i].setInNeighbors(nebrs);
+      }
+    }}
+    t.reportNext("Load InNeighbors Time");
+    reporter.reportNext("Finish Loading Vertex Metadata");
+  }
+
+  free(offsets);  // doesn't change rss
 
   Uncompressed_ChunkMem<vertex>* mem = new Uncompressed_ChunkMem<vertex>(v,n,m);
   t.stop();
@@ -831,7 +944,13 @@ graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binar
                         long job=0, bool update=0, bool chunk=0, bool debug=0, long buffer=0) {
   if(binary){ 
     // if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug,buffer,job,update);
-    if (chunk) return readGraphFromChunk<vertex>(iFile, symmetric, mmap, debug, buffer);
+    if (chunk) {
+      #ifdef CHUNK_MMAP
+      return readGraphFromChunkmmap<vertex>(iFile, symmetric, mmap, debug, buffer);
+      #else
+      return readGraphFromChunk<vertex>(iFile, symmetric, mmap, debug, buffer);
+      #endif
+    }
     return readGraphFromBinarymmap<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);

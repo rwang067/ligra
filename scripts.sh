@@ -7,7 +7,9 @@ USE_CHUNK=0
 
 [ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme1/zorax/chunks/ || DATA_PATH=/mnt/nvme1/zorax/datasets/
 CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
-TEST_CPU_SET="taskset --cpu-list 49-96:1"
+# CPU:use NUMA 0 node, with id 1-24 and 49-72, with taskset command
+# TEST_CPU_SET="taskset --cpu-list 0-95:1"
+TEST_CPU_SET="taskset -c 0-23,48-71:1"
 
 export OMP_PROC_BIND=true
 
@@ -73,7 +75,7 @@ profile_memory() {
     echo "memory bound: " $limit "GB" >> ../results/command.log
     echo "memory bound: " $limit "GB" >> ${log_dir}/${filename}.txt
 
-    nohup $commandargs >> ${log_dir}/${filename}.txt &
+    nohup $commandargs &>> ${log_dir}/${filename}.txt &
     pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
 
     echo "pid: " $pid >> ../results/command.log
@@ -158,21 +160,65 @@ cgroup_swap=true
 # cd apps && make clean && make BFS PageRank Components KCore
 
 if $debug; then
-    cd apps && make clean && make BFS
+    cd apps && make clean
+    
+    base_bound[0]=8
+    base_bound[1]=12
+    base_bound[2]=16
+    base_bound[3]=128
+
+    memory_bound[0]=$((${base_bound[0]}*1024*1024*1024))
+    memory_bound[1]=$((${base_bound[1]}*1024*1024*1024))
+    memory_bound[2]=$((${base_bound[2]}*1024*1024*1024))
+    memory_bound[3]=$((${base_bound[3]}*1024*1024*1024))
+
+    outputFile="../results/hierg_query_time.csv"
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
-    echo $cur_time "Test Ligra-swap Query Performace"
+    echo $cur_time "Test ChunkGraph Query Performace" >> ${outputFile}
+    # for idx in {0,1};
     for idx in 0;
     do
-        echo -n "Data: "
-        echo ${data[$idx]}
-        echo -n "Root: "
-        echo ${rts[$idx]}
-        echo -n "Name: "
-        echo ${name[$idx]}
-        # clear_pagecaches
-        ./BFS -b -r ${rts[$idx]} -chunk ${data[${idx}]}
-        # gdb --args ./testNebrs -b -chunk -debug ${data[${idx}]}
+
+        # 调试 BC 在 FS 上的性能下降
+        make BC
+        # for mem in {0,1,2,3};
+        for mem in {3,2,1,0};
+        do
+            clear_pagecaches
+            commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} /mnt/nvme1/zorax/chunks/friendster/friendster"
+            # commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} /mnt/nvme1/zorax/chunks/debug/friendster_out_unorder/friendster"
+            # commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} /mnt/nvme1/zorax/chunks/debug/friendster_in_unorder/friendster"
+            # commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} /mnt/nvme1/zorax/chunks/debug/friendster_total_unorder/friendster"
+
+            filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+            
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
     done
+
+    # # 测试 Ligra-mmap BC 在 FS 的性能
+    # outputFile="../results/ligra_mmap_query_time.csv"
+    # cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    # echo $cur_time "Test ChunkGraph Query Performace" >> ${outputFile}
+    # # for idx in {0,1};
+    # for idx in 1;
+    # do
+    #     make BC
+    #     for mem in {0,1,2,3};
+    #     do
+    #         clear_pagecaches
+    #         # commandargs="./BC -b -r ${rts[$idx]} /mnt/nvme1/zorax/datasets/csr_bin/Friendster/friendster"
+    #         commandargs="./BC -b -r ${rts[$idx]} ${data[${idx}]}"
+    #         filename="${name[${idx}]}_mmap_bc_${base_bound[$mem]}"
+    #         echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+    #         profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+    #         wait
+    #     done
+    # done
 fi
 
 if $run_performance; then
@@ -274,8 +320,9 @@ if $cgroup_swap; then
     [ $USE_CHUNK -eq 1 ] && outputFile="../results/hierg_query_time.csv" || outputFile="../results/ligra_mmap_query_time.csv"
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     echo $cur_time "Test ChunkGraph-swap Query Performace" >> ${outputFile}
-    for idx in {0,1};
-    # for idx in 1;
+    # for idx in {0,1,2,3,4,5,6};
+    # for idx in {0,1};
+    for idx in 1;
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -283,8 +330,8 @@ if $cgroup_swap; then
         echo ${rts[$idx]}
 
         make BFS
-        for mem in {0,1,2,3};
-        # for mem in 0;
+        # for mem in {0,1,2,3};
+        for mem in 3;
         do
             clear_pagecaches
             [ $USE_CHUNK -eq 1 ] && commandargs="./BFS -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./BFS -b -r ${rts[$idx]} ${data[${idx}]}"
@@ -296,8 +343,8 @@ if $cgroup_swap; then
         done
 
         make BC
-        for mem in {0,1,2,3};
-        # for mem in {2,3};
+        # for mem in {0,1,2,3};
+        for mem in 3;
         do
             clear_pagecaches
             [ $USE_CHUNK -eq 1 ] && commandargs="./BC -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./BC -b -r ${rts[$idx]} ${data[${idx}]}"
@@ -309,7 +356,8 @@ if $cgroup_swap; then
         done
 
         make PageRank
-        for mem in {0,1,2,3};
+        # for mem in {0,1,2,3};
+        for mem in 3;
         do
             clear_pagecaches
             [ $USE_CHUNK -eq 1 ] && commandargs="./PageRank -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./PageRank -b ${data[${idx}]}"
@@ -321,7 +369,8 @@ if $cgroup_swap; then
         done
 
         make Components
-        for mem in {0,1,2,3};
+        # for mem in {0,1,2,3};
+        for mem in 3;
         do
             clear_pagecaches
             [ $USE_CHUNK -eq 1 ] && commandargs="./Components -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./Components -b ${data[${idx}]}"
@@ -333,7 +382,8 @@ if $cgroup_swap; then
         done
         
         make KCore
-        for mem in {0,1,2,3};
+        # for mem in {0,1,2,3};
+        for mem in 3;
         do
             clear_pagecaches
             [ $USE_CHUNK -eq 1 ] && commandargs="./KCore -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./KCore -b ${data[${idx}]}"
@@ -345,7 +395,8 @@ if $cgroup_swap; then
         done
 
         make Radii
-        for mem in {0,1,2,3};
+        # for mem in {0,1,2,3};
+        for mem in 3;
         do
             clear_pagecaches
             [ $USE_CHUNK -eq 1 ] && commandargs="./Radii -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./Radii -b ${data[${idx}]}"

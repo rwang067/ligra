@@ -59,6 +59,17 @@ int main(int argc, const char ** argv)
         delete trigraph;
         break;
     }
+    case 6: {
+        MAX_LEVEL = 2;
+        ReorderGraph *reordergraph = new ReorderGraph();
+        reordergraph->convert_graph();
+        reordergraph->save_graph();
+        test_out_neighbors(reordergraph);
+        test_in_neighbors(reordergraph);
+        test_graph_benchmarks(reordergraph);
+        delete reordergraph;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+        break;
+    }
     default:
         break;
     }

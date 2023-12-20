@@ -254,6 +254,16 @@ struct vertexSubsetData<pbbs::empty> {
     else printActivateSparse();
   }
 
+  size_t getMemorySize() {
+    size_t size = 0;
+    if (isDense) {
+      size += sizeof(bool) * n;
+    } else {
+      size += sizeof(uintE) * m;
+    }
+    return size;
+  }
+
   S* s;
   bool* d;
   size_t n, m;

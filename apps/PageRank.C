@@ -81,27 +81,69 @@ void Compute(graph<vertex>& GA, commandLine P) {
   {parallel_for(long i=0;i<n;i++) frontier[i] = 1;}
 
   vertexSubset Frontier(n,n,frontier);
+
+#ifdef DEBUG_EN
+  std::cout << "maxIters = " << maxIters << std::endl;
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(double) * n;  // p_curr, p_next
+  memory_profiler.memory_usage[item] += size;
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(bool) * n;  // frontier
+  memory_profiler.memory_usage[item] += size;
+
+  size_t max_size = Frontier.getMemorySize();
+#endif
   
   long iter = 0;
+  double L1_norm = 1.0;
+
   while(iter++ < maxIters) {
+#ifdef DEBUG_EN
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    std::cout << "iteration = " << iter << ", L1_norm_prev = " << L1_norm
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
+#endif
     edgeMap(GA,Frontier,PR_F<vertex>(p_curr,p_next,GA.V),0, no_output);
     vertexMap(Frontier,PR_Vertex_F(p_curr,p_next,damping,n));
     //compute L1-norm between p_curr and p_next
     {parallel_for(long i=0;i<n;i++) {
       p_curr[i] = fabs(p_curr[i]-p_next[i]);
       }}
-    double L1_norm = sequence::plusReduce(p_curr,n);
-#ifdef DEBUG_EN
-    size_t vm, rss;
-    pid_t pid = getpid();
-    process_mem_usage(pid, vm, rss);
-    std::cout << "iteration = " << iter << ", L1_norm = " << L1_norm
-              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
-#endif
+    L1_norm = sequence::plusReduce(p_curr,n);
     if(L1_norm < epsilon) break;
     //reset p_curr
     vertexMap(Frontier,PR_Vertex_Reset(p_curr));
     swap(p_curr,p_next);
   }
+#ifdef DEBUG_EN
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    std::cout << "iteration = " << iter << ", L1_norm_prev = " << L1_norm
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss) << std::endl;
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
+#endif
+
+
+#ifdef DEBUG_EN
+  std::cout << "Frontier maximum memory usage = " << B2GB(max_size) << "GB" << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
+
   Frontier.del(); free(p_curr); free(p_next); 
+
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+#endif
 }

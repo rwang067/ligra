@@ -3,6 +3,11 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <unordered_map>
+#include <string>
+#include <utility>
 
 // #define PROFILE_EN
 #define DEBUG_EN
@@ -40,6 +45,76 @@ private:
    int nthreads = 0;
 };
 
+// only the runtime memory usage is recorded
+struct memory_profiler_t {
+   #define MAX_THREAD_NUM 96
+   // item, memory usage
+   std::unordered_map<std::string, size_t> memory_usage;
+   // memory usage of edge in chunk (multi-thread)
+   size_t edge_memory_usage[MAX_THREAD_NUM] = {0};
+
+   void print_memory_usage() {
+      size_t total_memory_usage = 0;
+      for (auto it = memory_usage.begin(); it != memory_usage.end(); ++it) {
+         total_memory_usage += it->second;
+      }
+      for (int i = 0; i < MAX_THREAD_NUM; ++i) {
+         total_memory_usage += edge_memory_usage[i];
+      }
+      printf("total_memory_usage = %.2lfGB\n", total_memory_usage / 1024.0 / 1024.0 / 1024.0);
+   }
+
+   void print_memory_usage_detail() {
+      for (auto it = memory_usage.begin(); it != memory_usage.end(); ++it) {
+         printf("\t%s = %.2lfGB\n", it->first.c_str(), it->second / 1024.0 / 1024.0 / 1024.0);
+      }
+      size_t total_edge_memory_usage = 0;
+      for (int i = 0; i < MAX_THREAD_NUM; ++i) {
+         total_edge_memory_usage += edge_memory_usage[i];
+         // printf("edge_memory_usage[%d] = %.2lfGB\n", i, edge_memory_usage[i] / 1024.0 / 1024.0 / 1024.0);
+      }
+      printf("\tedge_memory_usage = %.2lfGB\n", total_edge_memory_usage / 1024.0 / 1024.0 / 1024.0);
+   }
+};
+
+struct edge_profiler_t {
+   #define MAX_THREAD_NUM 96
+   
+   // memory usage of edge in chunk (multi-thread)
+   size_t edge_access[MAX_THREAD_NUM] = {0};
+   size_t out_edge_access[MAX_THREAD_NUM] = {0};
+   size_t in_edge_access[MAX_THREAD_NUM] = {0};
+
+   void print_edge_access() {
+      size_t total_edge_access = 0;
+      for (int i = 0; i < MAX_THREAD_NUM; ++i) {
+         total_edge_access += edge_access[i];
+      }
+      printf("total_edge_access = %lu\n", total_edge_access);
+   }
+
+   void print_out_edge_access() {
+      size_t total_out_edge_access = 0;
+      for (int i = 0; i < MAX_THREAD_NUM; ++i) {
+         total_out_edge_access += out_edge_access[i];
+      }
+      printf("total_out_edge_access = %lu\n", total_out_edge_access);
+   }
+
+   void print_in_edge_access() {
+      size_t total_in_edge_access = 0;
+      for (int i = 0; i < MAX_THREAD_NUM; ++i) {
+         total_in_edge_access += in_edge_access[i];
+      }
+      printf("total_in_edge_access = %lu\n", total_in_edge_access);
+   }
+};
+
 #ifdef PROFILE_EN
 profiler_t profiler = profiler_t(96);
+#endif
+
+#ifdef DEBUG_EN
+memory_profiler_t memory_profiler;
+edge_profiler_t edge_profiler;
 #endif
