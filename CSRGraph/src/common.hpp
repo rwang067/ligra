@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <algorithm>
 
 #include "utils/metrics/cmdopts.hpp"
 #include "utils/metrics/metrics.hpp"

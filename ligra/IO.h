@@ -757,13 +757,16 @@ graph<vertex> readGraphFromBinaryChunkBuff(char* iFile, bool isSymmetric, bool i
 
 template <class vertex>
 graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric, bool isMmap, bool debug, 
-                                          long buffer, long job=0, bool update=0) {
+                                          long buffer, bool isReorderListEnabled=false) {
   timer t;
   pid_t pid = getpid();
   vm_reporter reporter(pid);
 
   TriLevelManager* manager = new TriLevelManager();
   TriLevelReader* reader = manager->getReader();
+
+  manager->setReorderListEnable(isReorderListEnabled);
+  std::cout << "isReorderListEnabled = " << manager->getReorderListEnable() << std::endl;
 
   t.start();
   reporter.reportNext("Start Read Graph Space");
@@ -844,13 +847,16 @@ graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric, bool isMmap, boo
 
 template <class vertex>
 graph<vertex> readGraphFromChunkmmap(char* iFile, bool isSymmetric, bool isMmap, bool debug, 
-                                          long buffer, long job=0, bool update=0) {
+                                          long buffer, bool isReorderListEnabled=false) {
   timer t;
   pid_t pid = getpid();
   vm_reporter reporter(pid);
 
   TriLevelManager* manager = new TriLevelManager();
   TriLevelReader* reader = manager->getReader();
+
+  manager->setReorderListEnable(isReorderListEnabled);
+  std::cout << "isReorderListEnabled = " << manager->getReorderListEnable() << std::endl;
 
   t.start();
   reporter.reportNext("Start Read Graph Space");
@@ -941,14 +947,15 @@ graph<vertex> readGraphFromChunkmmap(char* iFile, bool isSymmetric, bool isMmap,
 
 template <class vertex>
 graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, 
-                        long job=0, bool update=0, bool chunk=0, bool debug=0, long buffer=0) {
+                        long job=0, bool update=0, bool chunk=0, bool debug=0, long buffer=0,
+                        bool isReorderListEnabled=false) {
   if(binary){ 
     // if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug,buffer,job,update);
     if (chunk) {
       #ifdef CHUNK_MMAP
-      return readGraphFromChunkmmap<vertex>(iFile, symmetric, mmap, debug, buffer);
+      return readGraphFromChunkmmap<vertex>(iFile, symmetric, mmap, debug, buffer, isReorderListEnabled);
       #else
-      return readGraphFromChunk<vertex>(iFile, symmetric, mmap, debug, buffer);
+      return readGraphFromChunk<vertex>(iFile, symmetric, mmap, debug, buffer, isReorderListEnabled);
       #endif
     }
     return readGraphFromBinarymmap<vertex>(iFile,symmetric);

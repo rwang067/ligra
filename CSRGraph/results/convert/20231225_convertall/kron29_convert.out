@@ -1,0 +1,1404 @@
+Print config information:
+  Graph info: 
+	 - filepath = /mnt/nvme1/zorax/datasets/csr_bin/Kron29/
+	 - PREFIX = kron29
+	 - nverts = 536870909
+	 - nedges = 0 (0 for processing all edges in the filepath) 
+  System info: 
+	 - JOB = 6
+	 - THD_COUNT = 1
+	 - QUERY_THD_COUNT = 48
+	 - SSDPATH = /mnt/nvme2/zorax/testCSRGraph/
+  Graph query benchmark: 
+	 - QUERY = 0
+	 - source = 310059974
+  Chunk allocator: 
+	 - SBLK_POOL_SIZE = 824633720832
+	 - sblk_name = sblk
+	 - MAX_LEVEL = 1
+	 - MEM_BULK_SIZE = 33554432
+
+import csr for out graph
+Allocated 4GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Kron29//kron29.idx
+Allocated 32GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Kron29//kron29.adj
+nverts = 536870909, nedges = 8589934592, average degree = 16
+import csr for in graph
+Allocated 4GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Kron29//kron29.ridx
+Allocated 32GB for local_buf.
+filepath = /mnt/nvme1/zorax/datasets/csr_bin/Kron29//kron29.radj
+[1;33mDEBUG:    chunk_allocator.hpp(init:29): sblk_pools[0] allocated 192GB on SSD, start = 0x7f359769c000
+[0m[1;33msblklevel0
+mempool_align=4096
+mempool_size=206158430208
+mempool_start=0x7f359769c000
+mempool_cur=0x7f359769c000
+mempool_end=0x7f659769c000
+mempool_free_block=(nil)
+
+DEBUG:    chunk_allocator.hpp(init:29): sblk_pools[1] allocated 192GB on SSD, start = 0x7f059769c000
+[0msblklevel1
+mempool_align=4096
+mempool_size=206158430208
+mempool_start=0x7f059769c000
+mempool_cur=0x7f059769c000
+mempool_end=0x7f359769c000
+mempool_free_block=(nil)
+
+====================sort====================
+The first five vertices in vid_list: 
+412127324: indeg=1500423, outdeg=394878
+309381841: indeg=1125945, outdeg=770927
+353953716: indeg=844381, outdeg=1051808
+798169: indeg=633583, outdeg=1262338
+117972941: indeg=571936, outdeg=26481
+sort time = 54.3684
+====================reorder====================
+threshold = 0.95
+vid_list.size() = 536870909
+preprocess with source = 310059974, iteration = 1, tail = 124200169, P(reorder) = 0.231341
+iteration = 536871, tail = 211138866, P(reorder) = 0.393277
+iteration = 1073741, tail = 211675736, P(reorder) = 0.394277
+iteration = 1610611, tail = 212212606, P(reorder) = 0.395277
+iteration = 2147481, tail = 212749476, P(reorder) = 0.396277
+iteration = 2684351, tail = 213286346, P(reorder) = 0.397277
+iteration = 3221221, tail = 213823216, P(reorder) = 0.398277
+iteration = 3758091, tail = 214360086, P(reorder) = 0.399277
+iteration = 4294961, tail = 214896956, P(reorder) = 0.400277
+iteration = 4831831, tail = 215433826, P(reorder) = 0.401277
+iteration = 5368701, tail = 215970696, P(reorder) = 0.402277
+iteration = 5905571, tail = 216507566, P(reorder) = 0.403277
+iteration = 6442441, tail = 217044436, P(reorder) = 0.404277
+iteration = 6979311, tail = 217581306, P(reorder) = 0.405277
+iteration = 7516181, tail = 218118176, P(reorder) = 0.406277
+iteration = 8053051, tail = 218655046, P(reorder) = 0.407277
+iteration = 8589921, tail = 219191916, P(reorder) = 0.408277
+iteration = 9126791, tail = 219728786, P(reorder) = 0.409277
+iteration = 9663661, tail = 220265656, P(reorder) = 0.410277
+iteration = 10200531, tail = 220802526, P(reorder) = 0.411277
+iteration = 10737401, tail = 221339396, P(reorder) = 0.412277
+iteration = 11274271, tail = 221876266, P(reorder) = 0.413277
+iteration = 11811141, tail = 222413136, P(reorder) = 0.414277
+iteration = 12348011, tail = 222950006, P(reorder) = 0.415277
+iteration = 12884881, tail = 223486876, P(reorder) = 0.416277
+iteration = 13421751, tail = 224023746, P(reorder) = 0.417277
+iteration = 13958621, tail = 224560616, P(reorder) = 0.418277
+iteration = 14495491, tail = 225097486, P(reorder) = 0.419277
+iteration = 15032361, tail = 225634356, P(reorder) = 0.420277
+iteration = 15569231, tail = 226171226, P(reorder) = 0.421277
+iteration = 16106101, tail = 226708096, P(reorder) = 0.422277
+iteration = 16642971, tail = 227244966, P(reorder) = 0.423277
+iteration = 17179841, tail = 227781836, P(reorder) = 0.424277
+iteration = 17716711, tail = 228318706, P(reorder) = 0.425277
+iteration = 18253581, tail = 228855576, P(reorder) = 0.426277
+iteration = 18790451, tail = 229392446, P(reorder) = 0.427277
+iteration = 19327321, tail = 229929316, P(reorder) = 0.428277
+iteration = 19864191, tail = 230466186, P(reorder) = 0.429277
+iteration = 20401061, tail = 231003056, P(reorder) = 0.430277
+iteration = 20937931, tail = 231539926, P(reorder) = 0.431277
+iteration = 21474801, tail = 232076796, P(reorder) = 0.432277
+iteration = 22011671, tail = 232613666, P(reorder) = 0.433277
+iteration = 22548541, tail = 233150536, P(reorder) = 0.434277
+iteration = 23085411, tail = 233687406, P(reorder) = 0.435277
+iteration = 23622281, tail = 234224276, P(reorder) = 0.436277
+iteration = 24159151, tail = 234761146, P(reorder) = 0.437277
+iteration = 24696021, tail = 235298016, P(reorder) = 0.438277
+iteration = 25232891, tail = 235834886, P(reorder) = 0.439277
+iteration = 25769761, tail = 236371756, P(reorder) = 0.440277
+iteration = 26306631, tail = 236908626, P(reorder) = 0.441277
+iteration = 26843501, tail = 237445496, P(reorder) = 0.442277
+iteration = 27380371, tail = 237982366, P(reorder) = 0.443277
+iteration = 27917241, tail = 238519236, P(reorder) = 0.444277
+iteration = 28454111, tail = 239056106, P(reorder) = 0.445277
+iteration = 28990981, tail = 239592976, P(reorder) = 0.446277
+iteration = 29527851, tail = 240129846, P(reorder) = 0.447277
+iteration = 30064721, tail = 240666716, P(reorder) = 0.448277
+iteration = 30601591, tail = 241203586, P(reorder) = 0.449277
+iteration = 31138461, tail = 241740456, P(reorder) = 0.450277
+iteration = 31675331, tail = 242277326, P(reorder) = 0.451277
+iteration = 32212201, tail = 242814196, P(reorder) = 0.452277
+iteration = 32749071, tail = 243351066, P(reorder) = 0.453277
+iteration = 33285941, tail = 243887936, P(reorder) = 0.454277
+iteration = 33822811, tail = 244424806, P(reorder) = 0.455277
+iteration = 34359681, tail = 244961676, P(reorder) = 0.456277
+iteration = 34896551, tail = 245498546, P(reorder) = 0.457277
+iteration = 35433421, tail = 246035416, P(reorder) = 0.458277
+iteration = 35970291, tail = 246572286, P(reorder) = 0.459277
+iteration = 36507161, tail = 247109156, P(reorder) = 0.460277
+iteration = 37044031, tail = 247646026, P(reorder) = 0.461277
+iteration = 37580901, tail = 248182896, P(reorder) = 0.462277
+iteration = 38117771, tail = 248719766, P(reorder) = 0.463277
+iteration = 38654641, tail = 249256636, P(reorder) = 0.464277
+iteration = 39191511, tail = 249793506, P(reorder) = 0.465277
+iteration = 39728381, tail = 250330376, P(reorder) = 0.466277
+iteration = 40265251, tail = 250867246, P(reorder) = 0.467277
+iteration = 40802121, tail = 251404116, P(reorder) = 0.468277
+iteration = 41338991, tail = 251940986, P(reorder) = 0.469277
+iteration = 41875861, tail = 252477856, P(reorder) = 0.470277
+iteration = 42412731, tail = 253014726, P(reorder) = 0.471277
+iteration = 42949601, tail = 253551596, P(reorder) = 0.472277
+iteration = 43486471, tail = 254088466, P(reorder) = 0.473277
+iteration = 44023341, tail = 254625336, P(reorder) = 0.474277
+iteration = 44560211, tail = 255162206, P(reorder) = 0.475277
+iteration = 45097081, tail = 255699076, P(reorder) = 0.476277
+iteration = 45633951, tail = 256235946, P(reorder) = 0.477277
+iteration = 46170821, tail = 256772816, P(reorder) = 0.478277
+iteration = 46707691, tail = 257309686, P(reorder) = 0.479277
+iteration = 47244561, tail = 257846556, P(reorder) = 0.480277
+iteration = 47781431, tail = 258383426, P(reorder) = 0.481277
+iteration = 48318301, tail = 258920296, P(reorder) = 0.482277
+iteration = 48855171, tail = 259457166, P(reorder) = 0.483277
+iteration = 49392041, tail = 259994036, P(reorder) = 0.484277
+iteration = 49928911, tail = 260530906, P(reorder) = 0.485277
+iteration = 50465781, tail = 261067776, P(reorder) = 0.486277
+iteration = 51002651, tail = 261604646, P(reorder) = 0.487277
+iteration = 51539521, tail = 262141516, P(reorder) = 0.488277
+iteration = 52076391, tail = 262678386, P(reorder) = 0.489277
+iteration = 52613261, tail = 263215256, P(reorder) = 0.490277
+iteration = 53150131, tail = 263752126, P(reorder) = 0.491277
+iteration = 53687001, tail = 264288996, P(reorder) = 0.492277
+iteration = 54223871, tail = 264825866, P(reorder) = 0.493277
+iteration = 54760741, tail = 265362736, P(reorder) = 0.494277
+iteration = 55297611, tail = 265899606, P(reorder) = 0.495277
+iteration = 55834481, tail = 266436476, P(reorder) = 0.496277
+iteration = 56371351, tail = 266973346, P(reorder) = 0.497277
+iteration = 56908221, tail = 267510216, P(reorder) = 0.498277
+iteration = 57445091, tail = 268047086, P(reorder) = 0.499277
+iteration = 57981961, tail = 268583956, P(reorder) = 0.500277
+iteration = 58518831, tail = 269120826, P(reorder) = 0.501277
+iteration = 59055701, tail = 269657696, P(reorder) = 0.502277
+iteration = 59592571, tail = 270194566, P(reorder) = 0.503277
+iteration = 60129441, tail = 270731436, P(reorder) = 0.504277
+iteration = 60666311, tail = 271268306, P(reorder) = 0.505277
+iteration = 61203181, tail = 271805176, P(reorder) = 0.506277
+iteration = 61740051, tail = 272342046, P(reorder) = 0.507277
+iteration = 62276921, tail = 272878916, P(reorder) = 0.508277
+iteration = 62813791, tail = 273415786, P(reorder) = 0.509277
+iteration = 63350661, tail = 273952656, P(reorder) = 0.510277
+iteration = 63887531, tail = 274489526, P(reorder) = 0.511277
+iteration = 64424401, tail = 275026396, P(reorder) = 0.512277
+iteration = 64961271, tail = 275563266, P(reorder) = 0.513277
+iteration = 65498141, tail = 276100136, P(reorder) = 0.514277
+iteration = 66035011, tail = 276637006, P(reorder) = 0.515277
+iteration = 66571881, tail = 277173876, P(reorder) = 0.516277
+iteration = 67108751, tail = 277710746, P(reorder) = 0.517277
+iteration = 67645621, tail = 278247616, P(reorder) = 0.518277
+iteration = 68182491, tail = 278784486, P(reorder) = 0.519277
+iteration = 68719361, tail = 279321356, P(reorder) = 0.520277
+iteration = 69256231, tail = 279858226, P(reorder) = 0.521277
+iteration = 69793101, tail = 280395096, P(reorder) = 0.522277
+iteration = 70329971, tail = 280931966, P(reorder) = 0.523277
+iteration = 70866841, tail = 281468836, P(reorder) = 0.524277
+iteration = 71403711, tail = 282005706, P(reorder) = 0.525277
+iteration = 71940581, tail = 282542576, P(reorder) = 0.526277
+iteration = 72477451, tail = 283079446, P(reorder) = 0.527277
+iteration = 73014321, tail = 283616316, P(reorder) = 0.528277
+iteration = 73551191, tail = 284153186, P(reorder) = 0.529277
+iteration = 74088061, tail = 284690056, P(reorder) = 0.530277
+iteration = 74624931, tail = 285226926, P(reorder) = 0.531277
+iteration = 75161801, tail = 285763796, P(reorder) = 0.532277
+iteration = 75698671, tail = 286300666, P(reorder) = 0.533277
+iteration = 76235541, tail = 286837536, P(reorder) = 0.534277
+iteration = 76772411, tail = 287374406, P(reorder) = 0.535277
+iteration = 77309281, tail = 287911276, P(reorder) = 0.536277
+iteration = 77846151, tail = 288448146, P(reorder) = 0.537277
+iteration = 78383021, tail = 288985016, P(reorder) = 0.538277
+iteration = 78919891, tail = 289521886, P(reorder) = 0.539277
+iteration = 79456761, tail = 290058756, P(reorder) = 0.540277
+iteration = 79993631, tail = 290595626, P(reorder) = 0.541277
+iteration = 80530501, tail = 291132496, P(reorder) = 0.542277
+iteration = 81067371, tail = 291669366, P(reorder) = 0.543277
+iteration = 81604241, tail = 292206236, P(reorder) = 0.544277
+iteration = 82141111, tail = 292743106, P(reorder) = 0.545277
+iteration = 82677981, tail = 293279976, P(reorder) = 0.546277
+iteration = 83214851, tail = 293816846, P(reorder) = 0.547277
+iteration = 83751721, tail = 294353716, P(reorder) = 0.548277
+iteration = 84288591, tail = 294890586, P(reorder) = 0.549277
+iteration = 84825461, tail = 295427456, P(reorder) = 0.550277
+iteration = 85362331, tail = 295964326, P(reorder) = 0.551277
+iteration = 85899201, tail = 296501196, P(reorder) = 0.552277
+iteration = 86436071, tail = 297038066, P(reorder) = 0.553277
+iteration = 86972941, tail = 297574936, P(reorder) = 0.554277
+iteration = 87509811, tail = 298111806, P(reorder) = 0.555277
+iteration = 88046681, tail = 298648676, P(reorder) = 0.556277
+iteration = 88583551, tail = 299185546, P(reorder) = 0.557277
+iteration = 89120421, tail = 299722416, P(reorder) = 0.558277
+iteration = 89657291, tail = 300259286, P(reorder) = 0.559277
+iteration = 90194161, tail = 300796156, P(reorder) = 0.560277
+iteration = 90731031, tail = 301333026, P(reorder) = 0.561277
+iteration = 91267901, tail = 301869896, P(reorder) = 0.562277
+iteration = 91804771, tail = 302406766, P(reorder) = 0.563276
+iteration = 92341641, tail = 302943636, P(reorder) = 0.564276
+iteration = 92878511, tail = 303480506, P(reorder) = 0.565276
+iteration = 93415381, tail = 304017376, P(reorder) = 0.566276
+iteration = 93952251, tail = 304554246, P(reorder) = 0.567276
+iteration = 94489121, tail = 305091116, P(reorder) = 0.568276
+iteration = 95025991, tail = 305627986, P(reorder) = 0.569276
+iteration = 95562861, tail = 306164856, P(reorder) = 0.570276
+iteration = 96099731, tail = 306701726, P(reorder) = 0.571276
+iteration = 96636601, tail = 307238596, P(reorder) = 0.572276
+iteration = 97173471, tail = 307775466, P(reorder) = 0.573276
+iteration = 97710341, tail = 308312336, P(reorder) = 0.574276
+iteration = 98247211, tail = 308849206, P(reorder) = 0.575276
+iteration = 98784081, tail = 309386076, P(reorder) = 0.576276
+iteration = 99320951, tail = 309922946, P(reorder) = 0.577276
+iteration = 99857821, tail = 310459816, P(reorder) = 0.578276
+iteration = 100394691, tail = 310996686, P(reorder) = 0.579276
+iteration = 100931561, tail = 311533556, P(reorder) = 0.580276
+iteration = 101468431, tail = 312070426, P(reorder) = 0.581276
+iteration = 102005301, tail = 312607296, P(reorder) = 0.582276
+iteration = 102542171, tail = 313144166, P(reorder) = 0.583276
+iteration = 103079041, tail = 313681036, P(reorder) = 0.584276
+iteration = 103615911, tail = 314217906, P(reorder) = 0.585276
+iteration = 104152781, tail = 314754776, P(reorder) = 0.586276
+iteration = 104689651, tail = 315291646, P(reorder) = 0.587276
+iteration = 105226521, tail = 315828516, P(reorder) = 0.588276
+iteration = 105763391, tail = 316365386, P(reorder) = 0.589276
+iteration = 106300261, tail = 316902256, P(reorder) = 0.590276
+iteration = 106837131, tail = 317439126, P(reorder) = 0.591276
+iteration = 107374001, tail = 317975996, P(reorder) = 0.592276
+iteration = 107910871, tail = 318512866, P(reorder) = 0.593276
+iteration = 108447741, tail = 319049736, P(reorder) = 0.594276
+iteration = 108984611, tail = 319586606, P(reorder) = 0.595276
+iteration = 109521481, tail = 320123476, P(reorder) = 0.596276
+iteration = 110058351, tail = 320660346, P(reorder) = 0.597276
+iteration = 110595221, tail = 321197216, P(reorder) = 0.598276
+iteration = 111132091, tail = 321734086, P(reorder) = 0.599276
+iteration = 111668961, tail = 322270956, P(reorder) = 0.600276
+iteration = 112205831, tail = 322807826, P(reorder) = 0.601276
+iteration = 112742701, tail = 323344696, P(reorder) = 0.602276
+iteration = 113279571, tail = 323881566, P(reorder) = 0.603276
+iteration = 113816441, tail = 324418436, P(reorder) = 0.604276
+iteration = 114353311, tail = 324955306, P(reorder) = 0.605276
+iteration = 114890181, tail = 325492176, P(reorder) = 0.606276
+iteration = 115427051, tail = 326029046, P(reorder) = 0.607276
+iteration = 115963921, tail = 326565916, P(reorder) = 0.608276
+iteration = 116500791, tail = 327102786, P(reorder) = 0.609276
+iteration = 117037661, tail = 327639656, P(reorder) = 0.610276
+iteration = 117574531, tail = 328176526, P(reorder) = 0.611276
+iteration = 118111401, tail = 328713396, P(reorder) = 0.612276
+iteration = 118648271, tail = 329250266, P(reorder) = 0.613276
+iteration = 119185141, tail = 329787136, P(reorder) = 0.614276
+iteration = 119722011, tail = 330324006, P(reorder) = 0.615276
+iteration = 120258881, tail = 330860876, P(reorder) = 0.616276
+iteration = 120795751, tail = 331397746, P(reorder) = 0.617276
+iteration = 121332621, tail = 331934616, P(reorder) = 0.618276
+iteration = 121869491, tail = 332471486, P(reorder) = 0.619276
+iteration = 122406361, tail = 333008356, P(reorder) = 0.620276
+iteration = 122943231, tail = 333545226, P(reorder) = 0.621276
+iteration = 123480101, tail = 334082096, P(reorder) = 0.622276
+iteration = 124016971, tail = 334618966, P(reorder) = 0.623276
+iteration = 124553841, tail = 335155836, P(reorder) = 0.624276
+iteration = 125090711, tail = 335692706, P(reorder) = 0.625276
+iteration = 125627581, tail = 336229576, P(reorder) = 0.626276
+iteration = 126164451, tail = 336766446, P(reorder) = 0.627276
+iteration = 126701321, tail = 337303316, P(reorder) = 0.628276
+iteration = 127238191, tail = 337840186, P(reorder) = 0.629276
+iteration = 127775061, tail = 338377056, P(reorder) = 0.630276
+iteration = 128311931, tail = 338913926, P(reorder) = 0.631276
+iteration = 128848801, tail = 339450796, P(reorder) = 0.632276
+iteration = 129385671, tail = 339987666, P(reorder) = 0.633276
+iteration = 129922541, tail = 340524536, P(reorder) = 0.634276
+iteration = 130459411, tail = 341061406, P(reorder) = 0.635276
+iteration = 130996281, tail = 341598276, P(reorder) = 0.636276
+iteration = 131533151, tail = 342135146, P(reorder) = 0.637276
+iteration = 132070021, tail = 342672016, P(reorder) = 0.638276
+iteration = 132606891, tail = 343208886, P(reorder) = 0.639276
+iteration = 133143761, tail = 343745756, P(reorder) = 0.640276
+iteration = 133680631, tail = 344282626, P(reorder) = 0.641276
+iteration = 134217501, tail = 344819496, P(reorder) = 0.642276
+iteration = 134754371, tail = 345356366, P(reorder) = 0.643276
+iteration = 135291241, tail = 345893236, P(reorder) = 0.644276
+iteration = 135828111, tail = 346430106, P(reorder) = 0.645276
+iteration = 136364981, tail = 346966976, P(reorder) = 0.646276
+iteration = 136901851, tail = 347503846, P(reorder) = 0.647276
+iteration = 137438721, tail = 348040716, P(reorder) = 0.648276
+iteration = 137975591, tail = 348577586, P(reorder) = 0.649276
+iteration = 138512461, tail = 349114456, P(reorder) = 0.650276
+iteration = 139049331, tail = 349651326, P(reorder) = 0.651276
+iteration = 139586201, tail = 350188196, P(reorder) = 0.652276
+iteration = 140123071, tail = 350725066, P(reorder) = 0.653276
+iteration = 140659941, tail = 351261936, P(reorder) = 0.654276
+iteration = 141196811, tail = 351798806, P(reorder) = 0.655276
+iteration = 141733681, tail = 352335676, P(reorder) = 0.656276
+iteration = 142270551, tail = 352872546, P(reorder) = 0.657276
+iteration = 142807421, tail = 353409416, P(reorder) = 0.658276
+iteration = 143344291, tail = 353946286, P(reorder) = 0.659276
+iteration = 143881161, tail = 354483156, P(reorder) = 0.660276
+iteration = 144418031, tail = 355020026, P(reorder) = 0.661276
+iteration = 144954901, tail = 355556896, P(reorder) = 0.662276
+iteration = 145491771, tail = 356093766, P(reorder) = 0.663276
+iteration = 146028641, tail = 356630636, P(reorder) = 0.664276
+iteration = 146565511, tail = 357167506, P(reorder) = 0.665276
+iteration = 147102381, tail = 357704376, P(reorder) = 0.666276
+iteration = 147639251, tail = 358241246, P(reorder) = 0.667276
+iteration = 148176121, tail = 358778116, P(reorder) = 0.668276
+iteration = 148712991, tail = 359314986, P(reorder) = 0.669276
+iteration = 149249861, tail = 359851856, P(reorder) = 0.670276
+iteration = 149786731, tail = 360388726, P(reorder) = 0.671276
+iteration = 150323601, tail = 360925596, P(reorder) = 0.672276
+iteration = 150860471, tail = 361462466, P(reorder) = 0.673276
+iteration = 151397341, tail = 361999336, P(reorder) = 0.674276
+iteration = 151934211, tail = 362536206, P(reorder) = 0.675276
+iteration = 152471081, tail = 363073076, P(reorder) = 0.676276
+iteration = 153007951, tail = 363609946, P(reorder) = 0.677276
+iteration = 153544821, tail = 364146816, P(reorder) = 0.678276
+iteration = 154081691, tail = 364683686, P(reorder) = 0.679276
+iteration = 154618561, tail = 365220556, P(reorder) = 0.680276
+iteration = 155155431, tail = 365757426, P(reorder) = 0.681276
+iteration = 155692301, tail = 366294296, P(reorder) = 0.682276
+iteration = 156229171, tail = 366831166, P(reorder) = 0.683276
+iteration = 156766041, tail = 367368036, P(reorder) = 0.684276
+iteration = 157302911, tail = 367904906, P(reorder) = 0.685276
+iteration = 157839781, tail = 368441776, P(reorder) = 0.686276
+iteration = 158376651, tail = 368978646, P(reorder) = 0.687276
+iteration = 158913521, tail = 369515516, P(reorder) = 0.688276
+iteration = 159450391, tail = 370052386, P(reorder) = 0.689276
+iteration = 159987261, tail = 370589256, P(reorder) = 0.690276
+iteration = 160524131, tail = 371126126, P(reorder) = 0.691276
+iteration = 161061001, tail = 371662996, P(reorder) = 0.692276
+iteration = 161597871, tail = 372199866, P(reorder) = 0.693276
+iteration = 162134741, tail = 372736736, P(reorder) = 0.694276
+iteration = 162671611, tail = 373273606, P(reorder) = 0.695276
+iteration = 163208481, tail = 373810476, P(reorder) = 0.696276
+iteration = 163745351, tail = 374347346, P(reorder) = 0.697276
+iteration = 164282221, tail = 374884216, P(reorder) = 0.698276
+iteration = 164819091, tail = 375421086, P(reorder) = 0.699276
+iteration = 165355961, tail = 375957956, P(reorder) = 0.700276
+iteration = 165892831, tail = 376494826, P(reorder) = 0.701276
+iteration = 166429701, tail = 377031696, P(reorder) = 0.702276
+iteration = 166966571, tail = 377568566, P(reorder) = 0.703276
+iteration = 167503441, tail = 378105436, P(reorder) = 0.704276
+iteration = 168040311, tail = 378642306, P(reorder) = 0.705276
+iteration = 168577181, tail = 379179176, P(reorder) = 0.706276
+iteration = 169114051, tail = 379716046, P(reorder) = 0.707276
+iteration = 169650921, tail = 380252916, P(reorder) = 0.708276
+iteration = 170187791, tail = 380789786, P(reorder) = 0.709276
+iteration = 170724661, tail = 381326656, P(reorder) = 0.710276
+iteration = 171261531, tail = 381863526, P(reorder) = 0.711276
+iteration = 171798401, tail = 382400396, P(reorder) = 0.712276
+iteration = 172335271, tail = 382937266, P(reorder) = 0.713276
+iteration = 172872141, tail = 383474136, P(reorder) = 0.714276
+iteration = 173409011, tail = 384011006, P(reorder) = 0.715276
+iteration = 173945881, tail = 384547876, P(reorder) = 0.716276
+iteration = 174482751, tail = 385084746, P(reorder) = 0.717276
+iteration = 175019621, tail = 385621616, P(reorder) = 0.718276
+iteration = 175556491, tail = 386158486, P(reorder) = 0.719276
+iteration = 176093361, tail = 386695356, P(reorder) = 0.720276
+iteration = 176630231, tail = 387232226, P(reorder) = 0.721276
+iteration = 177167101, tail = 387769096, P(reorder) = 0.722276
+iteration = 177703971, tail = 388305966, P(reorder) = 0.723276
+iteration = 178240841, tail = 388842836, P(reorder) = 0.724276
+iteration = 178777711, tail = 389379706, P(reorder) = 0.725276
+iteration = 179314581, tail = 389916576, P(reorder) = 0.726276
+iteration = 179851451, tail = 390453446, P(reorder) = 0.727276
+iteration = 180388321, tail = 390990316, P(reorder) = 0.728276
+iteration = 180925191, tail = 391527186, P(reorder) = 0.729276
+iteration = 181462061, tail = 392064056, P(reorder) = 0.730276
+iteration = 181998931, tail = 392600926, P(reorder) = 0.731276
+iteration = 182535801, tail = 393137796, P(reorder) = 0.732276
+iteration = 183072671, tail = 393674666, P(reorder) = 0.733276
+iteration = 183609541, tail = 394211536, P(reorder) = 0.734276
+iteration = 184146411, tail = 394748406, P(reorder) = 0.735276
+iteration = 184683281, tail = 395285276, P(reorder) = 0.736276
+iteration = 185220151, tail = 395822146, P(reorder) = 0.737276
+iteration = 185757021, tail = 396359016, P(reorder) = 0.738276
+iteration = 186293891, tail = 396895886, P(reorder) = 0.739276
+iteration = 186830761, tail = 397432756, P(reorder) = 0.740276
+iteration = 187367631, tail = 397969626, P(reorder) = 0.741276
+iteration = 187904501, tail = 398506496, P(reorder) = 0.742276
+iteration = 188441371, tail = 399043366, P(reorder) = 0.743276
+iteration = 188978241, tail = 399580236, P(reorder) = 0.744276
+iteration = 189515111, tail = 400117106, P(reorder) = 0.745276
+iteration = 190051981, tail = 400653976, P(reorder) = 0.746276
+iteration = 190588851, tail = 401190846, P(reorder) = 0.747276
+iteration = 191125721, tail = 401727716, P(reorder) = 0.748276
+iteration = 191662591, tail = 402264586, P(reorder) = 0.749276
+iteration = 192199461, tail = 402801456, P(reorder) = 0.750276
+iteration = 192736331, tail = 403338326, P(reorder) = 0.751276
+iteration = 193273201, tail = 403875196, P(reorder) = 0.752276
+iteration = 193810071, tail = 404412066, P(reorder) = 0.753276
+iteration = 194346941, tail = 404948936, P(reorder) = 0.754276
+iteration = 194883811, tail = 405485806, P(reorder) = 0.755276
+iteration = 195420681, tail = 406022676, P(reorder) = 0.756276
+iteration = 195957551, tail = 406559546, P(reorder) = 0.757276
+iteration = 196494421, tail = 407096416, P(reorder) = 0.758276
+iteration = 197031291, tail = 407633286, P(reorder) = 0.759276
+iteration = 197568161, tail = 408170156, P(reorder) = 0.760276
+iteration = 198105031, tail = 408707026, P(reorder) = 0.761276
+iteration = 198641901, tail = 409243896, P(reorder) = 0.762276
+iteration = 199178771, tail = 409780766, P(reorder) = 0.763276
+iteration = 199715641, tail = 410317636, P(reorder) = 0.764276
+iteration = 200252511, tail = 410854506, P(reorder) = 0.765276
+iteration = 200789381, tail = 411391376, P(reorder) = 0.766276
+iteration = 201326251, tail = 411928246, P(reorder) = 0.767276
+iteration = 201863121, tail = 412465116, P(reorder) = 0.768276
+iteration = 202399991, tail = 413001986, P(reorder) = 0.769276
+iteration = 202936861, tail = 413538856, P(reorder) = 0.770276
+iteration = 203473731, tail = 414075726, P(reorder) = 0.771276
+iteration = 204010601, tail = 414612596, P(reorder) = 0.772276
+iteration = 204547471, tail = 415149466, P(reorder) = 0.773276
+iteration = 205084341, tail = 415686336, P(reorder) = 0.774276
+iteration = 205621211, tail = 416223206, P(reorder) = 0.775276
+iteration = 206158081, tail = 416760076, P(reorder) = 0.776276
+iteration = 206694951, tail = 417296946, P(reorder) = 0.777276
+iteration = 207231821, tail = 417833816, P(reorder) = 0.778276
+iteration = 207768691, tail = 418370686, P(reorder) = 0.779276
+iteration = 208305561, tail = 418907556, P(reorder) = 0.780276
+iteration = 208842431, tail = 419444426, P(reorder) = 0.781276
+iteration = 209379301, tail = 419981296, P(reorder) = 0.782276
+iteration = 209916171, tail = 420518166, P(reorder) = 0.783276
+iteration = 210453041, tail = 421055036, P(reorder) = 0.784276
+iteration = 210989911, tail = 421591906, P(reorder) = 0.785276
+iteration = 211526781, tail = 422128776, P(reorder) = 0.786276
+iteration = 212063651, tail = 422665646, P(reorder) = 0.787276
+iteration = 212600521, tail = 423202516, P(reorder) = 0.788276
+iteration = 213137391, tail = 423739386, P(reorder) = 0.789276
+iteration = 213674261, tail = 424276256, P(reorder) = 0.790276
+iteration = 214211131, tail = 424813126, P(reorder) = 0.791276
+iteration = 214748001, tail = 425349996, P(reorder) = 0.792276
+iteration = 215284871, tail = 425886866, P(reorder) = 0.793276
+iteration = 215821741, tail = 426423736, P(reorder) = 0.794276
+iteration = 216358611, tail = 426960606, P(reorder) = 0.795276
+iteration = 216895481, tail = 427497476, P(reorder) = 0.796276
+iteration = 217432351, tail = 428034346, P(reorder) = 0.797276
+iteration = 217969221, tail = 428571216, P(reorder) = 0.798276
+iteration = 218506091, tail = 429108086, P(reorder) = 0.799276
+iteration = 219042961, tail = 429644956, P(reorder) = 0.800276
+iteration = 219579831, tail = 430181826, P(reorder) = 0.801276
+iteration = 220116701, tail = 430718696, P(reorder) = 0.802276
+iteration = 220653571, tail = 431255566, P(reorder) = 0.803276
+iteration = 221190441, tail = 431792436, P(reorder) = 0.804276
+iteration = 221727311, tail = 432329306, P(reorder) = 0.805276
+iteration = 222264181, tail = 432866176, P(reorder) = 0.806276
+iteration = 222801051, tail = 433403046, P(reorder) = 0.807276
+iteration = 223337921, tail = 433939916, P(reorder) = 0.808276
+iteration = 223874791, tail = 434476786, P(reorder) = 0.809276
+iteration = 224411661, tail = 435013656, P(reorder) = 0.810276
+iteration = 224948531, tail = 435550526, P(reorder) = 0.811276
+iteration = 225485401, tail = 436087396, P(reorder) = 0.812276
+iteration = 226022271, tail = 436624266, P(reorder) = 0.813276
+iteration = 226559141, tail = 437161136, P(reorder) = 0.814276
+iteration = 227096011, tail = 437698006, P(reorder) = 0.815276
+iteration = 227632881, tail = 438234876, P(reorder) = 0.816276
+iteration = 228169751, tail = 438771746, P(reorder) = 0.817276
+iteration = 228706621, tail = 439308616, P(reorder) = 0.818276
+iteration = 229243491, tail = 439845486, P(reorder) = 0.819276
+iteration = 229780361, tail = 440382356, P(reorder) = 0.820276
+iteration = 230317231, tail = 440919226, P(reorder) = 0.821276
+iteration = 230854101, tail = 441456096, P(reorder) = 0.822276
+iteration = 231390971, tail = 441992966, P(reorder) = 0.823276
+iteration = 231927841, tail = 442529836, P(reorder) = 0.824276
+iteration = 232464711, tail = 443066706, P(reorder) = 0.825276
+iteration = 233001581, tail = 443603576, P(reorder) = 0.826276
+iteration = 233538451, tail = 444140446, P(reorder) = 0.827276
+iteration = 234075321, tail = 444677316, P(reorder) = 0.828276
+iteration = 234612191, tail = 445214186, P(reorder) = 0.829276
+iteration = 235149061, tail = 445751056, P(reorder) = 0.830276
+iteration = 235685931, tail = 446287926, P(reorder) = 0.831276
+iteration = 236222801, tail = 446824796, P(reorder) = 0.832276
+iteration = 236759671, tail = 447361666, P(reorder) = 0.833276
+iteration = 237296541, tail = 447898536, P(reorder) = 0.834276
+iteration = 237833411, tail = 448435406, P(reorder) = 0.835276
+iteration = 238370281, tail = 448972276, P(reorder) = 0.836276
+iteration = 238907151, tail = 449509146, P(reorder) = 0.837276
+iteration = 239444021, tail = 450046016, P(reorder) = 0.838276
+iteration = 239980891, tail = 450582886, P(reorder) = 0.839276
+iteration = 240517761, tail = 451119756, P(reorder) = 0.840276
+iteration = 241054631, tail = 451656626, P(reorder) = 0.841276
+iteration = 241591501, tail = 452193496, P(reorder) = 0.842276
+iteration = 242128371, tail = 452730366, P(reorder) = 0.843276
+iteration = 242665241, tail = 453267236, P(reorder) = 0.844276
+iteration = 243202111, tail = 453804106, P(reorder) = 0.845276
+iteration = 243738981, tail = 454340976, P(reorder) = 0.846276
+iteration = 244275851, tail = 454877846, P(reorder) = 0.847276
+iteration = 244812721, tail = 455414716, P(reorder) = 0.848276
+iteration = 245349591, tail = 455951586, P(reorder) = 0.849276
+iteration = 245886461, tail = 456488456, P(reorder) = 0.850276
+iteration = 246423331, tail = 457025326, P(reorder) = 0.851276
+iteration = 246960201, tail = 457562196, P(reorder) = 0.852276
+iteration = 247497071, tail = 458099066, P(reorder) = 0.853276
+iteration = 248033941, tail = 458635936, P(reorder) = 0.854276
+iteration = 248570811, tail = 459172806, P(reorder) = 0.855276
+iteration = 249107681, tail = 459709676, P(reorder) = 0.856276
+iteration = 249644551, tail = 460246546, P(reorder) = 0.857276
+iteration = 250181421, tail = 460783416, P(reorder) = 0.858276
+iteration = 250718291, tail = 461320286, P(reorder) = 0.859276
+iteration = 251255161, tail = 461857156, P(reorder) = 0.860276
+iteration = 251792031, tail = 462394026, P(reorder) = 0.861276
+iteration = 252328901, tail = 462930896, P(reorder) = 0.862276
+iteration = 252865771, tail = 463467766, P(reorder) = 0.863276
+iteration = 253402641, tail = 464004636, P(reorder) = 0.864276
+iteration = 253939511, tail = 464541506, P(reorder) = 0.865276
+iteration = 254476381, tail = 465078376, P(reorder) = 0.866276
+iteration = 255013251, tail = 465615246, P(reorder) = 0.867276
+iteration = 255550121, tail = 466152116, P(reorder) = 0.868276
+iteration = 256086991, tail = 466688986, P(reorder) = 0.869276
+iteration = 256623861, tail = 467225856, P(reorder) = 0.870276
+iteration = 257160731, tail = 467762726, P(reorder) = 0.871276
+iteration = 257697601, tail = 468299596, P(reorder) = 0.872276
+iteration = 258234471, tail = 468836466, P(reorder) = 0.873276
+iteration = 258771341, tail = 469373336, P(reorder) = 0.874276
+iteration = 259308211, tail = 469910206, P(reorder) = 0.875276
+iteration = 259845081, tail = 470447076, P(reorder) = 0.876276
+iteration = 260381951, tail = 470983946, P(reorder) = 0.877276
+iteration = 260918821, tail = 471520816, P(reorder) = 0.878276
+iteration = 261455691, tail = 472057686, P(reorder) = 0.879276
+iteration = 261992561, tail = 472594556, P(reorder) = 0.880276
+iteration = 262529431, tail = 473131426, P(reorder) = 0.881276
+iteration = 263066301, tail = 473668296, P(reorder) = 0.882276
+iteration = 263603171, tail = 474205166, P(reorder) = 0.883276
+iteration = 264140041, tail = 474742036, P(reorder) = 0.884276
+iteration = 264676911, tail = 475278906, P(reorder) = 0.885276
+iteration = 265213781, tail = 475815776, P(reorder) = 0.886276
+iteration = 265750651, tail = 476352646, P(reorder) = 0.887276
+iteration = 266287521, tail = 476889516, P(reorder) = 0.888276
+iteration = 266824391, tail = 477426386, P(reorder) = 0.889276
+iteration = 267361261, tail = 477963256, P(reorder) = 0.890276
+iteration = 267898131, tail = 478500126, P(reorder) = 0.891276
+iteration = 268435001, tail = 479036996, P(reorder) = 0.892276
+iteration = 268971871, tail = 479573866, P(reorder) = 0.893276
+iteration = 269508741, tail = 480110736, P(reorder) = 0.894276
+iteration = 270045611, tail = 480647606, P(reorder) = 0.895276
+iteration = 270582481, tail = 481184476, P(reorder) = 0.896276
+iteration = 271119351, tail = 481721346, P(reorder) = 0.897276
+iteration = 271656221, tail = 482258216, P(reorder) = 0.898276
+iteration = 272193091, tail = 482795086, P(reorder) = 0.899276
+iteration = 272729961, tail = 483331956, P(reorder) = 0.900276
+iteration = 273266831, tail = 483868826, P(reorder) = 0.901276
+iteration = 273803701, tail = 484405696, P(reorder) = 0.902276
+iteration = 274340571, tail = 484942566, P(reorder) = 0.903276
+iteration = 274877441, tail = 485479436, P(reorder) = 0.904276
+iteration = 275414311, tail = 486016306, P(reorder) = 0.905276
+iteration = 275951181, tail = 486553176, P(reorder) = 0.906276
+iteration = 276488051, tail = 487090046, P(reorder) = 0.907276
+iteration = 277024921, tail = 487626916, P(reorder) = 0.908276
+iteration = 277561791, tail = 488163786, P(reorder) = 0.909276
+iteration = 278098661, tail = 488700656, P(reorder) = 0.910276
+iteration = 278635531, tail = 489237526, P(reorder) = 0.911276
+iteration = 279172401, tail = 489774396, P(reorder) = 0.912276
+iteration = 279709271, tail = 490311266, P(reorder) = 0.913276
+iteration = 280246141, tail = 490848136, P(reorder) = 0.914276
+iteration = 280783011, tail = 491385006, P(reorder) = 0.915276
+iteration = 281319881, tail = 491921876, P(reorder) = 0.916276
+iteration = 281856751, tail = 492458746, P(reorder) = 0.917276
+iteration = 282393621, tail = 492995616, P(reorder) = 0.918276
+iteration = 282930491, tail = 493532486, P(reorder) = 0.919276
+iteration = 283467361, tail = 494069356, P(reorder) = 0.920276
+iteration = 284004231, tail = 494606226, P(reorder) = 0.921276
+iteration = 284541101, tail = 495143096, P(reorder) = 0.922276
+iteration = 285077971, tail = 495679966, P(reorder) = 0.923276
+iteration = 285614841, tail = 496216836, P(reorder) = 0.924276
+iteration = 286151711, tail = 496753706, P(reorder) = 0.925276
+iteration = 286688581, tail = 497290576, P(reorder) = 0.926276
+iteration = 287225451, tail = 497827446, P(reorder) = 0.927276
+iteration = 287762321, tail = 498364316, P(reorder) = 0.928276
+iteration = 288299191, tail = 498901186, P(reorder) = 0.929276
+iteration = 288836061, tail = 499438056, P(reorder) = 0.930276
+iteration = 289372931, tail = 499974926, P(reorder) = 0.931276
+iteration = 289909801, tail = 500511796, P(reorder) = 0.932276
+iteration = 290446671, tail = 501048666, P(reorder) = 0.933276
+iteration = 290983541, tail = 501585536, P(reorder) = 0.934276
+iteration = 291520411, tail = 502122406, P(reorder) = 0.935276
+iteration = 292057281, tail = 502659276, P(reorder) = 0.936276
+iteration = 292594151, tail = 503196146, P(reorder) = 0.937276
+iteration = 293131021, tail = 503733016, P(reorder) = 0.938276
+iteration = 293667891, tail = 504269886, P(reorder) = 0.939276
+iteration = 294204761, tail = 504806756, P(reorder) = 0.940276
+iteration = 294741631, tail = 505343626, P(reorder) = 0.941276
+iteration = 295278501, tail = 505880496, P(reorder) = 0.942276
+iteration = 295815371, tail = 506417366, P(reorder) = 0.943276
+iteration = 296352241, tail = 506954236, P(reorder) = 0.944276
+iteration = 296889111, tail = 507491106, P(reorder) = 0.945276
+iteration = 297425981, tail = 508027976, P(reorder) = 0.946276
+iteration = 297962851, tail = 508564846, P(reorder) = 0.947276
+iteration = 298499721, tail = 509101716, P(reorder) = 0.948276
+iteration = 299036591, tail = 509638586, P(reorder) = 0.949276
+299425369 iterations
+Total number of reordered vertices: 510027364
+reorder time = 305.236
+====================convert====================
+max_chunkID = 3481873
+max_offset = 20(GB)
+The number of non-zero degree vertices: 136098239
+total_num_reorder = 536870909
+310059974 223224237 338093904 518541253 108844943 
+convert time = 115.935
+====================end====================
+[1;33mDEBUG:    chunk_allocator.hpp(init:29): sblk_pools[0] allocated 192GB on SSD, start = 0x7ed3976ab000
+[0m[1;33msblklevel0
+mempool_align=4096
+mempool_size=206158430208
+mempool_start=0x7ed3976ab000
+mempool_cur=0x7ed3976ab000
+mempool_end=0x7f03976ab000
+mempool_free_block=(nil)
+
+DEBUG:    chunk_allocator.hpp(init:29): sblk_pools[1] allocated 192GB on SSD, start = 0x7ea3976ab000
+[0msblklevel1
+mempool_align=4096
+mempool_size=206158430208
+mempool_start=0x7ea3976ab000
+mempool_cur=0x7ea3976ab000
+mempool_end=0x7ed3976ab000
+mempool_free_block=(nil)
+
+====================sort====================
+The first five vertices in vid_list: 
+231765318: indeg=6004993, outdeg=720
+63774197: indeg=1898050, outdeg=517
+64144191: indeg=1896402, outdeg=927
+59745633: indeg=1896369, outdeg=1576
+480983746: indeg=1895721, outdeg=1129
+sort time = 44.8451
+====================reorder====================
+threshold = 0.95
+vid_list.size() = 536870909
+preprocess with source = 310059974, iteration = 1, tail = 17388474, P(reorder) = 0.0323886
+iteration = 536871, tail = 131089560, P(reorder) = 0.244173
+iteration = 1073741, tail = 131724941, P(reorder) = 0.245357
+iteration = 1610611, tail = 132347831, P(reorder) = 0.246517
+iteration = 2147481, tail = 132958919, P(reorder) = 0.247655
+iteration = 2684351, tail = 133556056, P(reorder) = 0.248768
+iteration = 3221221, tail = 134142124, P(reorder) = 0.249859
+iteration = 3758091, tail = 134716057, P(reorder) = 0.250928
+iteration = 4294961, tail = 135276698, P(reorder) = 0.251972
+iteration = 4831831, tail = 135825364, P(reorder) = 0.252994
+iteration = 5368701, tail = 136363723, P(reorder) = 0.253997
+iteration = 5905571, tail = 136900593, P(reorder) = 0.254997
+iteration = 6442441, tail = 137437463, P(reorder) = 0.255997
+iteration = 6979311, tail = 137974333, P(reorder) = 0.256997
+iteration = 7516181, tail = 138511203, P(reorder) = 0.257997
+iteration = 8053051, tail = 139048073, P(reorder) = 0.258997
+iteration = 8589921, tail = 139584943, P(reorder) = 0.259997
+iteration = 9126791, tail = 140121813, P(reorder) = 0.260997
+iteration = 9663661, tail = 140658683, P(reorder) = 0.261997
+iteration = 10200531, tail = 141195553, P(reorder) = 0.262997
+iteration = 10737401, tail = 141732423, P(reorder) = 0.263997
+iteration = 11274271, tail = 142269293, P(reorder) = 0.264997
+iteration = 11811141, tail = 142806163, P(reorder) = 0.265997
+iteration = 12348011, tail = 143343033, P(reorder) = 0.266997
+iteration = 12884881, tail = 143879903, P(reorder) = 0.267997
+iteration = 13421751, tail = 144416773, P(reorder) = 0.268997
+iteration = 13958621, tail = 144953643, P(reorder) = 0.269997
+iteration = 14495491, tail = 145490513, P(reorder) = 0.270997
+iteration = 15032361, tail = 146027383, P(reorder) = 0.271997
+iteration = 15569231, tail = 146564253, P(reorder) = 0.272997
+iteration = 16106101, tail = 147101123, P(reorder) = 0.273997
+iteration = 16642971, tail = 147637993, P(reorder) = 0.274997
+iteration = 17179841, tail = 148174863, P(reorder) = 0.275997
+iteration = 17716711, tail = 148711733, P(reorder) = 0.276997
+iteration = 18253581, tail = 149248603, P(reorder) = 0.277997
+iteration = 18790451, tail = 149785473, P(reorder) = 0.278997
+iteration = 19327321, tail = 150322343, P(reorder) = 0.279997
+iteration = 19864191, tail = 150859213, P(reorder) = 0.280997
+iteration = 20401061, tail = 151396083, P(reorder) = 0.281997
+iteration = 20937931, tail = 151932953, P(reorder) = 0.282997
+iteration = 21474801, tail = 152469823, P(reorder) = 0.283997
+iteration = 22011671, tail = 153006693, P(reorder) = 0.284997
+iteration = 22548541, tail = 153543563, P(reorder) = 0.285997
+iteration = 23085411, tail = 154080433, P(reorder) = 0.286997
+iteration = 23622281, tail = 154617303, P(reorder) = 0.287997
+iteration = 24159151, tail = 155154173, P(reorder) = 0.288997
+iteration = 24696021, tail = 155691043, P(reorder) = 0.289997
+iteration = 25232891, tail = 156227913, P(reorder) = 0.290997
+iteration = 25769761, tail = 156764783, P(reorder) = 0.291997
+iteration = 26306631, tail = 157301653, P(reorder) = 0.292997
+iteration = 26843501, tail = 157838523, P(reorder) = 0.293997
+iteration = 27380371, tail = 158375393, P(reorder) = 0.294997
+iteration = 27917241, tail = 158912263, P(reorder) = 0.295997
+iteration = 28454111, tail = 159449133, P(reorder) = 0.296997
+iteration = 28990981, tail = 159986003, P(reorder) = 0.297997
+iteration = 29527851, tail = 160522873, P(reorder) = 0.298997
+iteration = 30064721, tail = 161059743, P(reorder) = 0.299997
+iteration = 30601591, tail = 161596613, P(reorder) = 0.300997
+iteration = 31138461, tail = 162133483, P(reorder) = 0.301997
+iteration = 31675331, tail = 162670353, P(reorder) = 0.302997
+iteration = 32212201, tail = 163207223, P(reorder) = 0.303997
+iteration = 32749071, tail = 163744093, P(reorder) = 0.304997
+iteration = 33285941, tail = 164280963, P(reorder) = 0.305997
+iteration = 33822811, tail = 164817833, P(reorder) = 0.306997
+iteration = 34359681, tail = 165354703, P(reorder) = 0.307997
+iteration = 34896551, tail = 165891573, P(reorder) = 0.308997
+iteration = 35433421, tail = 166428443, P(reorder) = 0.309997
+iteration = 35970291, tail = 166965313, P(reorder) = 0.310997
+iteration = 36507161, tail = 167502183, P(reorder) = 0.311997
+iteration = 37044031, tail = 168039053, P(reorder) = 0.312997
+iteration = 37580901, tail = 168575923, P(reorder) = 0.313997
+iteration = 38117771, tail = 169112793, P(reorder) = 0.314997
+iteration = 38654641, tail = 169649663, P(reorder) = 0.315997
+iteration = 39191511, tail = 170186533, P(reorder) = 0.316997
+iteration = 39728381, tail = 170723403, P(reorder) = 0.317997
+iteration = 40265251, tail = 171260273, P(reorder) = 0.318997
+iteration = 40802121, tail = 171797143, P(reorder) = 0.319997
+iteration = 41338991, tail = 172334013, P(reorder) = 0.320997
+iteration = 41875861, tail = 172870883, P(reorder) = 0.321997
+iteration = 42412731, tail = 173407753, P(reorder) = 0.322997
+iteration = 42949601, tail = 173944623, P(reorder) = 0.323997
+iteration = 43486471, tail = 174481493, P(reorder) = 0.324997
+iteration = 44023341, tail = 175018363, P(reorder) = 0.325997
+iteration = 44560211, tail = 175555233, P(reorder) = 0.326997
+iteration = 45097081, tail = 176092103, P(reorder) = 0.327997
+iteration = 45633951, tail = 176628973, P(reorder) = 0.328997
+iteration = 46170821, tail = 177165843, P(reorder) = 0.329997
+iteration = 46707691, tail = 177702713, P(reorder) = 0.330997
+iteration = 47244561, tail = 178239583, P(reorder) = 0.331997
+iteration = 47781431, tail = 178776453, P(reorder) = 0.332997
+iteration = 48318301, tail = 179313323, P(reorder) = 0.333997
+iteration = 48855171, tail = 179850193, P(reorder) = 0.334997
+iteration = 49392041, tail = 180387063, P(reorder) = 0.335997
+iteration = 49928911, tail = 180923933, P(reorder) = 0.336997
+iteration = 50465781, tail = 181460803, P(reorder) = 0.337997
+iteration = 51002651, tail = 181997673, P(reorder) = 0.338997
+iteration = 51539521, tail = 182534543, P(reorder) = 0.339997
+iteration = 52076391, tail = 183071413, P(reorder) = 0.340997
+iteration = 52613261, tail = 183608283, P(reorder) = 0.341997
+iteration = 53150131, tail = 184145153, P(reorder) = 0.342997
+iteration = 53687001, tail = 184682023, P(reorder) = 0.343997
+iteration = 54223871, tail = 185218893, P(reorder) = 0.344997
+iteration = 54760741, tail = 185755763, P(reorder) = 0.345997
+iteration = 55297611, tail = 186292633, P(reorder) = 0.346997
+iteration = 55834481, tail = 186829503, P(reorder) = 0.347997
+iteration = 56371351, tail = 187366373, P(reorder) = 0.348997
+iteration = 56908221, tail = 187903243, P(reorder) = 0.349997
+iteration = 57445091, tail = 188440113, P(reorder) = 0.350997
+iteration = 57981961, tail = 188976983, P(reorder) = 0.351997
+iteration = 58518831, tail = 189513853, P(reorder) = 0.352997
+iteration = 59055701, tail = 190050723, P(reorder) = 0.353997
+iteration = 59592571, tail = 190587593, P(reorder) = 0.354997
+iteration = 60129441, tail = 191124463, P(reorder) = 0.355997
+iteration = 60666311, tail = 191661333, P(reorder) = 0.356997
+iteration = 61203181, tail = 192198203, P(reorder) = 0.357997
+iteration = 61740051, tail = 192735073, P(reorder) = 0.358997
+iteration = 62276921, tail = 193271943, P(reorder) = 0.359997
+iteration = 62813791, tail = 193808813, P(reorder) = 0.360997
+iteration = 63350661, tail = 194345683, P(reorder) = 0.361997
+iteration = 63887531, tail = 194882553, P(reorder) = 0.362997
+iteration = 64424401, tail = 195419423, P(reorder) = 0.363997
+iteration = 64961271, tail = 195956293, P(reorder) = 0.364997
+iteration = 65498141, tail = 196493163, P(reorder) = 0.365997
+iteration = 66035011, tail = 197030033, P(reorder) = 0.366997
+iteration = 66571881, tail = 197566903, P(reorder) = 0.367997
+iteration = 67108751, tail = 198103773, P(reorder) = 0.368997
+iteration = 67645621, tail = 198640643, P(reorder) = 0.369997
+iteration = 68182491, tail = 199177513, P(reorder) = 0.370997
+iteration = 68719361, tail = 199714383, P(reorder) = 0.371997
+iteration = 69256231, tail = 200251253, P(reorder) = 0.372997
+iteration = 69793101, tail = 200788123, P(reorder) = 0.373997
+iteration = 70329971, tail = 201324993, P(reorder) = 0.374997
+iteration = 70866841, tail = 201861863, P(reorder) = 0.375997
+iteration = 71403711, tail = 202398733, P(reorder) = 0.376997
+iteration = 71940581, tail = 202935603, P(reorder) = 0.377997
+iteration = 72477451, tail = 203472473, P(reorder) = 0.378997
+iteration = 73014321, tail = 204009343, P(reorder) = 0.379997
+iteration = 73551191, tail = 204546213, P(reorder) = 0.380997
+iteration = 74088061, tail = 205083083, P(reorder) = 0.381997
+iteration = 74624931, tail = 205619953, P(reorder) = 0.382997
+iteration = 75161801, tail = 206156823, P(reorder) = 0.383997
+iteration = 75698671, tail = 206693693, P(reorder) = 0.384997
+iteration = 76235541, tail = 207230563, P(reorder) = 0.385997
+iteration = 76772411, tail = 207767433, P(reorder) = 0.386997
+iteration = 77309281, tail = 208304303, P(reorder) = 0.387997
+iteration = 77846151, tail = 208841173, P(reorder) = 0.388997
+iteration = 78383021, tail = 209378043, P(reorder) = 0.389997
+iteration = 78919891, tail = 209914913, P(reorder) = 0.390997
+iteration = 79456761, tail = 210451783, P(reorder) = 0.391997
+iteration = 79993631, tail = 210988653, P(reorder) = 0.392997
+iteration = 80530501, tail = 211525523, P(reorder) = 0.393997
+iteration = 81067371, tail = 212062393, P(reorder) = 0.394997
+iteration = 81604241, tail = 212599263, P(reorder) = 0.395997
+iteration = 82141111, tail = 213136133, P(reorder) = 0.396997
+iteration = 82677981, tail = 213673003, P(reorder) = 0.397997
+iteration = 83214851, tail = 214209873, P(reorder) = 0.398997
+iteration = 83751721, tail = 214746743, P(reorder) = 0.399997
+iteration = 84288591, tail = 215283613, P(reorder) = 0.400997
+iteration = 84825461, tail = 215820483, P(reorder) = 0.401997
+iteration = 85362331, tail = 216357353, P(reorder) = 0.402997
+iteration = 85899201, tail = 216894223, P(reorder) = 0.403997
+iteration = 86436071, tail = 217431093, P(reorder) = 0.404997
+iteration = 86972941, tail = 217967963, P(reorder) = 0.405997
+iteration = 87509811, tail = 218504833, P(reorder) = 0.406997
+iteration = 88046681, tail = 219041703, P(reorder) = 0.407997
+iteration = 88583551, tail = 219578573, P(reorder) = 0.408997
+iteration = 89120421, tail = 220115443, P(reorder) = 0.409997
+iteration = 89657291, tail = 220652313, P(reorder) = 0.410997
+iteration = 90194161, tail = 221189183, P(reorder) = 0.411997
+iteration = 90731031, tail = 221726053, P(reorder) = 0.412997
+iteration = 91267901, tail = 222262923, P(reorder) = 0.413997
+iteration = 91804771, tail = 222799793, P(reorder) = 0.414997
+iteration = 92341641, tail = 223336663, P(reorder) = 0.415997
+iteration = 92878511, tail = 223873533, P(reorder) = 0.416997
+iteration = 93415381, tail = 224410403, P(reorder) = 0.417997
+iteration = 93952251, tail = 224947273, P(reorder) = 0.418997
+iteration = 94489121, tail = 225484143, P(reorder) = 0.419997
+iteration = 95025991, tail = 226021013, P(reorder) = 0.420997
+iteration = 95562861, tail = 226557883, P(reorder) = 0.421997
+iteration = 96099731, tail = 227094753, P(reorder) = 0.422997
+iteration = 96636601, tail = 227631623, P(reorder) = 0.423997
+iteration = 97173471, tail = 228168493, P(reorder) = 0.424997
+iteration = 97710341, tail = 228705363, P(reorder) = 0.425997
+iteration = 98247211, tail = 229242233, P(reorder) = 0.426997
+iteration = 98784081, tail = 229779103, P(reorder) = 0.427997
+iteration = 99320951, tail = 230315973, P(reorder) = 0.428997
+iteration = 99857821, tail = 230852843, P(reorder) = 0.429997
+iteration = 100394691, tail = 231389713, P(reorder) = 0.430997
+iteration = 100931561, tail = 231926583, P(reorder) = 0.431997
+iteration = 101468431, tail = 232463453, P(reorder) = 0.432997
+iteration = 102005301, tail = 233000323, P(reorder) = 0.433997
+iteration = 102542171, tail = 233537193, P(reorder) = 0.434997
+iteration = 103079041, tail = 234074063, P(reorder) = 0.435997
+iteration = 103615911, tail = 234610933, P(reorder) = 0.436997
+iteration = 104152781, tail = 235147803, P(reorder) = 0.437997
+iteration = 104689651, tail = 235684673, P(reorder) = 0.438997
+iteration = 105226521, tail = 236221543, P(reorder) = 0.439997
+iteration = 105763391, tail = 236758413, P(reorder) = 0.440997
+iteration = 106300261, tail = 237295283, P(reorder) = 0.441997
+iteration = 106837131, tail = 237832153, P(reorder) = 0.442997
+iteration = 107374001, tail = 238369023, P(reorder) = 0.443997
+iteration = 107910871, tail = 238905893, P(reorder) = 0.444997
+iteration = 108447741, tail = 239442763, P(reorder) = 0.445997
+iteration = 108984611, tail = 239979633, P(reorder) = 0.446997
+iteration = 109521481, tail = 240516503, P(reorder) = 0.447997
+iteration = 110058351, tail = 241053373, P(reorder) = 0.448997
+iteration = 110595221, tail = 241590243, P(reorder) = 0.449997
+iteration = 111132091, tail = 242127113, P(reorder) = 0.450997
+iteration = 111668961, tail = 242663983, P(reorder) = 0.451997
+iteration = 112205831, tail = 243200853, P(reorder) = 0.452997
+iteration = 112742701, tail = 243737723, P(reorder) = 0.453997
+iteration = 113279571, tail = 244274593, P(reorder) = 0.454997
+iteration = 113816441, tail = 244811463, P(reorder) = 0.455997
+iteration = 114353311, tail = 245348333, P(reorder) = 0.456997
+iteration = 114890181, tail = 245885203, P(reorder) = 0.457997
+iteration = 115427051, tail = 246422073, P(reorder) = 0.458997
+iteration = 115963921, tail = 246958943, P(reorder) = 0.459997
+iteration = 116500791, tail = 247495813, P(reorder) = 0.460997
+iteration = 117037661, tail = 248032683, P(reorder) = 0.461997
+iteration = 117574531, tail = 248569553, P(reorder) = 0.462997
+iteration = 118111401, tail = 249106423, P(reorder) = 0.463997
+iteration = 118648271, tail = 249643293, P(reorder) = 0.464997
+iteration = 119185141, tail = 250180163, P(reorder) = 0.465997
+iteration = 119722011, tail = 250717033, P(reorder) = 0.466997
+iteration = 120258881, tail = 251253903, P(reorder) = 0.467997
+iteration = 120795751, tail = 251790773, P(reorder) = 0.468997
+iteration = 121332621, tail = 252327643, P(reorder) = 0.469997
+iteration = 121869491, tail = 252864513, P(reorder) = 0.470997
+iteration = 122406361, tail = 253401383, P(reorder) = 0.471997
+iteration = 122943231, tail = 253938253, P(reorder) = 0.472997
+iteration = 123480101, tail = 254475123, P(reorder) = 0.473997
+iteration = 124016971, tail = 255011993, P(reorder) = 0.474997
+iteration = 124553841, tail = 255548863, P(reorder) = 0.475997
+iteration = 125090711, tail = 256085733, P(reorder) = 0.476997
+iteration = 125627581, tail = 256622603, P(reorder) = 0.477997
+iteration = 126164451, tail = 257159473, P(reorder) = 0.478997
+iteration = 126701321, tail = 257696343, P(reorder) = 0.479997
+iteration = 127238191, tail = 258233213, P(reorder) = 0.480997
+iteration = 127775061, tail = 258770083, P(reorder) = 0.481997
+iteration = 128311931, tail = 259306953, P(reorder) = 0.482997
+iteration = 128848801, tail = 259843823, P(reorder) = 0.483997
+iteration = 129385671, tail = 260380693, P(reorder) = 0.484997
+iteration = 129922541, tail = 260917563, P(reorder) = 0.485997
+iteration = 130459411, tail = 261454433, P(reorder) = 0.486997
+iteration = 130996281, tail = 261991303, P(reorder) = 0.487997
+iteration = 131533151, tail = 262528173, P(reorder) = 0.488997
+iteration = 132070021, tail = 263065043, P(reorder) = 0.489997
+iteration = 132606891, tail = 263601913, P(reorder) = 0.490997
+iteration = 133143761, tail = 264138783, P(reorder) = 0.491997
+iteration = 133680631, tail = 264675653, P(reorder) = 0.492997
+iteration = 134217501, tail = 265212523, P(reorder) = 0.493997
+iteration = 134754371, tail = 265749393, P(reorder) = 0.494997
+iteration = 135291241, tail = 266286263, P(reorder) = 0.495997
+iteration = 135828111, tail = 266823133, P(reorder) = 0.496997
+iteration = 136364981, tail = 267360003, P(reorder) = 0.497997
+iteration = 136901851, tail = 267896873, P(reorder) = 0.498997
+iteration = 137438721, tail = 268433743, P(reorder) = 0.499997
+iteration = 137975591, tail = 268970613, P(reorder) = 0.500997
+iteration = 138512461, tail = 269507483, P(reorder) = 0.501997
+iteration = 139049331, tail = 270044353, P(reorder) = 0.502997
+iteration = 139586201, tail = 270581223, P(reorder) = 0.503997
+iteration = 140123071, tail = 271118093, P(reorder) = 0.504997
+iteration = 140659941, tail = 271654963, P(reorder) = 0.505997
+iteration = 141196811, tail = 272191833, P(reorder) = 0.506997
+iteration = 141733681, tail = 272728703, P(reorder) = 0.507997
+iteration = 142270551, tail = 273265573, P(reorder) = 0.508997
+iteration = 142807421, tail = 273802443, P(reorder) = 0.509997
+iteration = 143344291, tail = 274339313, P(reorder) = 0.510997
+iteration = 143881161, tail = 274876183, P(reorder) = 0.511997
+iteration = 144418031, tail = 275413053, P(reorder) = 0.512997
+iteration = 144954901, tail = 275949923, P(reorder) = 0.513997
+iteration = 145491771, tail = 276486793, P(reorder) = 0.514997
+iteration = 146028641, tail = 277023663, P(reorder) = 0.515997
+iteration = 146565511, tail = 277560533, P(reorder) = 0.516997
+iteration = 147102381, tail = 278097403, P(reorder) = 0.517997
+iteration = 147639251, tail = 278634273, P(reorder) = 0.518997
+iteration = 148176121, tail = 279171143, P(reorder) = 0.519997
+iteration = 148712991, tail = 279708013, P(reorder) = 0.520997
+iteration = 149249861, tail = 280244883, P(reorder) = 0.521997
+iteration = 149786731, tail = 280781753, P(reorder) = 0.522997
+iteration = 150323601, tail = 281318623, P(reorder) = 0.523997
+iteration = 150860471, tail = 281855493, P(reorder) = 0.524997
+iteration = 151397341, tail = 282392363, P(reorder) = 0.525997
+iteration = 151934211, tail = 282929233, P(reorder) = 0.526997
+iteration = 152471081, tail = 283466103, P(reorder) = 0.527997
+iteration = 153007951, tail = 284002973, P(reorder) = 0.528997
+iteration = 153544821, tail = 284539843, P(reorder) = 0.529997
+iteration = 154081691, tail = 285076713, P(reorder) = 0.530997
+iteration = 154618561, tail = 285613583, P(reorder) = 0.531997
+iteration = 155155431, tail = 286150453, P(reorder) = 0.532997
+iteration = 155692301, tail = 286687323, P(reorder) = 0.533997
+iteration = 156229171, tail = 287224193, P(reorder) = 0.534997
+iteration = 156766041, tail = 287761063, P(reorder) = 0.535997
+iteration = 157302911, tail = 288297933, P(reorder) = 0.536997
+iteration = 157839781, tail = 288834803, P(reorder) = 0.537997
+iteration = 158376651, tail = 289371673, P(reorder) = 0.538997
+iteration = 158913521, tail = 289908543, P(reorder) = 0.539997
+iteration = 159450391, tail = 290445413, P(reorder) = 0.540997
+iteration = 159987261, tail = 290982283, P(reorder) = 0.541997
+iteration = 160524131, tail = 291519153, P(reorder) = 0.542997
+iteration = 161061001, tail = 292056023, P(reorder) = 0.543997
+iteration = 161597871, tail = 292592893, P(reorder) = 0.544997
+iteration = 162134741, tail = 293129763, P(reorder) = 0.545997
+iteration = 162671611, tail = 293666633, P(reorder) = 0.546997
+iteration = 163208481, tail = 294203503, P(reorder) = 0.547997
+iteration = 163745351, tail = 294740373, P(reorder) = 0.548997
+iteration = 164282221, tail = 295277243, P(reorder) = 0.549997
+iteration = 164819091, tail = 295814113, P(reorder) = 0.550997
+iteration = 165355961, tail = 296350983, P(reorder) = 0.551997
+iteration = 165892831, tail = 296887853, P(reorder) = 0.552997
+iteration = 166429701, tail = 297424723, P(reorder) = 0.553997
+iteration = 166966571, tail = 297961593, P(reorder) = 0.554997
+iteration = 167503441, tail = 298498463, P(reorder) = 0.555997
+iteration = 168040311, tail = 299035333, P(reorder) = 0.556997
+iteration = 168577181, tail = 299572203, P(reorder) = 0.557997
+iteration = 169114051, tail = 300109073, P(reorder) = 0.558997
+iteration = 169650921, tail = 300645943, P(reorder) = 0.559997
+iteration = 170187791, tail = 301182813, P(reorder) = 0.560997
+iteration = 170724661, tail = 301719683, P(reorder) = 0.561997
+iteration = 171261531, tail = 302256553, P(reorder) = 0.562997
+iteration = 171798401, tail = 302793423, P(reorder) = 0.563997
+iteration = 172335271, tail = 303330293, P(reorder) = 0.564997
+iteration = 172872141, tail = 303867163, P(reorder) = 0.565997
+iteration = 173409011, tail = 304404033, P(reorder) = 0.566997
+iteration = 173945881, tail = 304940903, P(reorder) = 0.567997
+iteration = 174482751, tail = 305477773, P(reorder) = 0.568997
+iteration = 175019621, tail = 306014643, P(reorder) = 0.569997
+iteration = 175556491, tail = 306551513, P(reorder) = 0.570997
+iteration = 176093361, tail = 307088383, P(reorder) = 0.571997
+iteration = 176630231, tail = 307625253, P(reorder) = 0.572997
+iteration = 177167101, tail = 308162123, P(reorder) = 0.573997
+iteration = 177703971, tail = 308698993, P(reorder) = 0.574997
+iteration = 178240841, tail = 309235863, P(reorder) = 0.575997
+iteration = 178777711, tail = 309772733, P(reorder) = 0.576997
+iteration = 179314581, tail = 310309603, P(reorder) = 0.577997
+iteration = 179851451, tail = 310846473, P(reorder) = 0.578997
+iteration = 180388321, tail = 311383343, P(reorder) = 0.579997
+iteration = 180925191, tail = 311920213, P(reorder) = 0.580997
+iteration = 181462061, tail = 312457083, P(reorder) = 0.581997
+iteration = 181998931, tail = 312993953, P(reorder) = 0.582997
+iteration = 182535801, tail = 313530823, P(reorder) = 0.583997
+iteration = 183072671, tail = 314067693, P(reorder) = 0.584997
+iteration = 183609541, tail = 314604563, P(reorder) = 0.585997
+iteration = 184146411, tail = 315141433, P(reorder) = 0.586997
+iteration = 184683281, tail = 315678303, P(reorder) = 0.587997
+iteration = 185220151, tail = 316215173, P(reorder) = 0.588997
+iteration = 185757021, tail = 316752043, P(reorder) = 0.589997
+iteration = 186293891, tail = 317288913, P(reorder) = 0.590997
+iteration = 186830761, tail = 317825783, P(reorder) = 0.591997
+iteration = 187367631, tail = 318362653, P(reorder) = 0.592997
+iteration = 187904501, tail = 318899523, P(reorder) = 0.593997
+iteration = 188441371, tail = 319436393, P(reorder) = 0.594997
+iteration = 188978241, tail = 319973263, P(reorder) = 0.595997
+iteration = 189515111, tail = 320510133, P(reorder) = 0.596997
+iteration = 190051981, tail = 321047003, P(reorder) = 0.597997
+iteration = 190588851, tail = 321583873, P(reorder) = 0.598997
+iteration = 191125721, tail = 322120743, P(reorder) = 0.599997
+iteration = 191662591, tail = 322657613, P(reorder) = 0.600997
+iteration = 192199461, tail = 323194483, P(reorder) = 0.601997
+iteration = 192736331, tail = 323731353, P(reorder) = 0.602997
+iteration = 193273201, tail = 324268223, P(reorder) = 0.603997
+iteration = 193810071, tail = 324805093, P(reorder) = 0.604997
+iteration = 194346941, tail = 325341963, P(reorder) = 0.605997
+iteration = 194883811, tail = 325878833, P(reorder) = 0.606997
+iteration = 195420681, tail = 326415703, P(reorder) = 0.607997
+iteration = 195957551, tail = 326952573, P(reorder) = 0.608997
+iteration = 196494421, tail = 327489443, P(reorder) = 0.609997
+iteration = 197031291, tail = 328026313, P(reorder) = 0.610997
+iteration = 197568161, tail = 328563183, P(reorder) = 0.611997
+iteration = 198105031, tail = 329100053, P(reorder) = 0.612997
+iteration = 198641901, tail = 329636923, P(reorder) = 0.613997
+iteration = 199178771, tail = 330173793, P(reorder) = 0.614997
+iteration = 199715641, tail = 330710663, P(reorder) = 0.615997
+iteration = 200252511, tail = 331247533, P(reorder) = 0.616997
+iteration = 200789381, tail = 331784403, P(reorder) = 0.617997
+iteration = 201326251, tail = 332321273, P(reorder) = 0.618997
+iteration = 201863121, tail = 332858143, P(reorder) = 0.619997
+iteration = 202399991, tail = 333395013, P(reorder) = 0.620997
+iteration = 202936861, tail = 333931883, P(reorder) = 0.621997
+iteration = 203473731, tail = 334468753, P(reorder) = 0.622997
+iteration = 204010601, tail = 335005623, P(reorder) = 0.623997
+iteration = 204547471, tail = 335542493, P(reorder) = 0.624997
+iteration = 205084341, tail = 336079363, P(reorder) = 0.625997
+iteration = 205621211, tail = 336616233, P(reorder) = 0.626997
+iteration = 206158081, tail = 337153103, P(reorder) = 0.627997
+iteration = 206694951, tail = 337689973, P(reorder) = 0.628997
+iteration = 207231821, tail = 338226843, P(reorder) = 0.629997
+iteration = 207768691, tail = 338763713, P(reorder) = 0.630997
+iteration = 208305561, tail = 339300583, P(reorder) = 0.631997
+iteration = 208842431, tail = 339837453, P(reorder) = 0.632997
+iteration = 209379301, tail = 340374323, P(reorder) = 0.633997
+iteration = 209916171, tail = 340911193, P(reorder) = 0.634997
+iteration = 210453041, tail = 341448063, P(reorder) = 0.635997
+iteration = 210989911, tail = 341984933, P(reorder) = 0.636997
+iteration = 211526781, tail = 342521803, P(reorder) = 0.637997
+iteration = 212063651, tail = 343058673, P(reorder) = 0.638997
+iteration = 212600521, tail = 343595543, P(reorder) = 0.639997
+iteration = 213137391, tail = 344132413, P(reorder) = 0.640997
+iteration = 213674261, tail = 344669283, P(reorder) = 0.641997
+iteration = 214211131, tail = 345206153, P(reorder) = 0.642997
+iteration = 214748001, tail = 345743023, P(reorder) = 0.643997
+iteration = 215284871, tail = 346279893, P(reorder) = 0.644997
+iteration = 215821741, tail = 346816763, P(reorder) = 0.645997
+iteration = 216358611, tail = 347353633, P(reorder) = 0.646997
+iteration = 216895481, tail = 347890503, P(reorder) = 0.647997
+iteration = 217432351, tail = 348427373, P(reorder) = 0.648997
+iteration = 217969221, tail = 348964243, P(reorder) = 0.649997
+iteration = 218506091, tail = 349501113, P(reorder) = 0.650997
+iteration = 219042961, tail = 350037983, P(reorder) = 0.651997
+iteration = 219579831, tail = 350574853, P(reorder) = 0.652997
+iteration = 220116701, tail = 351111723, P(reorder) = 0.653997
+iteration = 220653571, tail = 351648593, P(reorder) = 0.654997
+iteration = 221190441, tail = 352185463, P(reorder) = 0.655997
+iteration = 221727311, tail = 352722333, P(reorder) = 0.656997
+iteration = 222264181, tail = 353259203, P(reorder) = 0.657997
+iteration = 222801051, tail = 353796073, P(reorder) = 0.658997
+iteration = 223337921, tail = 354332943, P(reorder) = 0.659997
+iteration = 223874791, tail = 354869813, P(reorder) = 0.660997
+iteration = 224411661, tail = 355406683, P(reorder) = 0.661997
+iteration = 224948531, tail = 355943553, P(reorder) = 0.662997
+iteration = 225485401, tail = 356480423, P(reorder) = 0.663997
+iteration = 226022271, tail = 357017293, P(reorder) = 0.664997
+iteration = 226559141, tail = 357554163, P(reorder) = 0.665997
+iteration = 227096011, tail = 358091033, P(reorder) = 0.666997
+iteration = 227632881, tail = 358627903, P(reorder) = 0.667997
+iteration = 228169751, tail = 359164773, P(reorder) = 0.668997
+iteration = 228706621, tail = 359701643, P(reorder) = 0.669997
+iteration = 229243491, tail = 360238513, P(reorder) = 0.670997
+iteration = 229780361, tail = 360775383, P(reorder) = 0.671997
+iteration = 230317231, tail = 361312253, P(reorder) = 0.672997
+iteration = 230854101, tail = 361849123, P(reorder) = 0.673997
+iteration = 231390971, tail = 362385993, P(reorder) = 0.674997
+iteration = 231927841, tail = 362922863, P(reorder) = 0.675997
+iteration = 232464711, tail = 363459733, P(reorder) = 0.676997
+iteration = 233001581, tail = 363996603, P(reorder) = 0.677997
+iteration = 233538451, tail = 364533473, P(reorder) = 0.678997
+iteration = 234075321, tail = 365070343, P(reorder) = 0.679997
+iteration = 234612191, tail = 365607213, P(reorder) = 0.680997
+iteration = 235149061, tail = 366144083, P(reorder) = 0.681997
+iteration = 235685931, tail = 366680953, P(reorder) = 0.682997
+iteration = 236222801, tail = 367217823, P(reorder) = 0.683997
+iteration = 236759671, tail = 367754693, P(reorder) = 0.684996
+iteration = 237296541, tail = 368291563, P(reorder) = 0.685996
+iteration = 237833411, tail = 368828433, P(reorder) = 0.686996
+iteration = 238370281, tail = 369365303, P(reorder) = 0.687996
+iteration = 238907151, tail = 369902173, P(reorder) = 0.688996
+iteration = 239444021, tail = 370439043, P(reorder) = 0.689996
+iteration = 239980891, tail = 370975913, P(reorder) = 0.690996
+iteration = 240517761, tail = 371512783, P(reorder) = 0.691996
+iteration = 241054631, tail = 372049653, P(reorder) = 0.692996
+iteration = 241591501, tail = 372586523, P(reorder) = 0.693996
+iteration = 242128371, tail = 373123393, P(reorder) = 0.694996
+iteration = 242665241, tail = 373660263, P(reorder) = 0.695996
+iteration = 243202111, tail = 374197133, P(reorder) = 0.696996
+iteration = 243738981, tail = 374734003, P(reorder) = 0.697996
+iteration = 244275851, tail = 375270873, P(reorder) = 0.698996
+iteration = 244812721, tail = 375807743, P(reorder) = 0.699996
+iteration = 245349591, tail = 376344613, P(reorder) = 0.700996
+iteration = 245886461, tail = 376881483, P(reorder) = 0.701996
+iteration = 246423331, tail = 377418353, P(reorder) = 0.702996
+iteration = 246960201, tail = 377955223, P(reorder) = 0.703996
+iteration = 247497071, tail = 378492093, P(reorder) = 0.704996
+iteration = 248033941, tail = 379028963, P(reorder) = 0.705996
+iteration = 248570811, tail = 379565833, P(reorder) = 0.706996
+iteration = 249107681, tail = 380102703, P(reorder) = 0.707996
+iteration = 249644551, tail = 380639573, P(reorder) = 0.708996
+iteration = 250181421, tail = 381176443, P(reorder) = 0.709996
+iteration = 250718291, tail = 381713313, P(reorder) = 0.710996
+iteration = 251255161, tail = 382250183, P(reorder) = 0.711996
+iteration = 251792031, tail = 382787053, P(reorder) = 0.712996
+iteration = 252328901, tail = 383323923, P(reorder) = 0.713996
+iteration = 252865771, tail = 383860793, P(reorder) = 0.714996
+iteration = 253402641, tail = 384397663, P(reorder) = 0.715996
+iteration = 253939511, tail = 384934533, P(reorder) = 0.716996
+iteration = 254476381, tail = 385471403, P(reorder) = 0.717996
+iteration = 255013251, tail = 386008273, P(reorder) = 0.718996
+iteration = 255550121, tail = 386545143, P(reorder) = 0.719996
+iteration = 256086991, tail = 387082013, P(reorder) = 0.720996
+iteration = 256623861, tail = 387618883, P(reorder) = 0.721996
+iteration = 257160731, tail = 388155753, P(reorder) = 0.722996
+iteration = 257697601, tail = 388692623, P(reorder) = 0.723996
+iteration = 258234471, tail = 389229493, P(reorder) = 0.724996
+iteration = 258771341, tail = 389766363, P(reorder) = 0.725996
+iteration = 259308211, tail = 390303233, P(reorder) = 0.726996
+iteration = 259845081, tail = 390840103, P(reorder) = 0.727996
+iteration = 260381951, tail = 391376973, P(reorder) = 0.728996
+iteration = 260918821, tail = 391913843, P(reorder) = 0.729996
+iteration = 261455691, tail = 392450713, P(reorder) = 0.730996
+iteration = 261992561, tail = 392987583, P(reorder) = 0.731996
+iteration = 262529431, tail = 393524453, P(reorder) = 0.732996
+iteration = 263066301, tail = 394061323, P(reorder) = 0.733996
+iteration = 263603171, tail = 394598193, P(reorder) = 0.734996
+iteration = 264140041, tail = 395135063, P(reorder) = 0.735996
+iteration = 264676911, tail = 395671933, P(reorder) = 0.736996
+iteration = 265213781, tail = 396208803, P(reorder) = 0.737996
+iteration = 265750651, tail = 396745673, P(reorder) = 0.738996
+iteration = 266287521, tail = 397282543, P(reorder) = 0.739996
+iteration = 266824391, tail = 397819413, P(reorder) = 0.740996
+iteration = 267361261, tail = 398356283, P(reorder) = 0.741996
+iteration = 267898131, tail = 398893153, P(reorder) = 0.742996
+iteration = 268435001, tail = 399430023, P(reorder) = 0.743996
+iteration = 268971871, tail = 399966893, P(reorder) = 0.744996
+iteration = 269508741, tail = 400503763, P(reorder) = 0.745996
+iteration = 270045611, tail = 401040633, P(reorder) = 0.746996
+iteration = 270582481, tail = 401577503, P(reorder) = 0.747996
+iteration = 271119351, tail = 402114373, P(reorder) = 0.748996
+iteration = 271656221, tail = 402651243, P(reorder) = 0.749996
+iteration = 272193091, tail = 403188113, P(reorder) = 0.750996
+iteration = 272729961, tail = 403724983, P(reorder) = 0.751996
+iteration = 273266831, tail = 404261853, P(reorder) = 0.752996
+iteration = 273803701, tail = 404798723, P(reorder) = 0.753996
+iteration = 274340571, tail = 405335593, P(reorder) = 0.754996
+iteration = 274877441, tail = 405872463, P(reorder) = 0.755996
+iteration = 275414311, tail = 406409333, P(reorder) = 0.756996
+iteration = 275951181, tail = 406946203, P(reorder) = 0.757996
+iteration = 276488051, tail = 407483073, P(reorder) = 0.758996
+iteration = 277024921, tail = 408019943, P(reorder) = 0.759996
+iteration = 277561791, tail = 408556813, P(reorder) = 0.760996
+iteration = 278098661, tail = 409093683, P(reorder) = 0.761996
+iteration = 278635531, tail = 409630553, P(reorder) = 0.762996
+iteration = 279172401, tail = 410167423, P(reorder) = 0.763996
+iteration = 279709271, tail = 410704293, P(reorder) = 0.764996
+iteration = 280246141, tail = 411241163, P(reorder) = 0.765996
+iteration = 280783011, tail = 411778033, P(reorder) = 0.766996
+iteration = 281319881, tail = 412314903, P(reorder) = 0.767996
+iteration = 281856751, tail = 412851773, P(reorder) = 0.768996
+iteration = 282393621, tail = 413388643, P(reorder) = 0.769996
+iteration = 282930491, tail = 413925513, P(reorder) = 0.770996
+iteration = 283467361, tail = 414462383, P(reorder) = 0.771996
+iteration = 284004231, tail = 414999253, P(reorder) = 0.772996
+iteration = 284541101, tail = 415536123, P(reorder) = 0.773996
+iteration = 285077971, tail = 416072993, P(reorder) = 0.774996
+iteration = 285614841, tail = 416609863, P(reorder) = 0.775996
+iteration = 286151711, tail = 417146733, P(reorder) = 0.776996
+iteration = 286688581, tail = 417683603, P(reorder) = 0.777996
+iteration = 287225451, tail = 418220473, P(reorder) = 0.778996
+iteration = 287762321, tail = 418757343, P(reorder) = 0.779996
+iteration = 288299191, tail = 419294213, P(reorder) = 0.780996
+iteration = 288836061, tail = 419831083, P(reorder) = 0.781996
+iteration = 289372931, tail = 420367953, P(reorder) = 0.782996
+iteration = 289909801, tail = 420904823, P(reorder) = 0.783996
+iteration = 290446671, tail = 421441693, P(reorder) = 0.784996
+iteration = 290983541, tail = 421978563, P(reorder) = 0.785996
+iteration = 291520411, tail = 422515433, P(reorder) = 0.786996
+iteration = 292057281, tail = 423052303, P(reorder) = 0.787996
+iteration = 292594151, tail = 423589173, P(reorder) = 0.788996
+iteration = 293131021, tail = 424126043, P(reorder) = 0.789996
+iteration = 293667891, tail = 424662913, P(reorder) = 0.790996
+iteration = 294204761, tail = 425199783, P(reorder) = 0.791996
+iteration = 294741631, tail = 425736653, P(reorder) = 0.792996
+iteration = 295278501, tail = 426273523, P(reorder) = 0.793996
+iteration = 295815371, tail = 426810393, P(reorder) = 0.794996
+iteration = 296352241, tail = 427347263, P(reorder) = 0.795996
+iteration = 296889111, tail = 427884133, P(reorder) = 0.796996
+iteration = 297425981, tail = 428421003, P(reorder) = 0.797996
+iteration = 297962851, tail = 428957873, P(reorder) = 0.798996
+iteration = 298499721, tail = 429494743, P(reorder) = 0.799996
+iteration = 299036591, tail = 430031613, P(reorder) = 0.800996
+iteration = 299573461, tail = 430568483, P(reorder) = 0.801996
+iteration = 300110331, tail = 431105353, P(reorder) = 0.802996
+iteration = 300647201, tail = 431642223, P(reorder) = 0.803996
+iteration = 301184071, tail = 432179093, P(reorder) = 0.804996
+iteration = 301720941, tail = 432715963, P(reorder) = 0.805996
+iteration = 302257811, tail = 433252833, P(reorder) = 0.806996
+iteration = 302794681, tail = 433789703, P(reorder) = 0.807996
+iteration = 303331551, tail = 434326573, P(reorder) = 0.808996
+iteration = 303868421, tail = 434863443, P(reorder) = 0.809996
+iteration = 304405291, tail = 435400313, P(reorder) = 0.810996
+iteration = 304942161, tail = 435937183, P(reorder) = 0.811996
+iteration = 305479031, tail = 436474053, P(reorder) = 0.812996
+iteration = 306015901, tail = 437010923, P(reorder) = 0.813996
+iteration = 306552771, tail = 437547793, P(reorder) = 0.814996
+iteration = 307089641, tail = 438084663, P(reorder) = 0.815996
+iteration = 307626511, tail = 438621533, P(reorder) = 0.816996
+iteration = 308163381, tail = 439158403, P(reorder) = 0.817996
+iteration = 308700251, tail = 439695273, P(reorder) = 0.818996
+iteration = 309237121, tail = 440232143, P(reorder) = 0.819996
+iteration = 309773991, tail = 440769013, P(reorder) = 0.820996
+iteration = 310310861, tail = 441305883, P(reorder) = 0.821996
+iteration = 310847731, tail = 441842753, P(reorder) = 0.822996
+iteration = 311384601, tail = 442379623, P(reorder) = 0.823996
+iteration = 311921471, tail = 442916493, P(reorder) = 0.824996
+iteration = 312458341, tail = 443453363, P(reorder) = 0.825996
+iteration = 312995211, tail = 443990233, P(reorder) = 0.826996
+iteration = 313532081, tail = 444527103, P(reorder) = 0.827996
+iteration = 314068951, tail = 445063973, P(reorder) = 0.828996
+iteration = 314605821, tail = 445600843, P(reorder) = 0.829996
+iteration = 315142691, tail = 446137713, P(reorder) = 0.830996
+iteration = 315679561, tail = 446674583, P(reorder) = 0.831996
+iteration = 316216431, tail = 447211453, P(reorder) = 0.832996
+iteration = 316753301, tail = 447748323, P(reorder) = 0.833996
+iteration = 317290171, tail = 448285193, P(reorder) = 0.834996
+iteration = 317827041, tail = 448822063, P(reorder) = 0.835996
+iteration = 318363911, tail = 449358933, P(reorder) = 0.836996
+iteration = 318900781, tail = 449895803, P(reorder) = 0.837996
+iteration = 319437651, tail = 450432673, P(reorder) = 0.838996
+iteration = 319974521, tail = 450969543, P(reorder) = 0.839996
+iteration = 320511391, tail = 451506413, P(reorder) = 0.840996
+iteration = 321048261, tail = 452043283, P(reorder) = 0.841996
+iteration = 321585131, tail = 452580153, P(reorder) = 0.842996
+iteration = 322122001, tail = 453117023, P(reorder) = 0.843996
+iteration = 322658871, tail = 453653893, P(reorder) = 0.844996
+iteration = 323195741, tail = 454190763, P(reorder) = 0.845996
+iteration = 323732611, tail = 454727633, P(reorder) = 0.846996
+iteration = 324269481, tail = 455264503, P(reorder) = 0.847996
+iteration = 324806351, tail = 455801373, P(reorder) = 0.848996
+iteration = 325343221, tail = 456338243, P(reorder) = 0.849996
+iteration = 325880091, tail = 456875113, P(reorder) = 0.850996
+iteration = 326416961, tail = 457411983, P(reorder) = 0.851996
+iteration = 326953831, tail = 457948853, P(reorder) = 0.852996
+iteration = 327490701, tail = 458485723, P(reorder) = 0.853996
+iteration = 328027571, tail = 459022593, P(reorder) = 0.854996
+iteration = 328564441, tail = 459559463, P(reorder) = 0.855996
+iteration = 329101311, tail = 460096333, P(reorder) = 0.856996
+iteration = 329638181, tail = 460633203, P(reorder) = 0.857996
+iteration = 330175051, tail = 461170073, P(reorder) = 0.858996
+iteration = 330711921, tail = 461706943, P(reorder) = 0.859996
+iteration = 331248791, tail = 462243813, P(reorder) = 0.860996
+iteration = 331785661, tail = 462780683, P(reorder) = 0.861996
+iteration = 332322531, tail = 463317553, P(reorder) = 0.862996
+iteration = 332859401, tail = 463854423, P(reorder) = 0.863996
+iteration = 333396271, tail = 464391293, P(reorder) = 0.864996
+iteration = 333933141, tail = 464928163, P(reorder) = 0.865996
+iteration = 334470011, tail = 465465033, P(reorder) = 0.866996
+iteration = 335006881, tail = 466001903, P(reorder) = 0.867996
+iteration = 335543751, tail = 466538773, P(reorder) = 0.868996
+iteration = 336080621, tail = 467075643, P(reorder) = 0.869996
+iteration = 336617491, tail = 467612513, P(reorder) = 0.870996
+iteration = 337154361, tail = 468149383, P(reorder) = 0.871996
+iteration = 337691231, tail = 468686253, P(reorder) = 0.872996
+iteration = 338228101, tail = 469223123, P(reorder) = 0.873996
+iteration = 338764971, tail = 469759993, P(reorder) = 0.874996
+iteration = 339301841, tail = 470296863, P(reorder) = 0.875996
+iteration = 339838711, tail = 470833733, P(reorder) = 0.876996
+iteration = 340375581, tail = 471370603, P(reorder) = 0.877996
+iteration = 340912451, tail = 471907473, P(reorder) = 0.878996
+iteration = 341449321, tail = 472444343, P(reorder) = 0.879996
+iteration = 341986191, tail = 472981213, P(reorder) = 0.880996
+iteration = 342523061, tail = 473518083, P(reorder) = 0.881996
+iteration = 343059931, tail = 474054953, P(reorder) = 0.882996
+iteration = 343596801, tail = 474591823, P(reorder) = 0.883996
+iteration = 344133671, tail = 475128693, P(reorder) = 0.884996
+iteration = 344670541, tail = 475665563, P(reorder) = 0.885996
+iteration = 345207411, tail = 476202433, P(reorder) = 0.886996
+iteration = 345744281, tail = 476739303, P(reorder) = 0.887996
+iteration = 346281151, tail = 477276173, P(reorder) = 0.888996
+iteration = 346818021, tail = 477813043, P(reorder) = 0.889996
+iteration = 347354891, tail = 478349913, P(reorder) = 0.890996
+iteration = 347891761, tail = 478886783, P(reorder) = 0.891996
+iteration = 348428631, tail = 479423653, P(reorder) = 0.892996
+iteration = 348965501, tail = 479960523, P(reorder) = 0.893996
+iteration = 349502371, tail = 480497393, P(reorder) = 0.894996
+iteration = 350039241, tail = 481034263, P(reorder) = 0.895996
+iteration = 350576111, tail = 481571133, P(reorder) = 0.896996
+iteration = 351112981, tail = 482108003, P(reorder) = 0.897996
+iteration = 351649851, tail = 482644873, P(reorder) = 0.898996
+iteration = 352186721, tail = 483181743, P(reorder) = 0.899996
+iteration = 352723591, tail = 483718613, P(reorder) = 0.900996
+iteration = 353260461, tail = 484255483, P(reorder) = 0.901996
+iteration = 353797331, tail = 484792353, P(reorder) = 0.902996
+iteration = 354334201, tail = 485329223, P(reorder) = 0.903996
+iteration = 354871071, tail = 485866093, P(reorder) = 0.904996
+iteration = 355407941, tail = 486402963, P(reorder) = 0.905996
+iteration = 355944811, tail = 486939833, P(reorder) = 0.906996
+iteration = 356481681, tail = 487476703, P(reorder) = 0.907996
+iteration = 357018551, tail = 488013573, P(reorder) = 0.908996
+iteration = 357555421, tail = 488550443, P(reorder) = 0.909996
+iteration = 358092291, tail = 489087313, P(reorder) = 0.910996
+iteration = 358629161, tail = 489624183, P(reorder) = 0.911996
+iteration = 359166031, tail = 490161053, P(reorder) = 0.912996
+iteration = 359702901, tail = 490697923, P(reorder) = 0.913996
+iteration = 360239771, tail = 491234793, P(reorder) = 0.914996
+iteration = 360776641, tail = 491771663, P(reorder) = 0.915996
+iteration = 361313511, tail = 492308533, P(reorder) = 0.916996
+iteration = 361850381, tail = 492845403, P(reorder) = 0.917996
+iteration = 362387251, tail = 493382273, P(reorder) = 0.918996
+iteration = 362924121, tail = 493919143, P(reorder) = 0.919996
+iteration = 363460991, tail = 494456013, P(reorder) = 0.920996
+iteration = 363997861, tail = 494992883, P(reorder) = 0.921996
+iteration = 364534731, tail = 495529753, P(reorder) = 0.922996
+iteration = 365071601, tail = 496066623, P(reorder) = 0.923996
+iteration = 365608471, tail = 496603493, P(reorder) = 0.924996
+iteration = 366145341, tail = 497140363, P(reorder) = 0.925996
+iteration = 366682211, tail = 497677233, P(reorder) = 0.926996
+iteration = 367219081, tail = 498214103, P(reorder) = 0.927996
+iteration = 367755951, tail = 498750973, P(reorder) = 0.928996
+iteration = 368292821, tail = 499287843, P(reorder) = 0.929996
+iteration = 368829691, tail = 499824713, P(reorder) = 0.930996
+iteration = 369366561, tail = 500361583, P(reorder) = 0.931996
+iteration = 369903431, tail = 500898453, P(reorder) = 0.932996
+iteration = 370440301, tail = 501435323, P(reorder) = 0.933996
+iteration = 370977171, tail = 501972193, P(reorder) = 0.934996
+iteration = 371514041, tail = 502509063, P(reorder) = 0.935996
+iteration = 372050911, tail = 503045933, P(reorder) = 0.936996
+iteration = 372587781, tail = 503582803, P(reorder) = 0.937996
+iteration = 373124651, tail = 504119673, P(reorder) = 0.938996
+iteration = 373661521, tail = 504656543, P(reorder) = 0.939996
+iteration = 374198391, tail = 505193413, P(reorder) = 0.940996
+iteration = 374735261, tail = 505730283, P(reorder) = 0.941996
+iteration = 375272131, tail = 506267153, P(reorder) = 0.942996
+iteration = 375809001, tail = 506804023, P(reorder) = 0.943996
+iteration = 376345871, tail = 507340893, P(reorder) = 0.944996
+iteration = 376882741, tail = 507877763, P(reorder) = 0.945996
+iteration = 377419611, tail = 508414633, P(reorder) = 0.946996
+iteration = 377956481, tail = 508951503, P(reorder) = 0.947996
+iteration = 378493351, tail = 509488373, P(reorder) = 0.948996
+iteration = 379030221, tail = 510025243, P(reorder) = 0.949996
+379032342 iterations
+Total number of reordered vertices: 510027364
+reorder time = 326.216
+====================convert====================
+max_chunkID = 5016467
+max_offset = 14(GB)
+The number of non-zero degree vertices: 210813367
+total_num_reorder = 536870909
+310059974 71133085 71167170 83211540 83569127 
+convert time = 115.552
+====================end====================
+Freed 4GB for local_buf.
+Freed 32GB for local_buf.
+Freed 4GB for local_buf.
+Freed 32GB for local_buf.
+convert graph time = 1078.6
+reorder_list for out graph: 310059974 223224237 338093904 518541253 108844943 74472492 189255625 294969782 146409743 519908898 75914612 502320962 264215376 466306864 521900736 404242026 365773370 403022607 402695278 145327690 417273812 240744730 493455215 469916762 165763130 322461449 431956399 259917380 526901925 369680471 489386841 383792829 59128137 437983617 333727866 514449152 46721749 425007433 287034821 508787181 256612131 158308478 172448991 55104968 403435811 121362924 369209709 453649948 282228710 374300248 390404464 265957086 80478615 189098179 113958747 142997239 504618174 470168021 275791339 57820649 482272397 477833096 303868730 64379130 264097605 398268173 279312723 12309181 448531647 432202733 377621754 200179653 102195385 402885696 305355717 160683194 413176209 318884786 342858513 213877249 174703856 495011470 401021724 526060832 16037350 255719250 2934049 119866523 202121825 500395231 137569010 442127466 114946102 210438320 288891651 247128679 446765106 342192883 242792649 23078536 
+test case
+out degree of 12 is 1
+in degree of 12 is 9
+reorder_list for in graph: 310059974 71133085 71167170 83211540 83569127 106351953 127117800 138731363 146477509 184389558 197933050 207310651 216718747 216890100 223682016 263475514 269930504 277577659 282908823 286164024 296070600 370965743 378699618 387487749 402415666 450487679 462214982 472355103 11848538 18647838 23566144 25287535 38658554 41375000 46086764 46964275 52064499 53750618 62029157 69809511 71632084 71746261 72047793 73608264 84153203 87277195 89528815 97259098 99246505 100092787 104860913 118302928 129142068 129872878 132123688 133111087 137425920 143030920 144840477 164884132 169076363 172663498 177674386 180110977 188594512 200049441 206835130 210879623 235771903 237541718 245542431 250008359 261342586 267386826 271509656 278627809 278899070 280086558 293224594 296541078 301634733 305286600 308129989 311015830 313738881 318333867 321709853 334050218 347344606 365209713 372764277 379888666 382516800 383855444 389607867 391637014 394098329 397047554 397248608 400472994 
+out degree of 12 is 1
+The top 1 in neighbors of 12 are: 403380213 
+out degree of 300 is 0
+out degree of 1024 is 5
+The top 5 in neighbors of 1024 are: 289473479 388276306 497223499 522131789 34854786 
+out degree of 65535 is 0
+out degree of 1023512 is 2
+The top 2 in neighbors of 1023512 are: 230742216 438821060 
+out degree of 13757872 is 0
+in degree of 12 is 9
+The top 9 in neighbors of 12 are: 11989703 179701889 242477219 282351615 285391046 286403544 302482265 416167806 422020180 
+in degree of 300 is 0
+in degree of 1024 is 4
+The top 4 in neighbors of 1024 are: 86232707 152828260 338411880 416155105 
+in degree of 65535 is 0
+in degree of 1023512 is 21
+The top 21 in neighbors of 1023512 are: 3296636 28406959 31116092 31368871 130868883 200155845 226277905 250814875 265360912 277508608 296448232 308582870 310745712 332029562 396600892 451182254 452637768 478346518 489185065 490809599 516038278 
+in degree of 13757872 is 0

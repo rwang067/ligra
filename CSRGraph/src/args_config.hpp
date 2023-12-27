@@ -31,7 +31,7 @@ void args_config(int argc, const char ** argv) {
     // Basic arguments for graph info
     filepath = get_option_string("-f", "/data1/wr/datasets/Friendster/all/bin");  // Input dataset file.
     PREFIX = get_option_string("--prefix", "out.friendster"); // Path of pmem1 of NUMA node1.
-    nverts = get_option_int("-v", 68349467); // Vertex count. //TT:61588415, FS:68349467, UK:105153953, K28:268435456, YW:1413511394, K29:536870912, K30:1073741824
+    nverts = get_option_int("-v", 0); // Vertex count. //TT:61588415, FS:68349467, UK:105153953, K28:268435456, YW:1413511394, K29:536870912, K30:1073741824
     nedges = get_option_int("-e", 0); // Edge count need for import. Default: 0 for importing all edges in the dataset file.
     /* ---------------------------------------------------------------------- */
     // Basic arguments for system info
@@ -42,10 +42,11 @@ void args_config(int argc, const char ** argv) {
     /* ---------------------------------------------------------------------- */
     // Basic arguments for graph query benchmark
     QUERY = get_option_int("-q", 0); // The number of executions for each graph query algorithm.
-    source = get_option_int("--source", 0); // The root vertex for graph query benchmark.
+    source = get_option_int("--source", -1); // The root vertex for graph query benchmark.
+    reorder_level = get_option_int("--reorder_level", 0); // The level of reordering.
     /* ---------------------------------------------------------------------- */
     // Basic arguments for chunk allocator
-    SBLK_POOL_SIZE = get_option_long("--sblk_pool_size", 784) * GB; // Size of ssd pool for chunk allocator. Default: 128GB.
+    SBLK_POOL_SIZE = get_option_long("--sblk_pool_size", 128) * GB; // Size of ssd pool for chunk allocator. Default: 128GB.
     sblk_name = get_option_string("--sblk_name", "sblk"); // Name of ssd pool for chunk allocator. Default: sblk.
     MAX_LEVEL = get_option_int("--max_level", 1); // Max level of chunk allocator. Default: 1.
     MEM_BULK_SIZE = get_option_int("--mem_bulk_size", 32) * MB; // Size of memory bulk for vertex allocator. Default: 32MB.

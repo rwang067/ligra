@@ -47,6 +47,14 @@ public:
         in_graph->print_degree();
     }
 
+    void convert_blaze() {
+        double start = mywtime();
+        out_graph->convert_blaze();
+        in_graph->convert_blaze();
+        double end = mywtime();
+        ofs << "convert blaze graph time = " << end - start << std::endl;
+    }
+
     vid_t get_vcount() { return out_graph->get_vcount(); }
     index_t get_ecount() { return out_graph->get_ecount(); }
 
@@ -330,10 +338,10 @@ public:
         load_csr(true);
         load_csr(false);
         out_graph->init_chunk_allocator();
-        out_graph->convert_graph(csr_idx, csr_adj);
+        out_graph->convert_graph(csr_idx, csr_adj, csr_idx_in);
         
         in_graph->init_chunk_allocator();
-        in_graph->convert_graph(csr_idx_in, csr_adj_in);
+        in_graph->convert_graph(csr_idx_in, csr_adj_in, csr_idx);
         free_csr(true);
         free_csr(false);
         double end = mywtime();

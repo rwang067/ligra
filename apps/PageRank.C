@@ -24,6 +24,8 @@
 #include "ligra.h"
 #include "math.h"
 
+#define PR_DEBUG_EN
+
 template <class vertex>
 struct PR_F {
   double* p_curr, *p_next;
@@ -68,7 +70,7 @@ struct PR_Vertex_Reset {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long maxIters = P.getOptionLongValue("-maxiters",10);
+  long maxIters = P.getOptionLongValue("-maxiters",3);
   const intE n = GA.n;
   const double damping = 0.85, epsilon = 0.0000001;
   
@@ -99,6 +101,12 @@ void Compute(graph<vertex>& GA, commandLine P) {
   double L1_norm = 1.0;
 
   while(iter++ < maxIters) {
+#ifdef PR_DEBUG_EN
+    time_t now = time(0);
+    char* dt = ctime(&now);
+    std::cout << "The local date and time is: " << dt;
+#endif
+
 #ifdef DEBUG_EN
     size_t vm, rss;
     pid_t pid = getpid();

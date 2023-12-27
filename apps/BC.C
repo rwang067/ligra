@@ -109,6 +109,10 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   bool* Visited = newA(bool,n);
   {parallel_for(long i=0;i<n;i++) Visited[i] = 0;}
+  
+  fType* Dependencies = newA(fType,n);
+  {parallel_for(long i=0;i<n;i++) Dependencies[i] = 0.0;}
+
   Visited[start] = 1;
   vertexSubset Frontier(n,start);
  
@@ -122,9 +126,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
   memory_profiler.memory_usage[item] += size;
   size = sizeof(bool) * n;  // Visited
   memory_profiler.memory_usage[item] += size;
+  size = sizeof(fType) * n; // Dependencies
+  memory_profiler.memory_usage[item] += size;
 
   size_t max_size = Frontier.getMemorySize();
 #endif
+
+
 
   long round = 0;
   while(!Frontier.isEmpty()){ //first phase
@@ -143,14 +151,6 @@ void Compute(graph<vertex>& GA, commandLine P) {
     Levels.push_back(output); //save frontier onto Levels
     Frontier = output;
   }
-
-  fType* Dependencies = newA(fType,n);
-  {parallel_for(long i=0;i<n;i++) Dependencies[i] = 0.0;}
-
-#ifdef DEBUG_EN
-  size = sizeof(fType) * n; // Dependencies
-  memory_profiler.memory_usage[item] += size;
-#endif
 
   //invert numpaths
   fType* inverseNumPaths = NumPaths;

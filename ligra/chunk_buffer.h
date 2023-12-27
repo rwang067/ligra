@@ -558,7 +558,7 @@ private:
   ChunkManager** chunkManager[DIRECT_GRAPH];
   SuperVertexManager* svManager[DIRECT_GRAPH];
   // reorder list
-  const bool reorderListEnable = 1;
+  bool reorderListEnable = 1;
   uintE* reorderList[DIRECT_GRAPH];
 
 public:
@@ -628,6 +628,7 @@ public:
     return chunkManager[inGraph][level]->getChunkNeighbors(cid, coff);
   }
 
+  inline void setReorderListEnable(bool enable) { reorderListEnable = enable; }
   inline bool getReorderListEnable() { return reorderListEnable; }
   inline uintE* getReorderList(bool inGraph) { return reorderList[inGraph]; }
   inline uintE getReorderListElement(bool inGraph, uintE i) { return reorderList[inGraph][i]; }

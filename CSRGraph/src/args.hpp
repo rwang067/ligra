@@ -17,6 +17,7 @@ std::string SSDPATH; // path of ssd
 // Basic arguments for graph query benchmark
 uint32_t QUERY; // times for query
 uint32_t source;
+uint32_t reorder_level;
 /* ---------------------------------------------------------------------- */
 // Basic arguments for chunk allocator
 size_t SBLK_POOL_SIZE; // size of ssd pool for chunk allocator

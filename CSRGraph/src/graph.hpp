@@ -155,6 +155,122 @@ public:
         }
     }
 
+    struct graph_header {
+        uint64_t unused;
+        uint64_t size_of_edge;
+        uint64_t num_nodes;
+        uint64_t num_edges;
+    };
+
+    // Align
+    #define ALIGN_UPTO(size, align) ((((uint64_t)size)+(align)-1u)&~((align)-1u))
+    #define CACHE_LINE 64
+    #define PAGE_SIZE 4096
+
+    void convert_blaze() {
+        char* buf_idx = 0, *buf_adj = 0;
+
+        if (is_out_graph) {
+            std::cout << "import csr for out graph" << std::endl;
+            // allocate and read for index and csr file
+            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".idx", &buf_idx);
+            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".adj", &buf_adj);
+            // get nverts and nedges
+            nverts = size_idx / sizeof(index_t) - 1;
+            nedges = size_adj / sizeof(vid_t);
+            std::cout << "nverts = " << nverts << ", nedges = " << nedges  << ", average degree = " << nedges * 1.0 / nverts << std::endl;
+
+            csr_idx = (index_t*)buf_idx;
+            csr_adj = (vid_t*)buf_adj;
+        } else {
+            std::cout << "import csr for in graph" << std::endl;
+            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".ridx", &buf_idx, (nverts+1)*sizeof(index_t));
+            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".radj", &buf_adj);
+
+            csr_idx = (index_t*)buf_idx;
+            csr_adj = (vid_t*)buf_adj;
+            csr_idx[nverts] = nedges;
+        }
+
+        graph_header header;
+        header.unused = 0;
+        header.size_of_edge = size_adj;
+        header.num_nodes = nverts;
+        header.num_edges = nedges;
+
+        size_t num_offsets = ((header.num_nodes - 1) / 16) + 1;
+        index_t* offset = (index_t*)calloc(sizeof(index_t), num_offsets);
+
+        std::cout << "num_offsets = " << num_offsets << std::endl;
+
+        #pragma omp parallel for num_threads(THD_COUNT) schedule (dynamic, 256*256)
+        for (vid_t v = 0; v < num_offsets; ++v) {
+            offset[v] = csr_idx[v*16];
+        }
+
+        size_t len_header = sizeof(header) + num_offsets * sizeof(uint64_t);
+        size_t len_header_aligned = ALIGN_UPTO(len_header, CACHE_LINE);
+        
+        degree_t* degree = (degree_t*)calloc(sizeof(degree_t), header.num_nodes);
+        #pragma omp parallel for num_threads(THD_COUNT) schedule (dynamic, 256*256)
+        for (vid_t v = 0; v < header.num_nodes; ++v) {
+            degree[v] = csr_idx[v+1] - csr_idx[v];
+        }
+
+        // save header, offset and degree in a same file
+        std::string outputFile;
+        if (is_out_graph) {
+            outputFile = SSDPATH + "/" + PREFIX + ".gr.index";
+        } else {
+            outputFile = SSDPATH + "/" + PREFIX + ".tgr.index";
+        }
+        size_t size = len_header_aligned + header.num_nodes * sizeof(degree_t);
+        std::cout << "size = " << size << std::endl;
+        std::cout << header.num_nodes * sizeof(degree_t) << std::endl;
+        int fd = open(outputFile.c_str(), O_RDWR|O_CREAT, 00777);
+        if (fd == -1) {
+            std::cout << "Could not open file for :" << outputFile << " error: " << strerror(errno) << std::endl;
+            exit(1);
+        }
+        if (ftruncate(fd, size) == -1) {
+            std::cout << "Could not truncate file for :" << outputFile << " error: " << strerror(errno) << std::endl;
+            exit(1);
+        }
+        graph_header* addr = (graph_header*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+        memcpy(addr, &header, sizeof(graph_header));
+        memcpy(addr+sizeof(graph_header), offset, num_offsets * sizeof(uint64_t));
+        memcpy(addr+len_header_aligned, degree, header.num_nodes * sizeof(degree_t));
+        msync(addr, size, MS_SYNC);
+        munmap(addr, size);
+        close(fd);
+
+        // align adjfile to PAGE_SIZE
+        std::cout << "size of adj: " << size_adj << std::endl;
+        // ceil(size_adj / PAGE_SIZE) * PAGE_SIZE
+        size_t len_adj_aligned = ceil((double)size_adj / PAGE_SIZE) * PAGE_SIZE;
+        std::cout << "len_adj_aligned = " << len_adj_aligned << std::endl;
+        // save adjfile
+        if (is_out_graph) {
+            outputFile = SSDPATH + "/" + PREFIX + ".gr.adj.0";
+        } else {
+            outputFile = SSDPATH + "/" + PREFIX + ".tgr.adj.0";
+        }
+        fd = open(outputFile.c_str(), O_RDWR|O_CREAT, 00777);
+        if (fd == -1) {
+            std::cout << "Could not open file for :" << outputFile << " error: " << strerror(errno) << std::endl;
+            exit(1);
+        }
+        if (ftruncate(fd, len_adj_aligned) == -1) {
+            std::cout << "Could not truncate file for :" << outputFile << " error: " << strerror(errno) << std::endl;
+            exit(1);
+        }
+        vid_t* addr_adj = (vid_t*)mmap(NULL, len_adj_aligned, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+        memcpy(addr_adj, csr_adj, header.size_of_edge);
+        msync(addr_adj, len_adj_aligned, MS_SYNC);
+        munmap(addr_adj, len_adj_aligned);
+        close(fd);
+    }
+
     inline void count_degree() {
         char* buf_idx = 0, *buf_adj = 0;
 
@@ -935,40 +1051,100 @@ public:
         chunk_allocator->init(pool_name);
     }
 
-    inline vid_t re_order(index_t* csr_idx, vid_t* csr_adj, vid_t root = 12) {
-        // run preprocess BFS
-        reorder_list[0] = root;
-        visited[root] = 1;
-        vid_t reorder_list_tail = 1;
-
-        for (vid_t i = 0; i < reorder_list_tail; ++i) {
-            vid_t vid = reorder_list[i];
-            degree_t degree = csr_idx[vid+1] - csr_idx[vid];
-            vid_t* nebrs = csr_adj+csr_idx[vid];
-            for (degree_t d = 0; d < degree; ++d) {
-                vid_t nebr = nebrs[d];
-                if (visited[nebr] == 0) {
-                    visited[nebr] = 1;
-                    reorder_list[reorder_list_tail++] = nebr;
+    // run preprocess BFS
+    inline vid_t re_order(index_t* csr_idx, vid_t* csr_adj, std::vector<vid_t>& vid_list, double threshold=0.95) {
+        vid_t head = 0, tail = 0;
+        size_t iteration = 0;
+        std::cout << "threshold = " << threshold << std::endl;
+        std::cout << "vid_list.size() = " << vid_list.size() << std::endl;
+        // if (source != -1) {
+        //     vid_t root = source;
+        //     reorder_list[head] = root;
+        //     visited[root] = 1;
+        //     tail = head + 1;
+        //     for (vid_t i = head; i < tail; ++i) {
+        //         vid_t vid = reorder_list[i];
+        //         degree_t degree = csr_idx[vid+1] - csr_idx[vid];
+        //         vid_t* nebrs = csr_adj+csr_idx[vid];
+        //         for (degree_t d = 0; d < degree; ++d) {
+        //             vid_t nebr = nebrs[d];
+        //             if (visited[nebr] == 0) {
+        //                 visited[nebr] = 1;
+        //                 reorder_list[tail++] = nebr;
+        //             }
+        //         }
+        //     }
+        //     head = tail;
+        //     iteration++;
+        //     double percent = (double)tail / vid_list.size();
+        //     std::cout << "preprocess with source = " << source << ", iteration = " << iteration << ", tail = " << tail << ", P(reorder) = " << percent << std::endl;
+        // }
+        for (vid_t v = 0; v < vid_list.size(); ++v) {
+            // run bfs and add nebrs to reorder_list
+            vid_t root = vid_list[v];
+            if (visited[root]) continue;
+            reorder_list[head] = root;
+            visited[root] = 1;
+            tail = head + 1;
+            for (vid_t i = head; i < tail; ++i) {
+                vid_t vid = reorder_list[i];
+                degree_t degree = csr_idx[vid+1] - csr_idx[vid];
+                vid_t* nebrs = csr_adj+csr_idx[vid];
+                for (degree_t d = 0; d < degree; ++d) {
+                    vid_t nebr = nebrs[d];
+                    if (visited[nebr] == 0) {
+                        visited[nebr] = 1;
+                        reorder_list[tail++] = nebr;
+                    }
                 }
             }
+            head = tail;
+            double percent = (double)tail / vid_list.size();
+            iteration++;
+            if (iteration % ((int)(nverts / 1000)) == 1) std::cout << "iteration = " << iteration << ", tail = " << tail << ", P(reorder) = " << percent << std::endl;
+            if (percent >= threshold) break;
         }
-        #ifdef MONITOR
-        std::cout << "reorder_list_tail = " << reorder_list_tail << std::endl;
-        #endif
-        return reorder_list_tail;
+        std::cout << iteration << " iterations" << std::endl;
+        std::cout << "Total number of reordered vertices: " << tail << std::endl;
+        return tail;
     }
 
-    void convert_graph(index_t* csr_idx, vid_t* csr_adj) {
+    void convert_graph(index_t* csr_idx, vid_t* csr_adj, index_t* csr_idx_in) {
+        // sort vertices' id according to their indegree
+        // time the sorting process
+        std::cout << "====================sort====================" << std::endl;
+        double start = mywtime();
+        std::vector<vid_t> vid_list;
+        for (vid_t vid = 0; vid < nverts; ++vid) {
+            vid_list.push_back(vid);
+        }
+        // std::sort(vid_list.begin(), vid_list.end(), [&](vid_t a, vid_t b) {
+        //     return csr_idx_in[a+1] - csr_idx_in[a] > csr_idx_in[b+1] - csr_idx_in[b];
+        // });
+        double end = mywtime();
+        #ifdef MONITOR
+        std::cout << "The first five vertices in vid_list: " << std::endl;
+        for (vid_t v = 0; v < 5; ++v) {
+            std::cout << vid_list[v] << ": indeg=" << csr_idx_in[vid_list[v]+1] - csr_idx_in[vid_list[v]]  << ", outdeg=" << csr_idx[vid_list[v]+1] - csr_idx[vid_list[v]] << std::endl;
+        }
+        #endif
+        std::cout << "sort time = " << end - start << std::endl;
+
         // reorder
+        std::cout << "====================reorder====================" << std::endl;
+        start = mywtime();
         visited = (vid_t*)calloc(sizeof(vid_t), nverts);
         reorder_list = (vid_t*)calloc(sizeof(vid_t), nverts);
-        vid_t num_reorder = re_order(csr_idx, csr_adj, source);
+        vid_t num_reorder = re_order(csr_idx, csr_adj, vid_list, 0.95);
+        end = mywtime();
+        std::cout << "reorder time = " << end - start << std::endl;
 
         #ifdef MONITOR
         degree_t nzvcount = 0;
         #endif
         
+        std::cout << "====================convert====================" << std::endl;
+        start = mywtime();
         // #pragma omp for schedule (dynamic, 256*256) nowait
         for (vid_t i = 0; i < num_reorder; ++i) {
             vid_t vid = reorder_list[i];
@@ -1028,6 +1204,7 @@ public:
             }
             reorder_list[total_num_reorder++] = vid;
         }
+        end = mywtime();
 
         #ifdef MONITOR
         max_chunkID = chunk_allocator->get_max_chunkID();
@@ -1041,6 +1218,8 @@ public:
         }
         std::cout << std::endl;
         #endif
+        std::cout << "convert time = " << end - start << std::endl;
+        std::cout << "====================end====================" << std::endl;
                 
         free(visited);
         visited = NULL;
@@ -1092,6 +1271,8 @@ public:
             std::cout << "mmap error" << std::endl;
             exit(1);
         }
+
+        // for (vid_t i = 0; i < nverts; ++i) { reorder_list[i] = i; }
 
         if (is_out_graph) {
             memcpy(addr, reorder_list, nverts * sizeof(vid_t));

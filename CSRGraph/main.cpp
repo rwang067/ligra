@@ -11,7 +11,8 @@ int main(int argc, const char ** argv)
     case 1: {
         CSRGraph *csrgraph = new CSRGraph();
         // csrgraph->import_graph();
-        csrgraph->count_degree();
+        // csrgraph->count_degree();
+        csrgraph->convert_blaze();
         test_out_neighbors(csrgraph);
         test_in_neighbors(csrgraph);
         test_graph_benchmarks(csrgraph);

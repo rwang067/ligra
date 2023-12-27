@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DATA_PATH=/mnt/nvme1/zorax/datasets/csr_bin/
-SSD_PATH=/mnt/nvme1/zorax/testCSRGraph/
+SSD_PATH=/mnt/nvme2/zorax/testCSRGraph/
 CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
 
 mkdir -p ${SSD_PATH}
@@ -71,9 +71,49 @@ name[6]=yahoo
 swap=false
 cgroup_limit=false
 debug=false
-convert_chunk=true
+convert_chunk=false
 count_degree=false
+convert_blaze=true
 
+if $convert_chunk; then
+    declare -a sblk_size=(128 128 256 512 768 768 768)
+    SAVE_PATH=/mnt/nvme1/zorax/chunks/
+    # for idx in {0,1,2,3,4,5,6};
+    # for idx in {1,2,3,4};
+    for idx in 6;
+    do
+        for job in 6;
+        do
+            mkdir -p ${SSD_PATH}
+            mkdir -p ${SAVE_PATH}${name[${idx}]}
+
+            nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+            echo $nverts
+            clear_ssd
+            # gdb --args 
+            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_convert.out
+            mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+        done
+    done
+fi
+
+if $convert_blaze; then
+    SAVE_PATH=/mnt/nvme2/blaze/
+    mkdir -p ${SAVE_PATH}
+
+    for idx in 0;
+    do
+        job=1
+        mkdir -p ${SSD_PATH}
+        mkdir -p ${SAVE_PATH}${name[${idx}]}
+        nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+        echo $nverts
+        clear_ssd
+        # gdb --args
+        ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} -t 48 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_convert_blaze.out
+        mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+    done
+fi
 
 if $debug; then
     # gdb --args ./bin/main -f ${data[0]} --prefix ${name[0]} --ssd ${SSD_PATH} --source ${rts[0]} -q 1 -t 1
@@ -135,22 +175,6 @@ if $cgroup_limit; then
         done
 
         echo "==========================" >> command.log
-    done
-fi
-
-if $convert_chunk; then
-    SAVE_PATH=/mnt/nvme1/zorax/chunks/
-    # for idx in {0,1};
-    for idx in 1;
-    do
-        for job in 6;
-        do
-            mkdir -p ${SSD_PATH}
-            mkdir -p ${SAVE_PATH}${name[${idx}]}
-            clear_ssd
-            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} -t 1 -q 0 -j ${job} > debug.txt
-            mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
-        done
     done
 fi
 

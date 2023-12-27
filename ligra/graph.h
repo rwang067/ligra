@@ -9,6 +9,8 @@
 #include "chunk_buffer.h"
 using namespace std;
 
+// #define CHUNK_MMAP
+
 // **************************************************************
 //    ADJACENCY ARRAY REPRESENTATION
 // **************************************************************
@@ -369,6 +371,14 @@ struct graph {
     return manager->getReorderListEnable();
     #else
     return false;
+    #endif
+  }
+
+  inline uintE* getReorderList(bool inGraph) {
+    #ifdef CHUNK
+    return manager->getReorderList(inGraph);
+    #else
+    return NULL;
     #endif
   }
 

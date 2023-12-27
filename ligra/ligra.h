@@ -43,7 +43,6 @@
 using namespace std;
 
 //*****START FRAMEWORK*****
-#define CHUNK_MMAP
 
 typedef uint32_t flags;
 const flags no_output = 1;
@@ -56,6 +55,8 @@ const flags no_dense = 64;
 const flags edge_parallel = 128;
 inline bool should_output(const flags& fl) { return !(fl & no_output); }
 
+long global_threshold = 5; // for top-down/bottom-up selection
+
 template <class data, class vertex, class VS, class F>
 vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, const flags fl) {
   using D = tuple<bool, data>;
@@ -67,8 +68,9 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
     auto g = get_emdense_gen<data>(next);
     if (GA.isReorderListEnabled()) {
       // std::cout << "reorder list enabled" << std::endl;
+      uintE* reorderList = GA.getReorderList(1);
       parallel_for (long i=0; i<n; i++) {
-        long v = GA.getReorderID(1, i);
+        long v = reorderList[i];
         std::get<0>(next[v]) = 0;
         if (f.cond(v)) {
           // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
@@ -93,8 +95,9 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
     auto g = get_emdense_nooutput_gen<data>();
     if (GA.isReorderListEnabled()) {
       // std::cout << "reorder list enabled" << std::endl;
+      uintE* reorderList = GA.getReorderList(1);
       parallel_for (long i=0; i<n; i++) {
-        long v = GA.getReorderID(1, i);
+        long v = reorderList[i];
         if (f.cond(v)) {
           // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
           uintE d = G[v].getInDegree();
@@ -276,7 +279,8 @@ template <class data, class vertex, class VS, class F>
 vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
     intT threshold = -1, const flags& fl=0) {
   long numVertices = GA.n, numEdges = GA.m, m = vs.numNonzeros();
-  if(threshold == -1) threshold = numEdges/20; //default threshold
+  // if(threshold == -1) threshold = numEdges/20; //default threshold
+  if(threshold == -1) threshold = numEdges / global_threshold; //default threshold
   vertex *G = GA.V;
   if (numVertices != vs.numRows()) {
     cout << "edgeMap: Sizes Don't match" << endl;
@@ -535,6 +539,8 @@ int parallel_main(int argc, char* argv[]) {
   long buffer = P.getOptionLongValue("-buffer",0);
   long dram_4kb = P.getOptionLongValue("-d4kb",16);
   long dram_2mb = P.getOptionLongValue("-d2mb",16);
+  bool isReorderListEnabled = P.getOptionValue("-reorder");
+  global_threshold = P.getOptionLongValue("-threshold", 20);
 
   reportInit();
   reportTitle(argv[0], iFile, buffer);
@@ -599,7 +605,7 @@ int parallel_main(int argc, char* argv[]) {
 #ifndef HYPER
       startTime();
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer,isReorderListEnabled); //asymmetric graph
       double time = nextTime("Preload time");
       reportTimeToFile(time);
     
