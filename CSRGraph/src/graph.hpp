@@ -199,7 +199,7 @@ public:
         header.num_edges = nedges;
 
         size_t num_offsets = ((header.num_nodes - 1) / 16) + 1;
-        index_t* offset = (index_t*)calloc(sizeof(index_t), num_offsets);
+        index_t* offset = (index_t*)calloc(num_offsets, sizeof(index_t));
 
         std::cout << "num_offsets = " << num_offsets << std::endl;
 
@@ -210,8 +210,9 @@ public:
 
         size_t len_header = sizeof(header) + num_offsets * sizeof(uint64_t);
         size_t len_header_aligned = ALIGN_UPTO(len_header, CACHE_LINE);
+        std::cout << "len_header_aligned = " << offset[1] << std::endl;
         
-        degree_t* degree = (degree_t*)calloc(sizeof(degree_t), header.num_nodes);
+        degree_t* degree = (degree_t*)calloc(header.num_nodes, sizeof(degree_t));
         #pragma omp parallel for num_threads(THD_COUNT) schedule (dynamic, 256*256)
         for (vid_t v = 0; v < header.num_nodes; ++v) {
             degree[v] = csr_idx[v+1] - csr_idx[v];
