@@ -368,6 +368,7 @@ struct graph {
 
   inline bool isReorderListEnabled() {
     #ifdef CHUNK
+    if (manager == NULL) return false;
     return manager->getReorderListEnable();
     #else
     return false;

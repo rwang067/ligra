@@ -946,19 +946,504 @@ graph<vertex> readGraphFromChunkmmap(char* iFile, bool isSymmetric, bool isMmap,
 }
 
 template <class vertex>
+graph<vertex> readGraphMinivertex(char* iFile, bool isSymmetric, bool isMmap) {
+  char* config = (char*) ".config";
+  char* idx = (char*) ".vertex";
+  char* adj = (char*) ".adj";
+  char* radj = (char*) ".radj";
+
+  char configFile[strlen(iFile)+strlen(config)+1];
+  char idxFile[strlen(iFile)+strlen(idx)+1];
+  char adjFile[strlen(iFile)+strlen(adj)+1];
+  char radjFile[strlen(iFile)+strlen(radj)+1];
+  *configFile = *idxFile = *adjFile = *radjFile = '\0';
+  strcat(configFile,iFile);
+  strcat(idxFile,iFile);
+  strcat(adjFile,iFile);
+  strcat(radjFile,iFile);
+  strcat(configFile,config);
+  strcat(idxFile,idx);
+  strcat(adjFile,adj);
+  strcat(radjFile,radj);
+
+  ifstream in(configFile, ifstream::in);
+  long n, m;
+  in >> n >> m;
+  in.close();
+
+  ifstream in1(idxFile,ifstream::in | ios::binary); //stored as longs
+  in1.seekg(0, ios::end);
+  long size = in1.tellg();
+  in1.seekg(0);
+  
+  pvertex_t* offsets = (pvertex_t*) malloc(size);
+  in1.read((char*)offsets,size);
+  in1.close();
+
+  ifstream in2(adjFile,ifstream::in | ios::binary); //stored as uints
+  in2.seekg(0, ios::end);
+  size = in2.tellg();
+  in2.seekg(0);
+  long outm = size/sizeof(uintE);
+  uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
+  
+  ifstream in3(radjFile,ifstream::in | ios::binary); //stored as uints
+  in3.seekg(0, ios::end);
+  size = in3.tellg();
+  in3.seekg(0);
+  long inm = size/sizeof(uintE);
+  uintE* redges = (uintE*) getFileData(radjFile, size, 1); // -m for read file by mmap
+
+  vertex* v = newA(vertex,n);
+  {parallel_for(long i=0;i<n;i++) {
+    uintE d = offsets[i].out_deg;
+    uintT r = offsets[i].residue;
+    v[i].setOutDegree(d);
+    if (d==0) {
+      v[i].setOutNeighbors(0);
+    } else if(d<=2) {
+      v[i].setOutNeighbors((uintE*)r);
+    } else {
+      uintE* nebrs = (uintE*)(edges+r);
+      v[i].setOutNeighbors(nebrs);
+    }
+  }}
+
+  if(!isSymmetric) {
+    {parallel_for(long i=0;i<n;i++) {
+    uintT d = offsets[n+i].out_deg;
+    uintT r = offsets[n+i].residue;
+      v[i].setInDegree(d);
+      if (d==0) {
+        v[i].setInNeighbors(0);
+      } else if (d<=2) {
+        v[i].setInNeighbors((uintE*)r);
+      } else {
+        uintE* nebrs = (uintE*)(redges+r);
+        v[i].setInNeighbors(nebrs);
+      }
+    }}}
+
+  free(offsets);
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges,redges);
+  return graph<vertex>(v,n,m,mem);
+}
+
+template <class vertex>
+graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
+  char* config = (char*) ".config";
+  char* adj = (char*) ".adj";
+  char* idx = (char*) ".idx";
+  char* vert = (char*) ".vertex";
+  char configFile[strlen(iFile)+strlen(config)+1];
+  char adjFile[strlen(iFile)+strlen(adj)+1];
+  char idxFile[strlen(iFile)+strlen(idx)+1];
+  char vertFile[strlen(iFile)+strlen(vert)+1];
+  *configFile = *adjFile = *idxFile = *vertFile = '\0';
+  strcat(configFile,iFile);
+  strcat(adjFile,iFile);
+  strcat(idxFile,iFile);
+  strcat(vertFile,iFile);
+  strcat(configFile,config);
+  strcat(adjFile,adj);
+  strcat(idxFile,idx);
+  strcat(vertFile,vert);
+
+  pid_t pid = getpid();
+  vm_reporter reporter(pid);
+  reporter.print("Start reading graph from binary file");
+
+  timer time;
+  time.start();
+
+  ifstream in(configFile, ifstream::in);
+  long n;
+  in >> n;
+  in.close();
+
+  time.reportNext("Load Config Time");
+  reporter.reportNext("Load Config Space");
+
+  ifstream in2(adjFile,ifstream::in | ios::binary); //stored as uints
+  in2.seekg(0, ios::end);
+  long size = in2.tellg();
+  in2.seekg(0);
+#ifdef WEIGHTED
+  long m = size/(2*sizeof(uint));
+#else
+  long m = size/sizeof(uint);
+#endif
+  in2.close();
+  time.reportNext("This shouldn't take long");
+  uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
+  time.reportNext("Load Adjlist Time");
+  reporter.reportNext("Load Adjlist Space");
+
+  ifstream in3(idxFile,ifstream::in | ios::binary); //stored as longs
+  in3.seekg(0, ios::end);
+  size = in3.tellg();
+  in3.seekg(0);
+  if(n+1 != size/sizeof(intT)) { 
+    cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+    cout << "File size wrong\n"; abort(); 
+  }
+
+  char* t = (char *) malloc(size);
+  in3.read(t,size);
+  in3.close();
+  uintT* offsets = (uintT*) t;
+  time.reportNext("Load Index Time");
+  reporter.reportNext("Load Index Space");
+
+  ifstream in4(vertFile,ifstream::in | ios::binary); //stored as longs
+  in4.seekg(0, ios::end);
+  size = in4.tellg();
+  in4.seekg(0);
+  if(n*2 != size/sizeof(pvertex_t)) { 
+    cout << n << " " << size << " " << sizeof(pvertex_t) << " " << size/sizeof(pvertex_t) << " " << size/8 << std::endl;
+    cout << "File size wrong\n"; abort(); 
+  }
+  pvertex_t* voffsets = (pvertex_t*) malloc(size);
+  in4.read((char*)voffsets,size);
+  in4.close();
+
+  vertex* v = newA(vertex,n);
+  time.reportNext("Allocate vertex time");
+  reporter.reportNext("Allocate vertex space");
+
+#ifdef DEBUG_EN
+  std::string item = "Vertex MetaData";
+  size = sizeof(vertex) * n;
+  memory_profiler.memory_usage[item] = size;
+  std::cout << "Allocate vertex metadata: " << B2GB(size) << "GB" << std::endl;
+#endif
+
+#ifdef WEIGHTED
+  intE* edgesAndWeights = newA(intE,2*m);
+  {parallel_for(long i=0;i<m;i++) {
+    edgesAndWeights[2*i] = edges[i];
+    edgesAndWeights[2*i+1] = edges[i+m];
+    }}
+  //free(edges);
+#endif
+  {parallel_for(long i=0;i<n;i++) {
+    uintT o = offsets[i];
+    uintT l = offsets[i+1]-offsets[i];
+    // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
+      v[i].setOutDegree(l);
+#ifndef WEIGHTED
+      if (l == 0) {
+        v[i].setOutNeighbors(0);
+      } else if (l <= 2) {
+        uint64_t r = voffsets[i].residue;
+        v[i].setOutNeighbors((uintE*)r);
+      } else {
+        uintE* nebrs = (uintE*)(edges+o);
+        v[i].setOutNeighbors(nebrs);
+      }
+#else
+      v[i].setOutNeighbors(edgesAndWeights+2*o);
+#endif
+    }}
+  time.reportNext("Load OutNeighbors Time");
+  reporter.reportNext("Load OutNeighbors Space");
+
+  if(!isSymmetric) {
+    char *suffix = (char*) ".radj"; 
+    char radjFile[strlen(iFile)+strlen(suffix)+1];
+    *radjFile = 0;
+    strcat(radjFile, iFile);
+    strcat(radjFile, suffix);
+    suffix = (char*) ".ridx"; 
+    char ridxFile[strlen(iFile)+strlen(suffix)+1];
+    *ridxFile = 0;
+    strcat(ridxFile, iFile);
+    strcat(ridxFile, suffix);
+
+#ifndef WEIGHTED
+    uintE* inEdges;
+#else
+    intE* inEdges = newA(intE,2*m);
+#endif
+    ifstream in4(radjFile,ifstream::in | ios::binary);
+    in4.seekg(0, ios::end);
+    size = in4.tellg();
+    in4.seekg(0);
+    in4.close();
+    time.reportNext("This shouldn't take long");
+
+    inEdges = (uintE*) getFileData(radjFile, size, 1); // -m for read file by mmap
+    time.reportNext("Load InEdges Time");
+    reporter.reportNext("Load InEdges Space");
+
+    ifstream in5(ridxFile,ifstream::in | ios::binary); //stored as longs
+    in5.seekg(0, ios::end);
+    size = in5.tellg();
+    in5.seekg(0);
+    if(n != size/sizeof(intT)) { 
+      cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+      cout << "ridx: File size wrong\n"; abort(); 
+    }
+    in5.read((char*)offsets,size);
+    in5.close();
+
+    time.reportNext("Load InIndex Time");
+    reporter.reportNext("Load InIndex Space");
+
+    {parallel_for(long i=0;i<n;i++){
+      uintT o = offsets[i];
+      uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
+      v[i].setInDegree(l);
+#ifndef WEIGHTED
+      if (l == 0) {
+        v[i].setInNeighbors(0);
+      } else if (l <= 2) {
+        uint64_t r = voffsets[i+n].residue;
+        v[i].setInNeighbors((uintE*)r);
+      } else {
+        uintE* nebrs = (uintE*)(inEdges+o);
+        v[i].setInNeighbors(nebrs);
+      }
+#else
+      v[i].setInNeighbors((intE*)(inEdges+2*o));
+#endif
+    }}
+    time.reportNext("Load InNeighbors Time");
+    reporter.reportNext("Load InNeighbors Space");
+  }
+  free(offsets);
+  free(voffsets);
+#ifndef WEIGHTED
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
+  return graph<vertex>(v,n,m,mem);
+#else
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
+  return graph<vertex>(v,n,m,mem);
+#endif
+}
+
+template <class vertex>
+graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
+  char* config = (char*) ".config";
+  char* adj = (char*) ".adj";
+  char* idx = (char*) ".idx";
+  char configFile[strlen(iFile)+strlen(config)+1];
+  char adjFile[strlen(iFile)+strlen(adj)+1];
+  char idxFile[strlen(iFile)+strlen(idx)+1];
+  *configFile = *adjFile = *idxFile = '\0';
+  strcat(configFile,iFile);
+  strcat(adjFile,iFile);
+  strcat(idxFile,iFile);
+  strcat(configFile,config);
+  strcat(adjFile,adj);
+  strcat(idxFile,idx);
+
+  pid_t pid = getpid();
+  vm_reporter reporter(pid);
+  reporter.print("Start reading graph from binary file");
+
+  timer time;
+  time.start();
+
+  ifstream in(configFile, ifstream::in);
+  long n;
+  in >> n;
+  in.close();
+
+  time.reportNext("Load Config Time");
+  reporter.reportNext("Load Config Space");
+
+  ifstream in2(adjFile,ifstream::in | ios::binary); //stored as uints
+  in2.seekg(0, ios::end);
+  long size = in2.tellg();
+  in2.seekg(0);
+#ifdef WEIGHTED
+  long m = size/(2*sizeof(uint));
+#else
+  long m = size/sizeof(uint);
+#endif
+  in2.close();
+  time.reportNext("This shouldn't take long");
+  uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
+  time.reportNext("Load Adjlist Time");
+  reporter.reportNext("Load Adjlist Space");
+
+  ifstream in3(idxFile,ifstream::in | ios::binary); //stored as longs
+  in3.seekg(0, ios::end);
+  size = in3.tellg();
+  in3.seekg(0);
+  if(n+1 != size/sizeof(intT)) { 
+    cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+    cout << "File size wrong\n"; abort(); 
+  }
+
+  char* t = (char *) malloc(size);
+  in3.read(t,size);
+  in3.close();
+  uintT* offsets = (uintT*) t;
+  time.reportNext("Load Index Time");
+  reporter.reportNext("Load Index Space");
+
+  vertex* v = newA(vertex,n);
+  time.reportNext("Allocate vertex time");
+  reporter.reportNext("Allocate vertex space");
+
+#ifdef DEBUG_EN
+  std::string item = "Vertex MetaData";
+  size = sizeof(vertex) * n;
+  memory_profiler.memory_usage[item] = size;
+  std::cout << "Allocate vertex metadata: " << B2GB(size) << "GB" << std::endl;
+#endif
+
+#ifdef WEIGHTED
+  intE* edgesAndWeights = newA(intE,2*m);
+  {parallel_for(long i=0;i<m;i++) {
+    edgesAndWeights[2*i] = edges[i];
+    edgesAndWeights[2*i+1] = edges[i+m];
+    }}
+  //free(edges);
+#endif
+  {parallel_for(long i=0;i<n;i++) {
+    uintT o = offsets[i];
+    uintT l = offsets[i+1]-offsets[i];
+    // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
+      v[i].setOutDegree(l);
+#ifndef WEIGHTED
+      if (l == 0) {
+        v[i].setOutNeighbors(0);
+      } else if (l <= 2) {
+        uint64_t nebrs = 0;
+        if (l == 1) {
+          nebrs = edges[o];
+        } else if (l == 2) {
+          nebrs = edges[o] | ((uint64_t)edges[o+1] << 32);
+        }
+        v[i].setOutNeighbors((uintE*)nebrs);
+      } else {
+        uintE* nebrs = (uintE*)(edges+o);
+        v[i].setOutNeighbors(nebrs);
+      }
+#else
+      v[i].setOutNeighbors(edgesAndWeights+2*o);
+#endif
+    }}
+  time.reportNext("Load OutNeighbors Time");
+  reporter.reportNext("Load OutNeighbors Space");
+
+  if(!isSymmetric) {
+    char *suffix = (char*) ".radj"; 
+    char radjFile[strlen(iFile)+strlen(suffix)+1];
+    *radjFile = 0;
+    strcat(radjFile, iFile);
+    strcat(radjFile, suffix);
+    suffix = (char*) ".ridx"; 
+    char ridxFile[strlen(iFile)+strlen(suffix)+1];
+    *ridxFile = 0;
+    strcat(ridxFile, iFile);
+    strcat(ridxFile, suffix);
+
+#ifndef WEIGHTED
+    uintE* inEdges;
+#else
+    intE* inEdges = newA(intE,2*m);
+#endif
+    ifstream in4(radjFile,ifstream::in | ios::binary);
+    in4.seekg(0, ios::end);
+    size = in4.tellg();
+    in4.seekg(0);
+    in4.close();
+    time.reportNext("This shouldn't take long");
+
+    inEdges = (uintE*) getFileData(radjFile, size, 1); // -m for read file by mmap
+    time.reportNext("Load InEdges Time");
+    reporter.reportNext("Load InEdges Space");
+
+    ifstream in5(ridxFile,ifstream::in | ios::binary); //stored as longs
+    in5.seekg(0, ios::end);
+    size = in5.tellg();
+    in5.seekg(0);
+    if(n != size/sizeof(intT)) { 
+      cout << n << " " << size << " " << sizeof(intT) << " " << size/sizeof(intT) << " " << size/8 << std::endl;
+      cout << "ridx: File size wrong\n"; abort(); 
+    }
+    in5.read((char*)offsets,size);
+    in5.close();
+
+    time.reportNext("Load InIndex Time");
+    reporter.reportNext("Load InIndex Space");
+
+    {parallel_for(long i=0;i<n;i++){
+      uintT o = offsets[i];
+      uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
+      v[i].setInDegree(l);
+#ifndef WEIGHTED
+      if (l == 0) {
+        v[i].setInNeighbors(0);
+      } else if (l <= 2) {
+        uint64_t nebrs = 0;
+        if (l == 1) {
+          nebrs = inEdges[o];
+        } else if (l == 2) {
+          nebrs = inEdges[o] | ((uint64_t)inEdges[o+1] << 32);
+        }
+        v[i].setInNeighbors((uintE*)nebrs);
+      } else {
+        uintE* nebrs = (uintE*)(inEdges+o);
+        v[i].setInNeighbors(nebrs);
+      }
+#else
+      v[i].setInNeighbors((intE*)(inEdges+2*o));
+#endif
+    }}
+    time.reportNext("Load InNeighbors Time");
+    reporter.reportNext("Load InNeighbors Space");
+  }
+  free(offsets);
+#ifndef WEIGHTED
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
+  return graph<vertex>(v,n,m,mem);
+#else
+  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
+  return graph<vertex>(v,n,m,mem);
+#endif
+}
+
+template <class vertex>
 graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, 
                         long job=0, bool update=0, bool chunk=0, bool debug=0, long buffer=0,
                         bool isReorderListEnabled=false) {
   if(binary){ 
     // if(chunk) return readGraphFromBinaryChunkBuff<vertex>(iFile,symmetric,mmap,debug,buffer,job,update);
     if (chunk) {
-      #ifdef CHUNK_MMAP
-      return readGraphFromChunkmmap<vertex>(iFile, symmetric, mmap, debug, buffer, isReorderListEnabled);
-      #else
-      return readGraphFromChunk<vertex>(iFile, symmetric, mmap, debug, buffer, isReorderListEnabled);
-      #endif
+      if (job == 0) {
+        return readGraphFromChunk<vertex>(iFile, symmetric, mmap, debug, buffer, isReorderListEnabled);
+      } else if (job == 1) {
+        return readGraphMinivertex<vertex>(iFile,symmetric,mmap);
+      } else if (job == 2) {
+        return readGraphFromChunkmmap<vertex>(iFile, symmetric, mmap, debug, buffer);
+      } else if (job == 3) {
+        return readGraphMinivertex2<vertex>(iFile,symmetric,mmap);
+      } else if (job == 4) {
+        return readGraphMinivertex3<vertex>(iFile,symmetric);
+      } else {
+        cout << "job = " << job << " is not supported." << endl;
+        exit(-1);
+      }
+    } else {
+      if (job == 0) {
+        return readGraphFromBinarymmap<vertex>(iFile,symmetric);
+      } else if (job == 1) {
+        return readGraphMinivertex<vertex>(iFile,symmetric,mmap);
+        // return readGraphFromBinarymmap<vertex>(iFile,symmetric);
+      } else if (job == 3) {
+        return readGraphMinivertex2<vertex>(iFile,symmetric,mmap);
+      } else if (job == 4) {
+        return readGraphMinivertex3<vertex>(iFile,symmetric);
+      } else {
+        cout << "job = " << job << " is not supported." << endl;
+        exit(-1);
+      }
     }
-    return readGraphFromBinarymmap<vertex>(iFile,symmetric);
   }
   else return readGraphFromFile<vertex>(iFile,symmetric,mmap);
 }

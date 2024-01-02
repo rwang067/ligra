@@ -55,7 +55,7 @@ const flags no_dense = 64;
 const flags edge_parallel = 128;
 inline bool should_output(const flags& fl) { return !(fl & no_output); }
 
-long global_threshold = 5; // for top-down/bottom-up selection
+long global_threshold = 20; // for top-down/bottom-up selection
 
 template <class data, class vertex, class VS, class F>
 vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, const flags fl) {
@@ -303,6 +303,9 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
     outDegrees = sequence::plusReduce(degrees, m);
     if (outDegrees == 0) return vertexSubsetData<data>(numVertices);
   }
+  #ifdef DEBUG_EN
+    stat_profiler._total_accessed_edges += outDegrees;
+  #endif
   if (!(fl & no_dense) && m + outDegrees > threshold) {
     #ifdef DEBUG_EN
       std::cout << ", Bottom-up dense" << std::endl;
@@ -624,6 +627,14 @@ int parallel_main(int argc, char* argv[]) {
       int res = std::system(command.c_str());
       if (res == -1) {
         std::cout << "perf_diskio.sh failed" << std::endl;
+      }
+#endif
+
+#ifdef CACHEMISS
+      std::string cache_command = "bash ../perf_cachemiss.sh " + std::to_string(pid);
+      int cache_res = std::system(cache_command.c_str());
+      if (cache_res == -1) {
+        std::cout << "perf_cachemiss.sh failed" << std::endl;
       }
 #endif
 

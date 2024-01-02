@@ -71,6 +71,35 @@ int main(int argc, const char ** argv)
         delete reordergraph;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         break;
     }
+    case 7: {
+        MiniVertexGraph *minivertexgraph = new MiniVertexGraph();
+        minivertexgraph->convert_graph();
+        test_out_neighbors(minivertexgraph);
+        test_in_neighbors(minivertexgraph);
+        test_graph_benchmarks(minivertexgraph);
+        delete minivertexgraph;
+        break;
+    }
+    case 8: {
+        MAX_LEVEL = 2;
+        TriLevelGraph *trigraph = new TriLevelGraph();
+        trigraph->convert_graph_without_reorder();
+        trigraph->save_graph();
+        test_out_neighbors(trigraph);
+        test_in_neighbors(trigraph);
+        test_graph_benchmarks(trigraph);
+        delete trigraph;
+        break;
+    }
+    case 9: {
+        MiniVertexGraph *minivertexgraph = new MiniVertexGraph();
+        minivertexgraph->convert_graph2();
+        test_out_neighbors(minivertexgraph);
+        test_in_neighbors(minivertexgraph);
+        test_graph_benchmarks(minivertexgraph);
+        delete minivertexgraph;
+        break;
+    }
     default:
         break;
     }

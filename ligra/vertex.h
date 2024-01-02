@@ -4,6 +4,9 @@
 #include "chunk_buffer.h"
 using namespace std;
 
+//uncomment the following line to test mini-vertices level
+// #define MINIVERTEX 
+
 namespace decode_uncompressed {
 
   // Used by edgeMapDense. Callers ensure cond(v_id). For each vertex, decode
@@ -352,20 +355,28 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
   uintE* getInNeighbors () { 
   #ifdef CHUNK
     if(inDegree<=2) return (uintE*)(&inNeighbors);
+  #elif defined(MINIVERTEX)
+    if(inDegree<=2) return (uintE*)(&inNeighbors);
   #endif
     return inNeighbors; }
   const uintE* getInNeighbors () const { 
   #ifdef CHUNK
+    if(inDegree<=2) return (uintE*)(&inNeighbors);
+  #elif defined(MINIVERTEX)
     if(inDegree<=2) return (uintE*)(&inNeighbors);
   #endif
     return inNeighbors; }
   uintE* getOutNeighbors () { 
   #ifdef CHUNK
     if(outDegree<=2) return (uintE*)(&outNeighbors);
+  #elif defined(MINIVERTEX)
+    if(outDegree<=2) return (uintE*)(&outNeighbors);
   #endif
     return outNeighbors; }
   const uintE* getOutNeighbors () const { 
   #ifdef CHUNK
+    if(outDegree<=2) return (uintE*)(&outNeighbors);
+  #elif defined(MINIVERTEX)
     if(outDegree<=2) return (uintE*)(&outNeighbors);
   #endif
     return outNeighbors; }

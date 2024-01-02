@@ -110,6 +110,15 @@ struct edge_profiler_t {
    }
 };
 
+struct stat_profiler_t {
+   uint64_t _total_accessed_edges = 0;
+
+   void print_total_accessed_edges() {
+      printf("total_accessed_edges = %lu\n", _total_accessed_edges);
+      printf("total_accessed_edges = %.2lfGB\n", _total_accessed_edges * sizeof(uintE) / 1024.0 / 1024.0 / 1024.0);
+   }
+};
+
 #ifdef PROFILE_EN
 profiler_t profiler = profiler_t(96);
 #endif
@@ -117,4 +126,5 @@ profiler_t profiler = profiler_t(96);
 #ifdef DEBUG_EN
 memory_profiler_t memory_profiler;
 edge_profiler_t edge_profiler;
+stat_profiler_t stat_profiler;
 #endif

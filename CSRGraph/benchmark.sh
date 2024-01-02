@@ -73,14 +73,77 @@ cgroup_limit=false
 debug=false
 convert_chunk=false
 count_degree=false
-convert_blaze=true
+convert_blaze=false
+convert_minivertex_graph=true
+convert_minipluschunk_graph=false
+
+if $convert_minivertex_graph; then
+    # SAVE_PATH=/mnt/nvme1/zorax/minivertex/
+    # mkdir -p ${SAVE_PATH}
+    # # for idx in {0,1,2,3,4,5,6};
+    # # for idx in {0,5}
+    # for idx in 0;
+    # do
+    #     mkdir -p ${SSD_PATH}
+    #     mkdir -p ${SAVE_PATH}${name[${idx}]}
+
+    #     nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+    #     echo $nverts
+    #     clear_ssd
+    #     # gdb --args 
+    #     ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} -t 1 -q 0 -j 7 -v ${nverts} &> ${name[${idx}]}_minivertex.out
+    #     mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+    # done
+
+    SAVE_PATH=/mnt/nvme1/zorax/minivertex2/
+    mkdir -p ${SAVE_PATH}
+
+    # for idx in {0,5};
+    for idx in 5;
+    do
+        mkdir -p ${SSD_PATH}
+        mkdir -p ${SAVE_PATH}${name[${idx}]}
+
+        nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+        echo $nverts
+        clear_ssd
+        # gdb --args 
+        ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} -t 1 -q 0 -j 9 -v ${nverts} &> ${name[${idx}]}_minivertex.out
+        mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+        ln -s ${data[${idx}]}${name[${idx}]}.idx  ${SAVE_PATH}${name[${idx}]}/${name[${idx}]}.idx
+        ln -s ${data[${idx}]}${name[${idx}]}.adj  ${SAVE_PATH}${name[${idx}]}/${name[${idx}]}.adj
+        ln -s ${data[${idx}]}${name[${idx}]}.ridx ${SAVE_PATH}${name[${idx}]}/${name[${idx}]}.ridx
+        ln -s ${data[${idx}]}${name[${idx}]}.radj ${SAVE_PATH}${name[${idx}]}/${name[${idx}]}.radj
+    done
+fi
+
+if $convert_minipluschunk_graph; then
+    declare -a sblk_size=(128 128 256 512 512 768 768)
+    # chunk hierachy, without reordering
+    SAVE_PATH=/mnt/nvme1/zorax/minipluschunk/
+    mkdir -p ${SAVE_PATH}
+    # for idx in {0,1,2,3,4,5,6};
+    for idx in {5,6};
+    do
+        mkdir -p ${SSD_PATH}
+        mkdir -p ${SAVE_PATH}${name[${idx}]}
+
+        nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+        echo $nverts
+        clear_ssd
+        # gdb --args 
+        ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j 8 -v ${nverts} &> ${name[${idx}]}_minipluschunk.out
+        mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+    done
+fi
+
 
 if $convert_chunk; then
     declare -a sblk_size=(128 128 256 512 768 768 768)
     SAVE_PATH=/mnt/nvme1/zorax/chunks/
     # for idx in {0,1,2,3,4,5,6};
     # for idx in {1,2,3,4};
-    for idx in 6;
+    for idx in 1;   
     do
         for job in 6;
         do
@@ -101,7 +164,8 @@ if $convert_blaze; then
     SAVE_PATH=/mnt/nvme2/blaze/
     mkdir -p ${SAVE_PATH}
 
-    for idx in 0;
+    # for idx in 0;
+    for idx in {0,1,2,3,4,5,6};
     do
         job=1
         mkdir -p ${SSD_PATH}
@@ -111,7 +175,7 @@ if $convert_blaze; then
         clear_ssd
         # gdb --args
         ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} -t 48 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_convert_blaze.out
-        mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+        # mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
     done
 fi
 

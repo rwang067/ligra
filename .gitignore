@@ -24,4 +24,5 @@ scripts/*
 apps/hierg_query_time.csv
 results/*
 
-CSRGraph/bin/*
+CSRGraph/bin/main
+*.out

@@ -5,6 +5,10 @@ ifdef CHUNK
 CK = -DCHUNK
 endif
 
+ifdef CACHEMISS
+CM = -DCACHEMISS
+endif
+
 ifdef LONG
 INTT = -DLONG
 endif
@@ -32,26 +36,27 @@ endif
 #compilers
 ifdef CILK
 PCC = g++
-PCFLAGS = -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK)
+PCFLAGS = -std=c++14 -fcilkplus -lcilkrts -O3 -DCILK $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK) $(CM)
 PLFLAGS = -fcilkplus -lcilkrts
 
 else ifdef MKLROOT
 PCC = icpc
-PCFLAGS = -std=c++14 -O3 -DCILKP $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK)
+PCFLAGS = -std=c++14 -O3 -DCILKP $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK) $(CM)
 
 else ifdef OPENMP
 PCC = g++
-PCFLAGS = -std=c++14 -fopenmp -march=native -O3 -DOPENMP $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK)
+# PCFLAGS = -std=c++14 -fopenmp -march=native -O0 -DOPENMP $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK) $(CM)
+PCFLAGS = -std=c++14 -fopenmp -march=native -O3 -DOPENMP $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK) $(CM)
 
 else
 PCC = g++
-# PCFLAGS = -std=c++14 -O0 -g $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK)
-PCFLAGS = -std=c++14 -O3 -g $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK)
+# PCFLAGS = -std=c++14 -O0 -g $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK) $(CM)
+PCFLAGS = -std=c++14 -O3 -g $(INTT) $(INTE) $(CODE) $(PD) $(MEM) $(CK) $(CM)
 endif
 
 COMMON= ligra.h graph.h chunk_buffer.h compressedVertex.h vertex.h utils.h IO.h parallel.h gettime.h index_map.h maybe.h sequence.h edgeMap_utils.h binary_search.h quickSort.h blockRadixSort.h transpose.h parseCommandLine.h byte.h byteRLE.h nibble.h byte-pd.h byteRLE-pd.h nibble-pd.h vertexSubset.h encoder.C decoder.C monitor.h
 
-ALL= encoder decoder BFS BC Components Components-Shortcut Radii PageRank PageRankDelta BFSCC BFS-Bitvector KCore Triangle MIS TestAll testNebrs # BellmanFord MIS CF
+ALL= encoder decoder BFS BC Components Components-Shortcut Radii PageRank PageRankDelta BFSCC BFS-Bitvector KCore TestAll testNebrs BellmanFord MIS CF Triangle
 
 all: $(ALL)
 

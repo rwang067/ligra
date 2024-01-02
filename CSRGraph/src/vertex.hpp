@@ -25,4 +25,7 @@ public:
             residue = (residue | ((uint64_t)nebr << 32));
         }
     }
+
+    inline void set_minivertex(uint64_t minivertex) { residue = minivertex; }
+    inline uint64_t get_minivertex() { return (uint64_t)(residue); }
 };

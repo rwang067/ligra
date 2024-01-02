@@ -21,9 +21,9 @@
 #define WEIGHTED 1
 #include "ligra.h"
 //uncomment the following line to compute the sum of squared errors per iteration
-//#define COMPUTE_ERROR 1
+#define COMPUTE_ERROR 1
 //uncomment the following line to print out the sum of values in latent vector
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifdef COMPUTE_ERROR
 double* squaredErrors;
@@ -121,12 +121,35 @@ void Compute(graph<vertex>& GA, commandLine P) {
   {parallel_for(long i=0;i<n;i++) frontier[i] = 1;}
   vertexSubset Frontier(n,n,frontier);
 
+#ifdef DEBUG_EN
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(double) * K * n;  // latent_curr
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(double) * K * n;  // error
+  memory_profiler.memory_usage[item] += size;
+#ifdef COMPUTE_ERROR
+  size = sizeof(double) * n;  // squaredErrors
+  memory_profiler.memory_usage[item] += size;
+#endif
+  size = sizeof(bool) * n;  // frontier
+  memory_profiler.memory_usage[item] += size;
+
+  size_t max_size = Frontier.getMemorySize();
+#endif
+
   for (int iter = 0; iter < numIter; iter++){
     //edgemap to accumulate error for each node
     edgeMap(GA, Frontier, CF_Edge_F<vertex>(GA.V,latent_curr,error,K), 0, no_output);
 
 #ifdef COMPUTE_ERROR
-    cout << "sum of squared error: " << sequence::plusReduce(squaredErrors,n)/2 << " for iter: " << iter << endl;
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    cout << "sum of squared error: " << sequence::plusReduce(squaredErrors,n)/2 << " for iter: " << iter 
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
 #endif
 
     //vertexmap to update the latent vectors
@@ -140,4 +163,19 @@ void Compute(graph<vertex>& GA, commandLine P) {
 #ifdef COMPUTE_ERROR
   free(squaredErrors);
 #endif
+
+#ifdef DEBUG_EN
+  std::cout << "Frontier maximum memory usage = " << B2GB(max_size) << "GB" << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
+
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+#endif
+
 }

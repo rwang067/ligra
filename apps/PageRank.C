@@ -153,5 +153,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   edge_profiler.print_edge_access();
   edge_profiler.print_out_edge_access();
   edge_profiler.print_in_edge_access();
+
+  stat_profiler.print_total_accessed_edges();
 #endif
 }

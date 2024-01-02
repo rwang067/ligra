@@ -236,7 +236,7 @@ public:
             std::cout << "Could not truncate file for :" << outputFile << " error: " << strerror(errno) << std::endl;
             exit(1);
         }
-        graph_header* addr = (graph_header*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+        char* addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
         memcpy(addr, &header, sizeof(graph_header));
         memcpy(addr+sizeof(graph_header), offset, num_offsets * sizeof(uint64_t));
         memcpy(addr+len_header_aligned, degree, header.num_nodes * sizeof(degree_t));
@@ -499,6 +499,201 @@ public:
     }
 };
 
+class minivertex_graph_t : public graph_t {
+private:
+    // graph data
+    index_t* csr_idx;
+    vid_t* csr_adj;
+    size_t size_idx = 0;
+    size_t size_adj = 0;
+
+    vid_t* adjListStore = 0;
+    
+public:
+    minivertex_graph_t(vid_t nverts, index_t nedges, bool is_out_graph) : graph_t() {
+        this->is_out_graph = is_out_graph;
+    }
+
+    ~minivertex_graph_t() {
+        char* buf_idx = (char*)csr_idx, *buf_adj = (char*)csr_adj;
+        if (is_out_graph) {
+            if(buf_idx) free_local_buf(size_idx, &buf_idx, "idx");
+            if(buf_adj) free_local_buf(size_adj, &buf_adj, "adj");
+        } else {
+            if(buf_idx) free_local_buf(size_idx, &buf_idx, "ridx");
+            if(buf_adj) free_local_buf(size_adj, &buf_adj, "radj");
+        }
+    }
+
+    void convert_graph() {
+        char* buf_idx = 0, *buf_adj = 0;
+
+        if (is_out_graph) {
+            std::cout << "import csr for out graph" << std::endl;
+            // allocate and read for index and csr file
+            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".idx", &buf_idx);
+            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".adj", &buf_adj);
+            // get nverts and nedges
+            nverts = size_idx / sizeof(index_t) - 1;
+            nedges = size_adj / sizeof(vid_t);
+            std::cout << "nverts = " << nverts << ", nedges = " << nedges  << ", average degree = " << nedges * 1.0 / nverts << std::endl;
+
+            csr_idx = (index_t*)buf_idx;
+            csr_adj = (vid_t*)buf_adj;
+        } else {
+            std::cout << "import csr for in graph" << std::endl;
+            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".ridx", &buf_idx, (nverts+1)*sizeof(index_t));
+            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".radj", &buf_adj);
+
+            csr_idx = (index_t*)buf_idx;
+            csr_adj = (vid_t*)buf_adj;
+            csr_idx[nverts] = nedges;
+        }
+
+        adjListStore = (vid_t*)calloc(sizeof(vid_t), nedges);
+        index_t offset = 0;
+
+        for (vid_t vid = 0; vid < nverts; ++vid) {
+            degree_t deg = csr_idx[vid+1] - csr_idx[vid];
+            if (deg == 0) continue;
+
+            vertex_t* vert = vertices[vid];
+            vert = new_vertex();
+            set_vertex(vid, vert);
+
+            vert->set_out_degree(deg);
+
+            if (deg <= 2) {
+                for (degree_t d = 0; d < deg; ++d) {
+                    vert->add_nebr(csr_adj[csr_idx[vid]+d]);
+                }
+            } else {
+                vid_t* adjlist = adjListStore + offset;
+                memcpy(adjlist, csr_adj+csr_idx[vid], deg*sizeof(vid_t));
+                vert->set_minivertex(offset);
+                offset += deg;
+            }
+        }
+
+        std::cout << "offset = " << offset << std::endl;
+
+        // save config
+        std::ofstream ofs(SSDPATH + "/" + PREFIX + ".config", std::ofstream::out | std::ofstream::app);
+        if (is_out_graph) {
+            // nverts   nedges
+            ofs << nverts << " " << nedges << std::endl;
+        }
+        ofs.close();
+
+        // save vertices
+        save_vertices();
+
+        // save adjlist
+        std::string outputFile;
+        if (is_out_graph) {
+            outputFile = SSDPATH + "/" + PREFIX + ".adj";
+        } else {
+            outputFile = SSDPATH + "/" + PREFIX + ".radj";
+        }
+        size_t size = offset * sizeof(vid_t);
+        std::cout << "size = " << size << std::endl;
+        int fd = open(outputFile.c_str(), O_RDWR|O_CREAT, 00777);
+        if (fd == -1) {
+            std::cout << "Could not open file for :" << outputFile << " error: " << strerror(errno) << std::endl;
+            exit(1);
+        }
+        if (ftruncate(fd, size) == -1) {
+            std::cout << "Could not truncate file for :" << outputFile << " error: " << strerror(errno) << std::endl;
+            exit(1);
+        }
+        char* addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+        memcpy(addr, adjListStore, size);
+        msync(addr, size, MS_SYNC);
+        munmap(addr, size);
+        close(fd);
+    }
+
+    void convert_graph2() {
+        char* buf_idx = 0, *buf_adj = 0;
+
+        if (is_out_graph) {
+            std::cout << "import csr for out graph" << std::endl;
+            // allocate and read for index and csr file
+            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".idx", &buf_idx);
+            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".adj", &buf_adj);
+            // get nverts and nedges
+            nverts = size_idx / sizeof(index_t) - 1;
+            nedges = size_adj / sizeof(vid_t);
+            std::cout << "nverts = " << nverts << ", nedges = " << nedges  << ", average degree = " << nedges * 1.0 / nverts << std::endl;
+
+            csr_idx = (index_t*)buf_idx;
+            csr_adj = (vid_t*)buf_adj;
+        } else {
+            std::cout << "import csr for in graph" << std::endl;
+            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".ridx", &buf_idx, (nverts+1)*sizeof(index_t));
+            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".radj", &buf_adj);
+
+            csr_idx = (index_t*)buf_idx;
+            csr_adj = (vid_t*)buf_adj;
+            csr_idx[nverts] = nedges;
+        }
+
+        adjListStore = csr_adj;
+
+        for (vid_t vid = 0; vid < nverts; ++vid) {
+            degree_t deg = csr_idx[vid+1] - csr_idx[vid];
+            if (deg == 0) continue;
+
+            vertex_t* vert = vertices[vid];
+            vert = new_vertex();
+            set_vertex(vid, vert);
+
+            vert->set_out_degree(deg);
+
+            if (deg <= 2) {
+                for (degree_t d = 0; d < deg; ++d) {
+                    vert->add_nebr(csr_adj[csr_idx[vid]+d]);
+                }
+            } else {
+                vert->set_minivertex(csr_idx[vid]);
+            }
+        }
+
+        // save config
+        std::ofstream ofs(SSDPATH + "/" + PREFIX + ".config", std::ofstream::out | std::ofstream::app);
+        if (is_out_graph) {
+            // nverts   nedges
+            ofs << nverts << " " << nedges << std::endl;
+        }
+        ofs.close();
+
+        // save vertices
+        save_vertices();
+    }
+
+    inline degree_t get_out_degree(vid_t vid) { 
+        if (vertices[vid] == NULL) return 0;
+        return vertices[vid]->get_out_degree(); 
+    }
+
+    inline degree_t get_out_nebrs(vid_t vid, vid_t* nebrs) { 
+        if (vertices[vid] == NULL) return 0;
+        degree_t degree = vertices[vid]->get_out_degree();
+        if (degree <= 2) {
+            vid_t* csr = vertices[vid]->get_nebrs();
+            for (degree_t d = 0; d < degree; ++d) {
+                nebrs[d] = csr[d];
+            }
+        } else {
+            vid_t* csr = adjListStore + vertices[vid]->get_minivertex();
+            for (degree_t d = 0; d < degree; ++d) {
+                nebrs[d] = csr[d];
+            }
+        }
+        return degree;
+    }
+};
+
 class inplace_graph_t : public graph_t {
 private:
     // chunk allocator
@@ -551,19 +746,6 @@ public:
                     memcpy(adjlist, csr_adj+csr_idx[vid], deg*sizeof(vid_t));
                 }
             }
-            // if (vid == 12) {
-            //     degree_t deg = get_out_degree(vid);
-            //     std::cout << "test case" << std::endl;
-            //     std::cout << "degree of " << vid << " is " << deg << std::endl;
-            //     degree_t threshold = deg > 100 ? 100 : deg;
-            //     std::cout << "The top " << threshold <<  " out neighbors of " << vid << " are: ";
-            //     vid_t* nebrs = (vid_t*)calloc(sizeof(vid_t), deg);
-            //     get_out_nebrs(vid, nebrs);
-            //     for (degree_t i = 0; i < threshold; ++i) {
-            //         std::cout << nebrs[i] << " ";
-            //     }
-            //     std::cout << std::endl;
-            // }
         }
         #ifdef MONITOR
         max_chunkID = chunk_allocator->get_max_chunkID();
@@ -605,7 +787,7 @@ public:
         // save config
         std::ofstream ofs(SSDPATH + "/" + PREFIX + ".config");
         if (is_out_graph) {
-            // nverts   nedges  max_level
+            // nverts   nedges
             ofs << nverts << " " << nedges << " " << MAX_LEVEL << std::endl;
         }
         // level chunk size     chunk_number
@@ -1057,28 +1239,28 @@ public:
         size_t iteration = 0;
         std::cout << "threshold = " << threshold << std::endl;
         std::cout << "vid_list.size() = " << vid_list.size() << std::endl;
-        // if (source != -1) {
-        //     vid_t root = source;
-        //     reorder_list[head] = root;
-        //     visited[root] = 1;
-        //     tail = head + 1;
-        //     for (vid_t i = head; i < tail; ++i) {
-        //         vid_t vid = reorder_list[i];
-        //         degree_t degree = csr_idx[vid+1] - csr_idx[vid];
-        //         vid_t* nebrs = csr_adj+csr_idx[vid];
-        //         for (degree_t d = 0; d < degree; ++d) {
-        //             vid_t nebr = nebrs[d];
-        //             if (visited[nebr] == 0) {
-        //                 visited[nebr] = 1;
-        //                 reorder_list[tail++] = nebr;
-        //             }
-        //         }
-        //     }
-        //     head = tail;
-        //     iteration++;
-        //     double percent = (double)tail / vid_list.size();
-        //     std::cout << "preprocess with source = " << source << ", iteration = " << iteration << ", tail = " << tail << ", P(reorder) = " << percent << std::endl;
-        // }
+        if (source != -1) {
+            vid_t root = source;
+            reorder_list[head] = root;
+            visited[root] = 1;
+            tail = head + 1;
+            for (vid_t i = head; i < tail; ++i) {
+                vid_t vid = reorder_list[i];
+                degree_t degree = csr_idx[vid+1] - csr_idx[vid];
+                vid_t* nebrs = csr_adj+csr_idx[vid];
+                for (degree_t d = 0; d < degree; ++d) {
+                    vid_t nebr = nebrs[d];
+                    if (visited[nebr] == 0) {
+                        visited[nebr] = 1;
+                        reorder_list[tail++] = nebr;
+                    }
+                }
+            }
+            head = tail;
+            iteration++;
+            double percent = (double)tail / vid_list.size();
+            std::cout << "preprocess with source = " << source << ", iteration = " << iteration << ", tail = " << tail << ", P(reorder) = " << percent << std::endl;
+        }
         for (vid_t v = 0; v < vid_list.size(); ++v) {
             // run bfs and add nebrs to reorder_list
             vid_t root = vid_list[v];

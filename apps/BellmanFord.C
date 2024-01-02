@@ -21,7 +21,7 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#define WEIGHTED 1
+#define WEIGHTED 0
 #include "ligra.h"
 
 struct BF_F {
@@ -69,8 +69,28 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   vertexSubset Frontier(n,start); //initial frontier
 
+#ifdef DEBUG_EN
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(intE) * n;  // ShortestPathLen
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(int) * n;  // Visited
+  memory_profiler.memory_usage[item] += size;
+
+  size_t max_size = Frontier.getMemorySize();
+#endif
+
   long round = 0;
   while(!Frontier.isEmpty()){
+#ifdef DEBUG_EN
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    std::cout << "round = " << round << ", number of activated vertices = " << Frontier.numNonzeros()
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
+#endif
     if(round == n) {
       //negative weight cycle
       {parallel_for(long i=0;i<n;i++) ShortestPathLen[i] = -(INT_E_MAX/2);}
@@ -84,4 +104,18 @@ void Compute(graph<vertex>& GA, commandLine P) {
   }
   Frontier.del(); free(Visited);
   free(ShortestPathLen);
+
+#ifdef DEBUG_EN
+  std::cout << "Frontier maximum memory usage = " << B2GB(max_size) << "GB" << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
+
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+#endif
 }
