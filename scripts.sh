@@ -6,18 +6,19 @@ USE_CHUNK=1
 debug=false
 cgroup_swap=false
 ligra_mmap=false
-chunkgraph=false
+chunkgraph=true
 minivertex=false # change #define CHUNK_MMAP in graph.h
 minivertex2=false
 minivertex3=false
-minipluxchunk=true
+minipluxchunk=false
 minipluxchunkreorder=false
+minipluxchunkreorderenable=false
 
 [ $USE_CHUNK -eq 1 ] && export CHUNK=1
 
 [ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme1/zorax/chunks/ || DATA_PATH=/mnt/nvme1/zorax/datasets/
 CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
-# CPU:use NUMA 0 node, with id 1-24 and 49-72, with taskset command
+# CPU:use NUMA 0 node, with id 0-23 and 48-71, with taskset command
 # TEST_CPU_SET="taskset --cpu-list 0-95:1"
 TEST_CPU_SET="taskset -c 0-23,48-71:1"
 
@@ -58,6 +59,15 @@ clear_pagecaches() {
     echo "zwx.1005" | sudo -S sysctl -w vm.drop_caches=3;
 }
 
+get_total_bytes_read_iostat() {
+    eval beg_file="$1"
+    eval end_file="$2"
+    DEVICE="nvme0n1"
+    beg=$(cat ${beg_file} | grep ${DEVICE} | awk '{print $6}')
+    end=$(cat ${end_file} | grep ${DEVICE} | awk '{print $6}')
+    echo "$end - $beg" | bc
+}
+
 profile_diskio() {
     eval filename="$1"
     DEVICE="/dev/nvme0n1"
@@ -85,6 +95,8 @@ profile_memory() {
 
     echo "memory bound: " $limit "GB" >> ../results/command.log
     echo "memory bound: " $limit "GB" >> ${log_dir}/${filename}.txt
+
+    iostat > ${log_dir}/${filename}.iostat_beg
 
     nohup $commandargs &>> ${log_dir}/${filename}.txt &
     pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
@@ -131,6 +143,14 @@ profile_memory() {
 
     wait $pid
 
+    iostat > ${log_dir}/${filename}.iostat_end
+    total_res=$(get_total_bytes_read_iostat ${log_dir}/${filename}.iostat_beg ${log_dir}/${filename}.iostat_end)
+    comp_res=$(get_total_bytes_read_iostat ${log_dir}/${filename}.iostat_startCompute ${log_dir}/${filename}.iostat_end)
+
+    rm ${log_dir}/${filename}.iostat_beg ${log_dir}/${filename}.iostat_end ${log_dir}/${filename}.iostat_startCompute
+    echo "Total bytes read by iostat during the whole procedure: " $total_res "KB ("$(echo "scale=2; $total_res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "Total bytes read by iostat during the compute procedure: " $comp_res "KB ("$(echo "scale=2; $comp_res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+
     res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
     # echo total bytes read in KB and convert to GB
     echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
@@ -152,12 +172,22 @@ profile_performance() {
     echo $cur_time "profile run with command: " $commandargs >> ../results/command.log
     echo $cur_time "profile run with command: " $commandargs > ${log_dir}/${filename}.txt
 
+    iostat > ${log_dir}/${filename}.iostat_beg
+
     nohup $commandargs &>> ${log_dir}/${filename}.txt &
     pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
 
     echo "pid: " $pid >> ../results/command.log
 
     wait $pid
+
+    iostat > ${log_dir}/${filename}.iostat_end
+    total_res=$(get_total_bytes_read_iostat ${log_dir}/${filename}.iostat_beg ${log_dir}/${filename}.iostat_end)
+    comp_res=$(get_total_bytes_read_iostat ${log_dir}/${filename}.iostat_startCompute ${log_dir}/${filename}.iostat_end)
+
+    rm ${log_dir}/${filename}.iostat_beg ${log_dir}/${filename}.iostat_end ${log_dir}/${filename}.iostat_startCompute
+    echo "Total bytes read by iostat during the whole procedure: " $total_res "KB ("$(echo "scale=2; $total_res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "Total bytes read by iostat during the compute procedure: " $comp_res "KB ("$(echo "scale=2; $comp_res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
 
     res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
     # echo total bytes read in KB and convert to GB
@@ -359,8 +389,8 @@ if $ligra_mmap; then
             '256 256 256'    # kron30
             '256 256 256')    # yahoo
 
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in 0;
+    # for idx in {0,1,2,3,4,5,6};
+    for idx in 0;
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -526,8 +556,8 @@ if $chunkgraph; then
             '64 80 96 256'  # kron30
             '48 56 64 72 80 96 256')    # yahoo
 
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in 1;
+    # for idx in {0,1,2,3,4,5,6};
+    for idx in 1;
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -933,6 +963,114 @@ if $minipluxchunk; then
 fi
 
 if $minipluxchunkreorder; then
+    log_time=$(date "+%Y%m%d_%H%M%S")
+    mkdir -p results/logs/${log_time}
+
+    cd apps && make clean
+
+    DATA_PATH=/mnt/nvme1/zorax/chunks/
+    data[0]=${DATA_PATH}${name[0]}/${name[0]}
+    data[1]=${DATA_PATH}${name[1]}/${name[1]}
+    data[2]=${DATA_PATH}${name[2]}/${name[2]}
+    data[3]=${DATA_PATH}${name[3]}/${name[3]}
+    data[4]=${DATA_PATH}${name[4]}/${name[4]}
+    data[5]=${DATA_PATH}${name[5]}/${name[5]}
+    data[6]=${DATA_PATH}${name[6]}/${name[6]}
+
+    outputFile="../results/hierg_query_time.csv"
+    title="MinivertexPlusChunkLevelReorder"
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
+
+    for idx in {0,1,2,3,4,5,6};
+    do
+        echo -n "Data: "
+        echo ${data[$idx]}
+        echo -n "Root: "
+        echo ${rts[$idx]}
+
+        len=3
+
+        make BFS
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./BFS -b -r ${rts[$idx]} -chunk ${data[${idx}]}"
+            filename="${name[${idx}]}_minipluschunkreorder_bfs"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make BC
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./BC -b -r ${rts[$idx]} -chunk ${data[${idx}]}"
+            filename="${name[${idx}]}_minipluschunkreorder_bc"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make PageRank
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./PageRank -b -chunk ${data[${idx}]}"
+            filename="${name[${idx}]}_minipluschunkreorder_pr"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make Components
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./Components -b -chunk ${data[${idx}]}"
+            filename="${name[${idx}]}_minipluschunkreorder_cc"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+        
+        make KCore
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./KCore -b -chunk -maxk ${kcore_iter[$idx]} ${data[${idx}]}"
+            filename="${name[${idx}]}_minipluschunkreorder_kc"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make Radii
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./Radii -b -chunk ${data[${idx}]} "
+            filename="${name[${idx}]}_minipluschunkreorder_radii"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make MIS
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./MIS -b -chunk ${data[${idx}]} "
+            filename="${name[${idx}]}_minipluschunkreorder_mis"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+    done
+fi
+
+if $minipluxchunkreorderenable; then
     log_time=$(date "+%Y%m%d_%H%M%S")
     mkdir -p results/logs/${log_time}
 

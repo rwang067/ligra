@@ -304,6 +304,9 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
     if (outDegrees == 0) return vertexSubsetData<data>(numVertices);
   }
   #ifdef DEBUG_EN
+    if (threshold == 0) {
+      stat_profiler._total_accessed_edges += numEdges;
+    }
     stat_profiler._total_accessed_edges += outDegrees;
   #endif
   if (!(fl & no_dense) && m + outDegrees > threshold) {
@@ -627,6 +630,11 @@ int parallel_main(int argc, char* argv[]) {
       int res = std::system(command.c_str());
       if (res == -1) {
         std::cout << "perf_diskio.sh failed" << std::endl;
+      }
+      command = "bash ../perf_iostat.sh " + std::to_string(pid);
+      res = std::system(command.c_str());
+      if (res == -1) {
+        std::cout << "perf_iostat.sh failed" << std::endl;
       }
 #endif
 
