@@ -15,7 +15,7 @@ L1=true
 LLC=true
 
 # CACHE_ITEM="cache-references,cache-misses"
-CACHE_ITEM="cache-references,cache-misses,cycles,instructions,branches,faults,migrations"
+CACHE_ITEM="cache-references,cache-misses,cycles,instructions,branches,migrations,faults,minor-faults,major-faults"
 
 if [ "$L1" = true ]; then
     CACHE_L1=",L1-dcache-load-misses,L1-dcache-loads,L1-dcache-stores,L1-icache-load-misses"

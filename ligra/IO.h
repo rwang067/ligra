@@ -620,6 +620,11 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
     }}
     time.reportNext("Load InNeighbors Time");
     reporter.reportNext("Load InNeighbors Space");
+
+    #ifdef VERTEXCUT_PROFILE_EN
+      vertexcut_profiler.out_graph_base_addr = (uintE*)edges;
+      vertexcut_profiler.in_graph_base_addr = (uintE*)inEdges;
+    #endif
   }
   free(offsets);
 #ifndef WEIGHTED

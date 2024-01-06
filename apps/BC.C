@@ -132,7 +132,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
   size_t max_size = Frontier.getMemorySize();
 #endif
 
-
+#ifdef ITER_PROFILE_EN
+  iteration_profiler.init_iostat();
+#endif
 
   long round = 0;
   while(!Frontier.isEmpty()){ //first phase
@@ -150,6 +152,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
     vertexMap(output, BC_Vertex_F(Visited)); //mark visited
     Levels.push_back(output); //save frontier onto Levels
     Frontier = output;
+#ifdef ITER_PROFILE_EN
+    iteration_profiler.record_iostat();
+#endif
+#ifdef VERTEXCUT_PROFILE_EN
+    vertexcut_profiler.record_vertexcut();
+    vertexcut_profiler.record_vertex_accessed();
+#endif
   }
 
   //invert numpaths
@@ -186,6 +195,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
     Frontier = Levels[r]; //gets frontier from Levels array
     //vertex map to mark visited and update Dependencies scores
     vertexMap(Frontier,BC_Back_Vertex_F(Visited,Dependencies,inverseNumPaths));
+#ifdef ITER_PROFILE_EN
+    iteration_profiler.record_iostat();
+#endif
+#ifdef VERTEXCUT_PROFILE_EN
+    vertexcut_profiler.record_vertexcut();
+    vertexcut_profiler.record_vertex_accessed();
+#endif
   }
   
   Frontier.del();
@@ -221,4 +237,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
   stat_profiler.print_total_accessed_edges();
 #endif
 
+#ifdef VERTEXCUT_PROFILE_EN
+  vertexcut_profiler.print_vertexcut_rate();
+#endif
 }

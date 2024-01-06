@@ -97,6 +97,10 @@ void Compute(graph<vertex>& GA, commandLine P) {
   size_t max_size = Frontier.getMemorySize();
 #endif
 
+#ifdef ITER_PROFILE_EN
+  iteration_profiler.init_iostat();
+#endif
+
   // long max_k = n > 10 ? 10 : n;
   long max_k = P.getOptionLongValue("-maxk", n > 10 ? 10 : n);
   for (long k = 1; k <= max_k; k++) {
@@ -126,6 +130,15 @@ void Compute(graph<vertex>& GA, commandLine P) {
     std::cout << "k = " << k << ", number of activated vertices = " << Frontier.numNonzeros()
               << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
 #endif
+
+#ifdef ITER_PROFILE_EN
+    iteration_profiler.record_iostat();
+#endif
+#ifdef VERTEXCUT_PROFILE_EN
+    vertexcut_profiler.record_vertexcut();
+    vertexcut_profiler.record_vertex_accessed();
+#endif
+
     if(Frontier.numNonzeros() == 0) { largestCore = k-1; break; }
   }
   cout << "largestCore was " << largestCore << endl;
@@ -147,4 +160,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   stat_profiler.print_total_accessed_edges();
 #endif 
+
+#ifdef VERTEXCUT_PROFILE_EN
+  vertexcut_profiler.print_vertexcut_rate();
+#endif
 }

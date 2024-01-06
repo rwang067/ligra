@@ -14,5 +14,4 @@ filename=$(ls -t ${result_dir} | head -1 | cut -d'.' -f1)
 echo "Disk I/O Performance Test" $pid > ${result_dir}/${filename}.iostat
 
 # Get the disk I/O performance for pid
-iostat > ${result_dir}/${filename}.iostat_startCompute
 iostat -d -x -m 1  >> ${result_dir}/${filename}.iostat &

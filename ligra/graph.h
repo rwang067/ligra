@@ -361,6 +361,11 @@ struct graph {
     edge_profiler.edge_access[thread_id] += d;
     if (!inGraph) edge_profiler.out_edge_access[thread_id] += d;
     else edge_profiler.in_edge_access[thread_id] += d;
+
+    #ifdef VERTEXCUT_PROFILE_EN
+    vertexcut_profiler.vertex_accessed[thread_id] += 1;
+    vertexcut_profiler.check_vertexcut(neighbors, d, inGraph, thread_id);
+    #endif
     #endif
     
     return neighbors;

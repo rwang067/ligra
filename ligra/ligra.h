@@ -304,14 +304,19 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
     if (outDegrees == 0) return vertexSubsetData<data>(numVertices);
   }
   #ifdef DEBUG_EN
-    if (threshold == 0) {
-      stat_profiler._total_accessed_edges += numEdges;
-    }
-    stat_profiler._total_accessed_edges += outDegrees;
+    uint64_t increment = (threshold == 0) ? numEdges : outDegrees;
+    stat_profiler._total_accessed_edges += increment;
+    #ifdef ITER_PROFILE_EN
+      iteration_profiler._curr_accessed_edges = increment;
+    #endif
   #endif
   if (!(fl & no_dense) && m + outDegrees > threshold) {
     #ifdef DEBUG_EN
+      #ifdef ITER_PROFILE_EN
+      std::cout << ", Bottom-up dense, ";
+      #else
       std::cout << ", Bottom-up dense" << std::endl;
+      #endif
     #endif
     if(degrees) free(degrees);
     if(frontierVertices) free(frontierVertices);
@@ -321,7 +326,11 @@ vertexSubsetData<data> edgeMapData(graph<vertex>& GA, VS &vs, F f,
       edgeMapDense<data, vertex, VS, F>(GA, vs, f, fl);
   } else {
     #ifdef DEBUG_EN
+      #ifdef ITER_PROFILE_EN
+      std::cout << ", Top-down sparse, ";
+      #else
       std::cout << ", Top-down sparse" << std::endl;
+      #endif
     #endif
     auto vs_out =
       (should_output(fl) && fl & sparse_no_filter) ? // only call snof when we output
@@ -554,6 +563,10 @@ int parallel_main(int argc, char* argv[]) {
   size_t vm, rss;
   pid_t pid = getpid();
 
+  #ifdef DEBUG_EN
+  stat_profiler.record_read_KB(0);
+  #endif
+
   if (compressed) {
     if (symmetric) {
 #ifndef HYPER
@@ -646,6 +659,10 @@ int parallel_main(int argc, char* argv[]) {
       }
 #endif
 
+#ifdef DEBUG_EN
+      stat_profiler.record_read_KB(1);
+#endif
+
       setWorkers(nthreads);
       for(int r=0;r<rounds;r++) {
         process_mem_usage(pid, vm, rss);
@@ -665,6 +682,11 @@ int parallel_main(int argc, char* argv[]) {
   reportEnd();
 #ifdef PROFILE_EN
   profiler.print_page_miss_ratio();
+#endif
+
+#ifdef DEBUG_EN
+  stat_profiler.record_read_KB(2);
+  stat_profiler.print_read_KB();
 #endif
 }
 #endif

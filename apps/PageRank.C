@@ -96,7 +96,11 @@ void Compute(graph<vertex>& GA, commandLine P) {
 
   size_t max_size = Frontier.getMemorySize();
 #endif
-  
+
+#ifdef ITER_PROFILE_EN
+  iteration_profiler.init_iostat();
+#endif
+
   long iter = 0;
   double L1_norm = 1.0;
 
@@ -127,6 +131,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
     //reset p_curr
     vertexMap(Frontier,PR_Vertex_Reset(p_curr));
     swap(p_curr,p_next);
+#ifdef ITER_PROFILE_EN
+    iteration_profiler.record_iostat();
+#endif
+#ifdef VERTEXCUT_PROFILE_EN
+    vertexcut_profiler.record_vertexcut();
+    vertexcut_profiler.record_vertex_accessed();
+#endif
   }
 #ifdef DEBUG_EN
     size_t vm, rss;
@@ -155,5 +166,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
   edge_profiler.print_in_edge_access();
 
   stat_profiler.print_total_accessed_edges();
+#endif
+
+#ifdef VERTEXCUT_PROFILE_EN
+  vertexcut_profiler.print_vertexcut_rate();
 #endif
 }
