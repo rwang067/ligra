@@ -100,6 +100,29 @@ int main(int argc, const char ** argv)
         delete minivertexgraph;
         break;
     }
+    case 10: {
+        MAX_LEVEL = 2;
+        ReorderIDGraph *reorderidgraph = new ReorderIDGraph();
+        reorderidgraph->convert_graph();
+        reorderidgraph->save_graph();
+        test_out_neighbors(reorderidgraph);
+        test_in_neighbors(reorderidgraph);
+        test_graph_benchmarks(reorderidgraph);
+        delete reorderidgraph;
+        break;
+    }
+    case 11: {
+        MAX_LEVEL = 2;
+        ReorderIDGraph *reorderidgraph = new ReorderIDGraph();
+        reorderidgraph->convert_graph_in();
+        reorderidgraph->save_graph();
+        test_out_neighbors(reorderidgraph);
+        test_in_neighbors(reorderidgraph);
+        test_graph_benchmarks(reorderidgraph);
+        delete reorderidgraph;
+        break;
+    }
+    
     default:
         break;
     }

@@ -12,8 +12,8 @@
 
 // #define PROFILE_EN
 #define DEBUG_EN
-#define ITER_PROFILE_EN
-#define VERTEXCUT_PROFILE_EN
+// #define ITER_PROFILE_EN
+// #define VERTEXCUT_PROFILE_EN
 
 class profiler_t {
 public:

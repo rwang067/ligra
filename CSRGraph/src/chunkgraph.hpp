@@ -404,3 +404,165 @@ private:
     reordergraph_t* out_graph;
     reordergraph_t* in_graph;
 };
+
+class ReorderIDGraph : public ConvertGraph {
+public:
+    ReorderIDGraph() {
+        this->out_graph = new reorderidgraph_t(nverts, nedges, true);
+        this->in_graph = new reorderidgraph_t(nverts, nedges, false);
+    }
+    ~ReorderIDGraph() {
+        delete out_graph;
+        delete in_graph;
+    }
+
+    void convert_graph() {
+        double start = mywtime();
+        load_csr(true);
+        load_csr(false);
+        out_graph->init_chunk_allocator();
+        in_graph->init_chunk_allocator();
+
+        vid_t* reorder_list = (vid_t*)calloc(nverts, sizeof(vid_t));    // save the reorder result
+        vid_t* origin2reorder = (vid_t*)calloc(nverts, sizeof(vid_t));  // save mapping from original id to new id
+
+        out_graph->init_reorder_list(reorder_list, origin2reorder);
+        in_graph->init_reorder_list(reorder_list, origin2reorder);
+        out_graph->convert_graph(csr_idx, csr_adj, csr_idx_in);
+        in_graph->convert_id(csr_idx_in, csr_adj_in);
+        
+        free_csr(true);
+        free_csr(false);
+        double end = mywtime();
+        ofs << "convert graph time = " << end - start << std::endl;
+        std::cout << "convert graph time = " << end - start << std::endl;
+
+        // test
+        if (source != -1) {
+            std::cout << "source = " << source << ", reorder source = " << origin2reorder[source] << std::endl;
+        }
+        vid_t origin_list[5] = {12, 300, 1024, 65535, 1023512};
+        for (int i = 0; i < 5; i++) {
+            vid_t origin_id = origin_list[i];
+            vid_t new_id = origin2reorder[origin_id];
+            std::cout << "origin id = " << origin_id << ", reorder id = " << new_id << std::endl;
+            degree_t out_degree = out_graph->get_out_degree(new_id);
+            degree_t in_degree = in_graph->get_out_degree(new_id);
+            std::cout << "out degree = " << out_degree << ", in degree = " << in_degree << std::endl;
+            vid_t* out_nebrs = (vid_t*)malloc(out_degree * sizeof(vid_t));
+            out_graph->get_out_nebrs(new_id, out_nebrs);
+            degree_t threshold = out_degree > 100 ? 100 : out_degree;
+            std::cout << "out nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << out_nebrs[j] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "original out nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << reorder_list[out_nebrs[j]] << " ";
+            }
+            std::cout << std::endl;
+            free(out_nebrs);
+            vid_t* in_nebrs = (vid_t*)malloc(in_degree * sizeof(vid_t));
+            in_graph->get_out_nebrs(new_id, in_nebrs);
+            threshold = in_degree > 100 ? 100 : in_degree;
+            std::cout << "in nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << in_nebrs[j] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "original in nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << reorder_list[in_nebrs[j]] << " ";
+            }
+            std::cout << std::endl;
+            free(in_nebrs);
+        }
+
+        free(reorder_list);
+        free(origin2reorder);
+    }
+
+    void convert_graph_in() {
+        double start = mywtime();
+        load_csr(true);
+        load_csr(false);
+        out_graph->init_chunk_allocator();
+        in_graph->init_chunk_allocator();
+
+        vid_t* reorder_list = (vid_t*)calloc(nverts, sizeof(vid_t));    // save the reorder result
+        vid_t* origin2reorder = (vid_t*)calloc(nverts, sizeof(vid_t));  // save mapping from original id to new id
+
+        out_graph->init_reorder_list(reorder_list, origin2reorder);
+        in_graph->init_reorder_list(reorder_list, origin2reorder);
+
+        in_graph->convert_graph(csr_idx_in, csr_adj_in, csr_idx);
+        out_graph->convert_id(csr_idx, csr_adj);
+        
+        free_csr(true);
+        free_csr(false);
+        double end = mywtime();
+        ofs << "convert graph time = " << end - start << std::endl;
+        std::cout << "convert graph time = " << end - start << std::endl;
+
+        // test
+        if (source != -1) {
+            std::cout << "source = " << source << ", reorder source = " << origin2reorder[source] << std::endl;
+        }
+        vid_t origin_list[5] = {12, 300, 1024, 65535, 1023512};
+        for (int i = 0; i < 5; i++) {
+            vid_t origin_id = origin_list[i];
+            vid_t new_id = origin2reorder[origin_id];
+            std::cout << "origin id = " << origin_id << ", reorder id = " << new_id << std::endl;
+            degree_t out_degree = out_graph->get_out_degree(new_id);
+            degree_t in_degree = in_graph->get_out_degree(new_id);
+            std::cout << "out degree = " << out_degree << ", in degree = " << in_degree << std::endl;
+            vid_t* out_nebrs = (vid_t*)malloc(out_degree * sizeof(vid_t));
+            out_graph->get_out_nebrs(new_id, out_nebrs);
+            degree_t threshold = out_degree > 100 ? 100 : out_degree;
+            std::cout << "out nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << out_nebrs[j] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "original out nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << reorder_list[out_nebrs[j]] << " ";
+            }
+            std::cout << std::endl;
+            free(out_nebrs);
+            vid_t* in_nebrs = (vid_t*)malloc(in_degree * sizeof(vid_t));
+            in_graph->get_out_nebrs(new_id, in_nebrs);
+            threshold = in_degree > 100 ? 100 : in_degree;
+            std::cout << "in nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << in_nebrs[j] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "original in nebrs: ";
+            for (degree_t j = 0; j < threshold; j++) {
+                std::cout << reorder_list[in_nebrs[j]] << " ";
+            }
+            std::cout << std::endl;
+            free(in_nebrs);
+        }
+
+        free(reorder_list);
+        free(origin2reorder);
+    }
+
+    void save_graph() {
+        out_graph->save_graph();
+        in_graph->save_graph();
+    }
+
+    vid_t get_vcount() { return out_graph->get_vcount(); }
+    index_t get_ecount() { return out_graph->get_ecount(); }
+    degree_t get_out_degree(vid_t vid) { return out_graph->get_out_degree(vid); }
+    degree_t get_out_nebrs(vid_t vid, vid_t* nebrs) { return out_graph->get_out_nebrs(vid, nebrs); }
+    degree_t get_in_degree(vid_t vid) { return in_graph->get_out_degree(vid); }
+    degree_t get_in_nebrs(vid_t vid, vid_t* nebrs) { return in_graph->get_out_nebrs(vid, nebrs); }
+private:
+    reorderidgraph_t* out_graph;
+    reorderidgraph_t* in_graph;
+};
