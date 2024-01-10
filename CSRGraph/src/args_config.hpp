@@ -44,6 +44,8 @@ void args_config(int argc, const char ** argv) {
     QUERY = get_option_int("-q", 0); // The number of executions for each graph query algorithm.
     source = get_option_int("--source", -1); // The root vertex for graph query benchmark.
     reorder_level = get_option_int("--reorder_level", 0); // The level of reordering.
+    uint32_t global_threshold_int = get_option_int("--global_threshold", 0); // The global threshold for reordering.
+    global_threshold = (double)global_threshold_int / 100.0;
     /* ---------------------------------------------------------------------- */
     // Basic arguments for chunk allocator
     SBLK_POOL_SIZE = get_option_long("--sblk_pool_size", 128) * GB; // Size of ssd pool for chunk allocator. Default: 128GB.

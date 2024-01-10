@@ -91,6 +91,21 @@ namespace decode_uncompressed {
     });
   }
 
+  template <class V, class F, class G>
+  inline void decodeOutNghChunk(uintE d, uintE* nebrs, long i, F &f, G &g) {
+    granular_for(j, 0, d, (d > 1000), {
+      uintE ngh = nebrs[j];
+      if (f.cond(ngh)) {
+#ifndef WEIGHTED
+      auto m = f.updateAtomic(i,ngh);
+#else
+      auto m = f.updateAtomic(i,ngh,nebrs[d+j]);
+#endif
+        g(ngh, m);
+      }
+    });
+  }
+
   // Used by edgeMapSparse. For each out-neighbor satisfying cond, call
   // updateAtomic.
   template <class V, class F, class G>
@@ -301,6 +316,11 @@ symmetricVertex(intE* n, uintT d)
   }
 
   template <class F, class G>
+  inline void decodeOutNghChunk(uintE d, uintE* nebrs, long i, F &f, G& g) {
+     decode_uncompressed::decodeOutNghChunk<symmetricVertex, F, G>(d, nebrs, i, f, g);
+  }
+
+  template <class F, class G>
   inline void decodeOutNghSparse(long i, uintT o, F &f, G &g) {
     decode_uncompressed::decodeOutNghSparse<symmetricVertex, F>(this, i, o, f, g);
   }
@@ -427,6 +447,11 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
   template <class F, class G>
   inline void decodeOutNgh(long i, F &f, G &g) {
     decode_uncompressed::decodeOutNgh<asymmetricVertex, F, G>(this, i, f, g);
+  }
+
+  template <class F, class G>
+  inline void decodeOutNghChunk(uintE d, uintE* nebrs, long i, F &f, G& g) {
+     decode_uncompressed::decodeOutNghChunk<asymmetricVertex, F, G>(d, nebrs, i, f, g);
   }
 
   template <class F, class G>

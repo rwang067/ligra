@@ -71,12 +71,12 @@ name[6]=yahoo
 swap=false
 cgroup_limit=false
 debug=false
-convert_chunk=false
+convert_chunk=true
 count_degree=false
 convert_blaze=false
 convert_minivertex_graph=false
 convert_minipluschunk_graph=false
-convert_reorderid=true
+convert_reorderid=false
 
 
 if $convert_reorderid; then
@@ -179,23 +179,28 @@ if $convert_minipluschunk_graph; then
 fi
 
 if $convert_chunk; then
+    declare -a thresholds=(0 25 50 75 100)
     declare -a sblk_size=(128 128 256 512 768 768 768)
-    SAVE_PATH=/mnt/nvme1/zorax/chunks/
-    # for idx in {0,1,2,3,4,5,6};
-    # for idx in {1,2,3,4};
-    for idx in 1;   
+    for threshold in {0,1,2,3,4};
     do
-        for job in 6;
+        # SAVE_PATH=/mnt/nvme2/zorax/chunks/k30_${thresholds[${threshold}]}/
+        SAVE_PATH=/mnt/pmem1/zorax/chunks/k30_${thresholds[${threshold}]}/
+        # for idx in {0,1,2,3,4,5,6};
+        # for idx in {1,2,3,4};
+        for idx in 5;   
         do
-            mkdir -p ${SSD_PATH}
-            mkdir -p ${SAVE_PATH}${name[${idx}]}
+            for job in 6;
+            do
+                mkdir -p ${SSD_PATH}
+                mkdir -p ${SAVE_PATH}${name[${idx}]}
 
-            nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
-            echo $nverts
-            clear_ssd
-            # gdb --args 
-            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_convert.out
-            mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+                nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+                echo $nverts
+                clear_ssd
+                # gdb --args 
+                ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} --global_threshold ${thresholds[${threshold}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_convert_${thresholds[${threshold}]}.out
+                mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+            done
         done
     done
 fi

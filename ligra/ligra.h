@@ -128,17 +128,52 @@ vertexSubsetData<data> edgeMapDenseForward(graph<vertex> GA, VS& vertexSubset, F
     D* next = newA(D, n);
     auto g = get_emdense_forward_gen<data>(next);
     parallel_for(long i=0;i<n;i++) { std::get<0>(next[i]) = 0; }
-    parallel_for (long i=0; i<n; i++) {
-      if (vertexSubset.isIn(i)) {
-        G[i].decodeOutNgh(i, f, g);
+    if (GA.isReorderListEnabled()) {
+      // std::cout << "reorder list enabled" << std::endl;
+      uintE* reorderList = GA.getReorderList(1);
+      parallel_for (long i=0; i<n; i++) {
+        long v = reorderList[i];
+        if (vertexSubset.isIn(v)) {
+          // G[v].decodeOutNgh(v, f, g);
+          uintE d = G[v].getOutDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[v],0);
+          G[v].decodeOutNghChunk(d,nebrs,v,f,g);
+        }
       }
+      return vertexSubsetData<data>(n, next);
+    } else {
+      parallel_for (long i=0; i<n; i++) {
+        if (vertexSubset.isIn(i)) {
+          // G[i].decodeOutNgh(i, f, g);
+          uintE d = G[i].getOutDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[i],0);
+          G[i].decodeOutNghChunk(d,nebrs,i,f,g);
+        }
+      }
+      return vertexSubsetData<data>(n, next);
     }
-    return vertexSubsetData<data>(n, next);
   } else {
     auto g = get_emdense_forward_nooutput_gen<data>();
-    parallel_for (long i=0; i<n; i++) {
-      if (vertexSubset.isIn(i)) {
-        G[i].decodeOutNgh(i, f, g);
+    if (GA.isReorderListEnabled()) {
+      // std::cout << "reorder list enabled" << std::endl;
+      uintE* reorderList = GA.getReorderList(1);
+      parallel_for (long i=0; i<n; i++) {
+        long v = reorderList[i];
+        if (vertexSubset.isIn(v)) {
+          // G[v].decodeOutNgh(v, f, g);
+          uintE d = G[v].getOutDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[v],0);
+          G[v].decodeOutNghChunk(d,nebrs,v,f,g);
+        }
+      }
+    } else {
+      parallel_for (long i=0; i<n; i++) {
+        if (vertexSubset.isIn(i)) {
+          // G[i].decodeOutNgh(i, f, g);
+          uintE d = G[i].getOutDegree();
+          uintE* nebrs = GA.getChunkNeighbors(&G[i],0);
+          G[i].decodeOutNghChunk(d,nebrs,i,f,g);
+        }
       }
     }
     return vertexSubsetData<data>(n);

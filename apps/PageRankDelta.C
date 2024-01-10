@@ -24,19 +24,24 @@
 #include "ligra.h"
 #include "math.h"
 
+// #define PR_DEBUG_EN
+
+// #define PR_VALUE_TYPE double
+#define PR_VALUE_TYPE float
+
 template <class vertex>
 struct PR_F {
   vertex* V;
-  double* Delta, *nghSum;
-  PR_F(vertex* _V, double* _Delta, double* _nghSum) : 
+  PR_VALUE_TYPE* Delta, *nghSum;
+  PR_F(vertex* _V, PR_VALUE_TYPE* _Delta, PR_VALUE_TYPE* _nghSum) : 
     V(_V), Delta(_Delta), nghSum(_nghSum) {}
   inline bool update(uintE s, uintE d){
-    double oldVal = nghSum[d];
+    PR_VALUE_TYPE oldVal = nghSum[d];
     nghSum[d] += Delta[s]/V[s].getOutDegree();
     return oldVal == 0;
   }
   inline bool updateAtomic (uintE s, uintE d) {
-    volatile double oldV, newV; 
+    volatile PR_VALUE_TYPE oldV, newV; 
     do { //basically a fetch-and-add
       oldV = nghSum[d]; newV = oldV + Delta[s]/V[s].getOutDegree();
     } while(!CAS(&nghSum[d],oldV,newV));
@@ -45,9 +50,9 @@ struct PR_F {
   inline bool cond (uintE d) { return cond_true(d); }};
 
 struct PR_Vertex_F_FirstRound {
-  double damping, addedConstant, one_over_n, epsilon2;
-  double* p, *Delta, *nghSum;
-  PR_Vertex_F_FirstRound(double* _p, double* _Delta, double* _nghSum, double _damping, double _one_over_n,double _epsilon2) :
+  PR_VALUE_TYPE damping, addedConstant, one_over_n, epsilon2;
+  PR_VALUE_TYPE* p, *Delta, *nghSum;
+  PR_Vertex_F_FirstRound(PR_VALUE_TYPE* _p, PR_VALUE_TYPE* _Delta, PR_VALUE_TYPE* _nghSum, PR_VALUE_TYPE _damping, PR_VALUE_TYPE _one_over_n,PR_VALUE_TYPE _epsilon2) :
     p(_p),
     damping(_damping), Delta(_Delta), nghSum(_nghSum), one_over_n(_one_over_n),
     addedConstant((1-_damping)*_one_over_n),
@@ -61,9 +66,9 @@ struct PR_Vertex_F_FirstRound {
 };
 
 struct PR_Vertex_F {
-  double damping, epsilon2;
-  double* p, *Delta, *nghSum;
-  PR_Vertex_F(double* _p, double* _Delta, double* _nghSum, double _damping, double _epsilon2) :
+  PR_VALUE_TYPE damping, epsilon2;
+  PR_VALUE_TYPE* p, *Delta, *nghSum;
+  PR_Vertex_F(PR_VALUE_TYPE* _p, PR_VALUE_TYPE* _Delta, PR_VALUE_TYPE* _nghSum, PR_VALUE_TYPE _damping, PR_VALUE_TYPE _epsilon2) :
     p(_p),
     damping(_damping), Delta(_Delta), nghSum(_nghSum), 
     epsilon2(_epsilon2) {}
@@ -75,8 +80,8 @@ struct PR_Vertex_F {
 };
 
 struct PR_Vertex_Reset {
-  double* nghSum;
-  PR_Vertex_Reset(double* _nghSum) :
+  PR_VALUE_TYPE* nghSum;
+  PR_Vertex_Reset(PR_VALUE_TYPE* _nghSum) :
     nghSum(_nghSum) {}
   inline bool operator () (uintE i) {
     nghSum[i] = 0.0;
@@ -86,15 +91,15 @@ struct PR_Vertex_Reset {
 
 template <class vertex>
 void Compute(graph<vertex>& GA, commandLine P) {
-  long maxIters = P.getOptionLongValue("-maxiters",100);
+  long maxIters = P.getOptionLongValue("-maxiters",10);
   const long n = GA.n;
-  const double damping = 0.85;
-  const double epsilon = 0.0000001;
-  const double epsilon2 = 0.01;
+  const PR_VALUE_TYPE damping = 0.85;
+  const PR_VALUE_TYPE epsilon = 0.0000001;
+  const PR_VALUE_TYPE epsilon2 = 0.01;
 
-  double one_over_n = 1/(double)n;
-  double* p = newA(double,n), *Delta = newA(double,n), 
-    *nghSum = newA(double,n);
+  PR_VALUE_TYPE one_over_n = 1/(PR_VALUE_TYPE)n;
+  PR_VALUE_TYPE* p = newA(PR_VALUE_TYPE,n), *Delta = newA(PR_VALUE_TYPE,n), 
+    *nghSum = newA(PR_VALUE_TYPE,n);
   bool* frontier = newA(bool,n);
   parallel_for(long i=0;i<n;i++) {
     p[i] = 0.0;//one_over_n;
@@ -108,8 +113,32 @@ void Compute(graph<vertex>& GA, commandLine P) {
   {parallel_for(long i=0;i<n;i++) all[i] = 1;}
   vertexSubset All(n,n,all); //all vertices
 
+#ifdef DEBUG_EN
+  std::cout << "maxIters = " << maxIters << std::endl;
+  std::string item = "Algo MetaData";
+  memory_profiler.memory_usage[item] = 0;
+  size_t size = sizeof(PR_VALUE_TYPE) * n;  // p, Delta, nghSum
+  memory_profiler.memory_usage[item] += size;
+  memory_profiler.memory_usage[item] += size;
+  memory_profiler.memory_usage[item] += size;
+  size = sizeof(bool) * n;  // frontier, all
+  memory_profiler.memory_usage[item] += size;
+  memory_profiler.memory_usage[item] += size;
+
+  size_t max_size = Frontier.getMemorySize();
+#endif
+
+#ifdef ITER_PROFILE_EN
+  iteration_profiler.init_iostat();
+#endif
+
   long round = 0;
   while(round++ < maxIters) {
+#ifdef PR_DEBUG_EN
+    time_t now = time(0);
+    char* dt = ctime(&now);
+    std::cout << "The local date and time is: " << dt;
+#endif
     edgeMap(GA,Frontier,PR_F<vertex>(GA.V,Delta,nghSum),GA.m/20, no_output | dense_forward);
     vertexSubset active 
       = (round == 1) ? 
@@ -118,12 +147,50 @@ void Compute(graph<vertex>& GA, commandLine P) {
     //compute L1-norm (use nghSum as temp array)
     {parallel_for(long i=0;i<n;i++) {
       nghSum[i] = fabs(Delta[i]); }}
-    double L1_norm = sequence::plusReduce(nghSum,n);
+    PR_VALUE_TYPE L1_norm = sequence::plusReduce(nghSum,n);
     if(L1_norm < epsilon) break;
     //reset
     vertexMap(All,PR_Vertex_Reset(nghSum));
+
+#ifdef DEBUG_EN
+    size_t vm, rss;
+    pid_t pid = getpid();
+    process_mem_usage(pid, vm, rss);
+    std::cout << "iteration = " << round << ", L1_norm_prev = " << L1_norm
+              << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
+    size = Frontier.getMemorySize();
+    if (size > max_size) max_size = size;
+#endif
+
     Frontier.del();
     Frontier = active;
+
+#ifdef ITER_PROFILE_EN
+    iteration_profiler.record_iostat();
+#endif
+#ifdef VERTEXCUT_PROFILE_EN
+    vertexcut_profiler.record_vertexcut();
+    vertexcut_profiler.record_vertex_accessed();
+#endif
   }
+
+#ifdef DEBUG_EN
+  std::cout << "Frontier maximum memory usage = " << B2GB(max_size) << "GB" << std::endl;
+  memory_profiler.memory_usage[item] += max_size;
+#endif
   Frontier.del(); free(p); free(Delta); free(nghSum); All.del();
+#ifdef DEBUG_EN
+  memory_profiler.print_memory_usage();
+  memory_profiler.print_memory_usage_detail();
+
+  edge_profiler.print_edge_access();
+  edge_profiler.print_out_edge_access();
+  edge_profiler.print_in_edge_access();
+
+  stat_profiler.print_total_accessed_edges();
+#endif
+
+#ifdef VERTEXCUT_PROFILE_EN
+  vertexcut_profiler.print_vertexcut_rate();
+#endif
 }

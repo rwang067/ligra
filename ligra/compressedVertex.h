@@ -314,6 +314,11 @@ struct compressedSymmetricVertex {
     decode_compressed::decodeOutNgh<compressedSymmetricVertex, F, G>(this, i, f, g);
   }
 
+  template<class F, class G>
+  inline void decodeOutNghChunk(uintE d, uintE* nebrs, long i, F &f, G &g) {
+    decode_compressed::decodeOutNgh<compressedSymmetricVertex, F, G>(this, i, f, g);
+  }
+
   template <class F, class G>
   inline void decodeOutNghSparse(long i, uintT o, F &f, G &g) {
     decode_compressed::decodeOutNghSparse<compressedSymmetricVertex, F, G>(this, i, o, f, g);
@@ -382,6 +387,11 @@ struct compressedAsymmetricVertex {
 
   template<class F, class G>
   inline void decodeOutNgh(long i, F &f, G &g) {
+    decode_compressed::decodeOutNgh<compressedAsymmetricVertex, F, G>(this, i, f, g);
+  }
+
+  template<class F, class G>
+  inline void decodeOutNghChunk(uintE d, uintE* nebrs, long i, F &f, G &g) {
     decode_compressed::decodeOutNgh<compressedAsymmetricVertex, F, G>(this, i, f, g);
   }
 

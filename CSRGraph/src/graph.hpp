@@ -1318,7 +1318,8 @@ public:
         start = mywtime();
         visited = (vid_t*)calloc(sizeof(vid_t), nverts);
         reorder_list = (vid_t*)calloc(sizeof(vid_t), nverts);
-        vid_t num_reorder = re_order(csr_idx, csr_adj, vid_list, 0.95);
+        double threshold = global_threshold ? global_threshold : 0.95;
+        vid_t num_reorder = re_order(csr_idx, csr_adj, vid_list, threshold);
         end = mywtime();
         std::cout << "reorder time = " << end - start << std::endl;
 

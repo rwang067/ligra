@@ -24,7 +24,9 @@ name[4]=kron29
 name[5]=kron30
 name[6]=yahoo
 
-chunkgraph=true
+debug=false
+chunkgraph=false
+ligra_mmap=true
 
 [ $USE_CHUNK -eq 1 ] && data[0]=${DATA_PATH}twitter/${name[0]} || data[0]=${DATA_PATH}csr_bin/Twitter/${name[0]}
 [ $USE_CHUNK -eq 1 ] && data[1]=${DATA_PATH}friendster/${name[1]} || data[1]=${DATA_PATH}csr_bin/Friendster/${name[1]}
@@ -184,6 +186,52 @@ profile_performance() {
     fi
 }
 
+if $debug; then
+    log_time=$(date "+%Y%m%d_%H%M%S")
+    mkdir -p results/logs/${log_time}
+    cd apps && make clean
+
+    outputFile="../results/hierg_query_time.csv"
+    title="ChunkGraph"
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
+
+    bounds=('256'
+        '256'
+        '256'
+        '256'
+        '256'
+        '256'
+        '256')
+
+    for idx in 0;
+    do
+        len=1
+
+        make PageRankDelta
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./PageRankDelta -b -chunk -threshold 20 ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_pr"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        # make PageRankDelta
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./PageRankDelta -b -chunk -threshold 20 -reorder ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_reorder_pr"
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+    done
+
+fi
 
 if $chunkgraph; then
     log_time=$(date "+%Y%m%d_%H%M%S")
@@ -219,7 +267,8 @@ if $chunkgraph; then
             '256'
             '256')
 
-    for idx in {0,1,2,3,4,5,6};
+    # for idx in {0,1,2,3,4,5,6};
+    for idx in {1,5,6}
     # for idx in 6;
     do
         echo -n "Data: "
@@ -243,7 +292,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -255,7 +304,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -267,7 +316,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./PageRank -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./PageRank -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -279,7 +328,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./Components -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./Components -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -291,7 +340,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./KCore -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./KCore -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_kc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -303,7 +352,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./Radii -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+            commandargs="./Radii -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
             filename="${name[${idx}]}_chunk_radii_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -315,7 +364,7 @@ if $chunkgraph; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./MIS -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+            commandargs="./MIS -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
             filename="${name[${idx}]}_chunk_mis_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
