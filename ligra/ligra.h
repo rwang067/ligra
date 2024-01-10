@@ -557,11 +557,19 @@ int parallel_main(int argc, char* argv[]) {
   bool isReorderListEnabled = P.getOptionValue("-reorder");
   global_threshold = P.getOptionLongValue("-threshold", 20);
 
+  pid_t pid = getpid();
+#ifdef PAGECACHE
+      std::string pcache_command = "bash ../pagecache.sh " + std::to_string(pid);
+      int pcache_res = std::system(pcache_command.c_str());
+      if (pcache_res == -1) {
+        std::cout << "pagecache.sh failed" << std::endl;
+      }
+#endif
+
   reportInit();
   reportTitle(argv[0], iFile, buffer);
 
   size_t vm, rss;
-  pid_t pid = getpid();
 
   #ifdef DEBUG_EN
   stat_profiler.record_read_KB(0);

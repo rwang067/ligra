@@ -9,6 +9,10 @@ ifdef CACHEMISS
 CM = -DCACHEMISS
 endif
 
+ifdef PAGECACHE
+CM = -DPAGECACHE
+endif
+
 ifdef LONG
 INTT = -DLONG
 endif
