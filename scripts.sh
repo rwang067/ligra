@@ -25,7 +25,9 @@ CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
 TEST_CPU_SET="taskset -c 0-23,48-71:1"
 
 PERF_CACHE_MISS=1
+PERF_PAGECACHE=1
 [ $PERF_CACHE_MISS -eq 1 ] && export CACHEMISS=1
+[ $PERF_PAGECACHE -eq 1 ] && export PAGECACHE=1
 
 export OMP_PROC_BIND=true
 
@@ -260,6 +262,8 @@ if $debug; then
 fi
 
 if $cgroup_swap; then
+    log_time=$(date "+%Y%m%d_%H%M%S")
+    mkdir -p results/logs/${log_time}
     declare -a base_bound=(8 12 16 128)
     # cd apps && make clean && make testNebrs BFS BC PageRank Components KCore Radii
     # exit
