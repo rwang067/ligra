@@ -287,6 +287,18 @@ if $cgroup_swap; then
         echo -n "Root: "
         echo ${rts[$idx]}
 
+        make BellmanFord
+        for mem in 3;
+        do
+            clear_pagecaches
+            [ $USE_CHUNK -eq 1 ] && commandargs="./BellmanFord -b -r ${rts[$idx]} -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}" || commandargs="./BellmanFord -b -r ${rts[$idx]} ${data[${idx}]}"
+            [ $USE_CHUNK -eq 1 ] && filename="${name[${idx}]}_chunk_bf_${base_bound[$mem]}" || filename="${name[${idx}]}_mmap_bf_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
+
         make BFS
         # for mem in {0,1,2,3};
         for mem in 3;

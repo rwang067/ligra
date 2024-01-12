@@ -23,7 +23,7 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
           auto m = f.update(ngh, v_id);
 #else
-          auto m = f.update(ngh, v_id, v->getInWeight(j));
+          auto m = f.update(ngh, v_id, 1);
 #endif
           g(v_id, m);
         }
@@ -36,7 +36,7 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
           auto m = f.updateAtomic(ngh, v_id);
 #else
-          auto m = f.updateAtomic(ngh, v_id, v->getInWeight(j));
+          auto m = f.updateAtomic(ngh, v_id, 1);
 #endif
           g(v_id, m);
         }
@@ -52,7 +52,7 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
           auto m = f.update(ngh, v_id);
 #else
-          auto m = f.update(ngh, v_id, v->getInWeight(j));
+          auto m = f.update(ngh, v_id, 1);
 #endif
           g(v_id, m);
         }
@@ -65,7 +65,7 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
           auto m = f.updateAtomic(ngh, v_id);
 #else
-          auto m = f.updateAtomic(ngh, v_id, v->getInWeight(j));
+          auto m = f.updateAtomic(ngh, v_id, 1);
 #endif
           g(v_id, m);
         }
@@ -99,7 +99,7 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
       auto m = f.updateAtomic(i,ngh);
 #else
-      auto m = f.updateAtomic(i,ngh,nebrs[d+j]);
+      auto m = f.updateAtomic(i,ngh,1);
 #endif
         g(ngh, m);
       }
@@ -133,7 +133,7 @@ namespace decode_uncompressed {
 #ifndef WEIGHTED
         auto m = f.updateAtomic(i, ngh);
 #else
-        auto m = f.updateAtomic(i, ngh, nebrs[d+j]);
+        auto m = f.updateAtomic(i, ngh, 1);
         // auto m = f.updateAtomic(i, ngh, v->getOutWeight(j));
 #endif
         g(ngh, o+j, m);
@@ -254,14 +254,14 @@ struct symmetricVertex {
 #ifndef WEIGHTED
   uintE* neighbors;
 #else
-  intE* neighbors;
+  uintE* neighbors;
 #endif
   uintT degree;
   void del() {free(neighbors); }
 #ifndef WEIGHTED
 symmetricVertex(uintE* n, uintT d)
 #else
-symmetricVertex(intE* n, uintT d)
+symmetricVertex(uintE* n, uintT d)
 #endif
 : neighbors(n), degree(d) {}
 #ifndef WEIGHTED
@@ -279,20 +279,20 @@ symmetricVertex(intE* n, uintT d)
 #else
   //weights are stored in the entry after the neighbor ID
   //so size of neighbor list is twice the degree
-  intE* getInNeighbors () { return neighbors; }
-  const intE* getInNeighbors () const { return neighbors; }
-  intE* getOutNeighbors () { return neighbors; }
-  const intE* getOutNeighbors () const { return neighbors; }
-  intE getInNeighbor(intT j) const { return neighbors[2*j]; }
-  intE getOutNeighbor(intT j) const { return neighbors[2*j]; }
-  intE getInWeight(intT j) const { return neighbors[2*j+1]; }
-  intE getOutWeight(intT j) const { return neighbors[2*j+1]; }
-  void setInNeighbor(uintT j, uintE ngh) { neighbors[2*j] = ngh; }
-  void setOutNeighbor(uintT j, uintE ngh) { neighbors[2*j] = ngh; }
-  void setInWeight(uintT j, intE wgh) { neighbors[2*j+1] = wgh; }
-  void setOutWeight(uintT j, intE wgh) { neighbors[2*j+1] = wgh; }
-  void setInNeighbors(intE* _i) { neighbors = _i; }
-  void setOutNeighbors(intE* _i) { neighbors = _i; }
+  uintE* getInNeighbors () { return neighbors; }
+  const uintE* getInNeighbors () const { return neighbors; }
+  uintE* getOutNeighbors () { return neighbors; }
+  const uintE* getOutNeighbors () const { return neighbors; }
+  uintE getInNeighbor(intT j) const { return neighbors[j]; }
+  uintE getOutNeighbor(intT j) const { return neighbors[j]; }
+  uintE getInWeight(intT j) const { return 1; }
+  uintE getOutWeight(intT j) const { return 1; }
+  void setInNeighbor(uintT j, uintE ngh) { neighbors[j] = ngh; }
+  void setOutNeighbor(uintT j, uintE ngh) { neighbors[j] = ngh; }
+  void setInWeight(uintT j, uintE wgh) { }
+  void setOutWeight(uintT j, uintE wgh) { }
+  void setInNeighbors(uintE* _i) { neighbors = _i; }
+  void setOutNeighbors(uintE* _i) { neighbors = _i; }
 #endif
 
   uintT getInDegree() const { return degree; }
@@ -356,7 +356,7 @@ struct asymmetricVertex {
 #ifndef WEIGHTED
   uintE* inNeighbors, *outNeighbors;
 #else
-  intE* inNeighbors, *outNeighbors;
+  uintE* inNeighbors, *outNeighbors;
 #endif
   // uintT outDegree;
   // uintT inDegree;
@@ -368,10 +368,9 @@ struct asymmetricVertex {
 #ifndef WEIGHTED
 asymmetricVertex(uintE* iN, uintE* oN, uintT id, uintT od)
 #else
-asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
+asymmetricVertex(uintE* iN, uintE* oN, uintT id, uintT od)
 #endif
 : inNeighbors(iN), outNeighbors(oN), inDegree(id), outDegree(od) {}
-#ifndef WEIGHTED
   uintE* getInNeighbors () { 
   #ifdef CHUNK
     if(inDegree<=2) return (uintE*)(&inNeighbors);
@@ -400,6 +399,7 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
     if(outDegree<=2) return (uintE*)(&outNeighbors);
   #endif
     return outNeighbors; }
+#ifndef WEIGHTED
   uintE getInNeighbor(uintT j) const { return inNeighbors[j]; }
   uintE getOutNeighbor(uintT j) const { return outNeighbors[j]; }
   void setInNeighbor(uintT j, uintE ngh) { inNeighbors[j] = ngh; }
@@ -407,20 +407,20 @@ asymmetricVertex(intE* iN, intE* oN, uintT id, uintT od)
   void setInNeighbors(uintE* _i) { inNeighbors = _i; }
   void setOutNeighbors(uintE* _i) { outNeighbors = _i; }
 #else
-  intE* getInNeighbors () { return inNeighbors; }
-  const intE* getInNeighbors () const { return inNeighbors; }
-  intE* getOutNeighbors () { return outNeighbors; }
-  const intE* getOutNeighbors () const { return outNeighbors; }
-  intE getInNeighbor(uintT j) const { return inNeighbors[2*j]; }
-  intE getOutNeighbor(uintT j) const { return outNeighbors[2*j]; }
-  intE getInWeight(uintT j) const { return inNeighbors[2*j+1]; }
-  intE getOutWeight(uintT j) const { return outNeighbors[2*j+1]; }
-  void setInNeighbor(uintT j, uintE ngh) { inNeighbors[2*j] = ngh; }
-  void setOutNeighbor(uintT j, uintE ngh) { outNeighbors[2*j] = ngh; }
-  void setInWeight(uintT j, uintE wgh) { inNeighbors[2*j+1] = wgh; }
-  void setOutWeight(uintT j, uintE wgh) { outNeighbors[2*j+1] = wgh; }
-  void setInNeighbors(intE* _i) { inNeighbors = _i; }
-  void setOutNeighbors(intE* _i) { outNeighbors = _i; }
+  // uintE* getInNeighbors () { return inNeighbors; }
+  // const uintE* getInNeighbors () const { return inNeighbors; }
+  // uintE* getOutNeighbors () { return outNeighbors; }
+  // const uintE* getOutNeighbors () const { return outNeighbors; }
+  uintE getInNeighbor(uintT j) const { return inNeighbors[j]; }
+  uintE getOutNeighbor(uintT j) const { return outNeighbors[j]; }
+  uintE getInWeight(uintT j) const { return 1; }
+  uintE getOutWeight(uintT j) const { return 1; }
+  void setInNeighbor(uintT j, uintE ngh) { inNeighbors[j] = ngh; }
+  void setOutNeighbor(uintT j, uintE ngh) { outNeighbors[j] = ngh; }
+  void setInWeight(uintT j, uintE wgh) { }
+  void setOutWeight(uintT j, uintE wgh) { }
+  void setInNeighbors(uintE* _i) { inNeighbors = _i; }
+  void setOutNeighbors(uintE* _i) { outNeighbors = _i; }
 #endif
 
   uintT getInDegree() const { return inDegree; }

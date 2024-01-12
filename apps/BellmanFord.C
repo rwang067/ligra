@@ -80,6 +80,10 @@ void Compute(graph<vertex>& GA, commandLine P) {
   size_t max_size = Frontier.getMemorySize();
 #endif
 
+#ifdef ITER_PROFILE_EN
+  iteration_profiler.init_iostat();
+#endif
+
   long round = 0;
   while(!Frontier.isEmpty()){
 #ifdef DEBUG_EN
@@ -101,6 +105,9 @@ void Compute(graph<vertex>& GA, commandLine P) {
     Frontier.del();
     Frontier = output;
     round++;
+#ifdef ITER_PROFILE_EN
+    iteration_profiler.record_iostat();
+#endif
   }
   Frontier.del(); free(Visited);
   free(ShortestPathLen);

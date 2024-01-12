@@ -41,7 +41,7 @@
 using namespace std;
 
 typedef pair<uintE,uintE> intPair;
-typedef pair<uintE, pair<uintE,intE> > intTriple;
+typedef pair<uintE, pair<uintE,uintE> > intTriple;
 
 template <class E>
 struct pairFirstCmp {
@@ -206,7 +206,7 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric, bool mmap) {
 #ifndef WEIGHTED
   uintE* edges = newA(uintE,m);
 #else
-  intE* edges = newA(intE,2*m);
+  uintE* edges = newA(uintE,2*m);
 #endif
 
   {parallel_for(long i=0; i < n; i++) offsets[i] = atol(W.Strings[i + 3]);}
@@ -272,7 +272,7 @@ graph<vertex> readGraphFromFile(char* fname, bool isSymmetric, bool mmap) {
     uintE* inEdges = newA(uintE,m);
     inEdges[0] = temp[0].second;
 #else
-    intE* inEdges = newA(intE,2*m);
+    uintE* inEdges = newA(uintE,2*m);
     inEdges[0] = temp[0].second.first;
     inEdges[1] = temp[0].second.second;
 #endif
@@ -367,7 +367,7 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 
   vertex* v = newA(vertex,n);
 #ifdef WEIGHTED
-  intE* edgesAndWeights = newA(intE,2*m);
+  uintE* edgesAndWeights = newA(uintE,2*m);
   {parallel_for(long i=0;i<m;i++) {
     edgesAndWeights[2*i] = edges[i];
     edgesAndWeights[2*i+1] = edges[i+m];
@@ -423,7 +423,7 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
     uintE* inEdges = newA(uintE,m);
     inEdges[0] = temp[0].second;
 #else
-    intE* inEdges = newA(intE,2*m);
+    uintE* inEdges = newA(uintE,2*m);
     inEdges[0] = temp[0].second.first;
     inEdges[1] = temp[0].second.second;
 #endif
@@ -449,7 +449,7 @@ graph<vertex> readGraphFromBinary(char* iFile, bool isSymmetric) {
 #ifndef WEIGHTED
       v[i].setInNeighbors((uintE*)inEdges+o);
 #else
-      v[i].setInNeighbors((intE*)(inEdges+2*o));
+      v[i].setInNeighbors((uintE*)(inEdges+2*o));
 #endif
       }}
     free(tOffsets);
@@ -506,11 +506,7 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
   in2.seekg(0, ios::end);
   long size = in2.tellg();
   in2.seekg(0);
-#ifdef WEIGHTED
-  long m = size/(2*sizeof(uint));
-#else
-  long m = size/sizeof(uint);
-#endif
+  long m = size/(sizeof(uint));
   in2.close();
   time.reportNext("This shouldn't take long");
   uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
@@ -544,24 +540,12 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
   std::cout << "Allocate vertex metadata: " << B2GB(size) << "GB" << std::endl;
 #endif
 
-#ifdef WEIGHTED
-  intE* edgesAndWeights = newA(intE,2*m);
-  {parallel_for(long i=0;i<m;i++) {
-    edgesAndWeights[2*i] = edges[i];
-    edgesAndWeights[2*i+1] = edges[i+m];
-    }}
-  //free(edges);
-#endif
   {parallel_for(long i=0;i<n;i++) {
     uintT o = offsets[i];
     uintT l = offsets[i+1]-offsets[i];
     // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setOutDegree(l);
-#ifndef WEIGHTED
       v[i].setOutNeighbors((uintE*)edges+o);
-#else
-      v[i].setOutNeighbors(edgesAndWeights+2*o);
-#endif
     }}
   time.reportNext("Load OutNeighbors Time");
   reporter.reportNext("Load OutNeighbors Space");
@@ -578,11 +562,6 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
     strcat(ridxFile, iFile);
     strcat(ridxFile, suffix);
 
-#ifndef WEIGHTED
-    uintE* inEdges;
-#else
-    intE* inEdges = newA(intE,2*m);
-#endif
     ifstream in4(radjFile,ifstream::in | ios::binary);
     in4.seekg(0, ios::end);
     size = in4.tellg();
@@ -590,7 +569,7 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
     in4.close();
     time.reportNext("This shouldn't take long");
 
-    inEdges = (uintE*) getFileData(radjFile, size, 1); // -m for read file by mmap
+    uintE* inEdges = (uintE*) getFileData(radjFile, size, 1); // -m for read file by mmap
     time.reportNext("Load InEdges Time");
     reporter.reportNext("Load InEdges Space");
 
@@ -612,11 +591,7 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
       uintT o = offsets[i];
       uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setInDegree(l);
-#ifndef WEIGHTED
       v[i].setInNeighbors((uintE*)inEdges+o);
-#else
-      v[i].setInNeighbors((intE*)(inEdges+2*o));
-#endif
     }}
     time.reportNext("Load InNeighbors Time");
     reporter.reportNext("Load InNeighbors Space");
@@ -627,13 +602,8 @@ graph<vertex> readGraphFromBinarymmap(char* iFile, bool isSymmetric) {
     #endif
   }
   free(offsets);
-#ifndef WEIGHTED
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
   return graph<vertex>(v,n,m,mem);
-#else
-  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
-  return graph<vertex>(v,n,m,mem);
-#endif
 }
 
 struct pvertex_t {
@@ -1073,11 +1043,7 @@ graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
   in2.seekg(0, ios::end);
   long size = in2.tellg();
   in2.seekg(0);
-#ifdef WEIGHTED
-  long m = size/(2*sizeof(uint));
-#else
   long m = size/sizeof(uint);
-#endif
   in2.close();
   time.reportNext("This shouldn't take long");
   uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
@@ -1123,20 +1089,11 @@ graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
   std::cout << "Allocate vertex metadata: " << B2GB(size) << "GB" << std::endl;
 #endif
 
-#ifdef WEIGHTED
-  intE* edgesAndWeights = newA(intE,2*m);
-  {parallel_for(long i=0;i<m;i++) {
-    edgesAndWeights[2*i] = edges[i];
-    edgesAndWeights[2*i+1] = edges[i+m];
-    }}
-  //free(edges);
-#endif
   {parallel_for(long i=0;i<n;i++) {
     uintT o = offsets[i];
     uintT l = offsets[i+1]-offsets[i];
     // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setOutDegree(l);
-#ifndef WEIGHTED
       if (l == 0) {
         v[i].setOutNeighbors(0);
       } else if (l <= 2) {
@@ -1146,9 +1103,6 @@ graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
         uintE* nebrs = (uintE*)(edges+o);
         v[i].setOutNeighbors(nebrs);
       }
-#else
-      v[i].setOutNeighbors(edgesAndWeights+2*o);
-#endif
     }}
   time.reportNext("Load OutNeighbors Time");
   reporter.reportNext("Load OutNeighbors Space");
@@ -1165,11 +1119,7 @@ graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
     strcat(ridxFile, iFile);
     strcat(ridxFile, suffix);
 
-#ifndef WEIGHTED
     uintE* inEdges;
-#else
-    intE* inEdges = newA(intE,2*m);
-#endif
     ifstream in4(radjFile,ifstream::in | ios::binary);
     in4.seekg(0, ios::end);
     size = in4.tellg();
@@ -1199,7 +1149,6 @@ graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
       uintT o = offsets[i];
       uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setInDegree(l);
-#ifndef WEIGHTED
       if (l == 0) {
         v[i].setInNeighbors(0);
       } else if (l <= 2) {
@@ -1209,22 +1158,14 @@ graph<vertex> readGraphMinivertex2(char* iFile, bool isSymmetric, bool isMmap) {
         uintE* nebrs = (uintE*)(inEdges+o);
         v[i].setInNeighbors(nebrs);
       }
-#else
-      v[i].setInNeighbors((intE*)(inEdges+2*o));
-#endif
     }}
     time.reportNext("Load InNeighbors Time");
     reporter.reportNext("Load InNeighbors Space");
   }
   free(offsets);
   free(voffsets);
-#ifndef WEIGHTED
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
   return graph<vertex>(v,n,m,mem);
-#else
-  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
-  return graph<vertex>(v,n,m,mem);
-#endif
 }
 
 template <class vertex>
@@ -1262,11 +1203,7 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
   in2.seekg(0, ios::end);
   long size = in2.tellg();
   in2.seekg(0);
-#ifdef WEIGHTED
-  long m = size/(2*sizeof(uint));
-#else
   long m = size/sizeof(uint);
-#endif
   in2.close();
   time.reportNext("This shouldn't take long");
   uintE* edges = (uintE*) getFileData(adjFile, size, 1); // -m for read file by mmap
@@ -1300,20 +1237,11 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
   std::cout << "Allocate vertex metadata: " << B2GB(size) << "GB" << std::endl;
 #endif
 
-#ifdef WEIGHTED
-  intE* edgesAndWeights = newA(intE,2*m);
-  {parallel_for(long i=0;i<m;i++) {
-    edgesAndWeights[2*i] = edges[i];
-    edgesAndWeights[2*i+1] = edges[i+m];
-    }}
-  //free(edges);
-#endif
   {parallel_for(long i=0;i<n;i++) {
     uintT o = offsets[i];
     uintT l = offsets[i+1]-offsets[i];
     // uintT l = ((i==n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setOutDegree(l);
-#ifndef WEIGHTED
       if (l == 0) {
         v[i].setOutNeighbors(0);
       } else if (l <= 2) {
@@ -1328,9 +1256,6 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
         uintE* nebrs = (uintE*)(edges+o);
         v[i].setOutNeighbors(nebrs);
       }
-#else
-      v[i].setOutNeighbors(edgesAndWeights+2*o);
-#endif
     }}
   time.reportNext("Load OutNeighbors Time");
   reporter.reportNext("Load OutNeighbors Space");
@@ -1347,11 +1272,7 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
     strcat(ridxFile, iFile);
     strcat(ridxFile, suffix);
 
-#ifndef WEIGHTED
     uintE* inEdges;
-#else
-    intE* inEdges = newA(intE,2*m);
-#endif
     ifstream in4(radjFile,ifstream::in | ios::binary);
     in4.seekg(0, ios::end);
     size = in4.tellg();
@@ -1381,7 +1302,6 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
       uintT o = offsets[i];
       uintT l = ((i == n-1) ? m : offsets[i+1])-offsets[i];
       v[i].setInDegree(l);
-#ifndef WEIGHTED
       if (l == 0) {
         v[i].setInNeighbors(0);
       } else if (l <= 2) {
@@ -1396,21 +1316,13 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric) {
         uintE* nebrs = (uintE*)(inEdges+o);
         v[i].setInNeighbors(nebrs);
       }
-#else
-      v[i].setInNeighbors((intE*)(inEdges+2*o));
-#endif
     }}
     time.reportNext("Load InNeighbors Time");
     reporter.reportNext("Load InNeighbors Space");
   }
   free(offsets);
-#ifndef WEIGHTED
   Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edges);
   return graph<vertex>(v,n,m,mem);
-#else
-  Uncompressed_Mem<vertex>* mem = new Uncompressed_Mem<vertex>(v,n,m,edgesAndWeights);
-  return graph<vertex>(v,n,m,mem);
-#endif
 }
 
 template <class vertex>
@@ -1488,7 +1400,7 @@ graph<vertex> readCompressedGraph(char* fname, bool isSymmetric, bool mmap) {
   uintT* offsets = (uintT*) (s+3*sizeof(long));
   long skip = 3*sizeof(long) + (n+1)*sizeof(intT);
   uintE* Degrees = (uintE*) (s+skip);
-  skip+= n*sizeof(intE);
+  skip+= n*sizeof(uintE);
   uchar* edges = (uchar*)(s+skip);
 
   uintT* inOffsets;
