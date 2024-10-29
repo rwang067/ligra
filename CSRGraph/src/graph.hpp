@@ -377,111 +377,6 @@ public:
         std::cout << "====================end====================" << std::endl;
     }
 
-    inline void count_degree() {
-        char* buf_idx = 0, *buf_adj = 0;
-
-        if (is_out_graph) {
-            std::cout << "import csr for out graph" << std::endl;
-            // allocate and read for index and csr file
-            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".idx", &buf_idx);
-            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".adj", &buf_adj);
-            // get nverts and nedges
-            nverts = size_idx / sizeof(index_t) - 1;
-            nedges = size_adj / sizeof(vid_t);
-            std::cout << "nverts = " << nverts << ", nedges = " << nedges  << ", average degree = " << nedges * 1.0 / nverts << std::endl;
-
-            csr_idx = (index_t*)buf_idx;
-            csr_adj = (vid_t*)buf_adj;
-        } else {
-            std::cout << "import csr for in graph" << std::endl;
-            size_idx = alloc_and_read_file(filepath + "/" + PREFIX + ".ridx", &buf_idx, (nverts+1)*sizeof(index_t));
-            size_adj = alloc_and_read_file(filepath + "/" + PREFIX + ".radj", &buf_adj);
-
-            csr_idx = (index_t*)buf_idx;
-            csr_adj = (vid_t*)buf_adj;
-            csr_idx[nverts] = nedges;
-        }
-        
-        degree_t D = (1 << threshold);
-        for (vid_t vid = 0; vid < nverts; ++vid) {
-            degree_t deg = csr_idx[vid+1] - csr_idx[vid];
-            if (deg > max_degree) max_degree = deg;
-            if (deg == 0) {
-                V_deg_bucket[0]++;
-                E_deg_bucket[0] += deg;
-                if (degree_list[0].size() < max_count) degree_list[0].push_back(vid);
-            } else if (deg < D) {
-                int level = floor(log2(deg))+1;
-                V_deg_bucket[level]++;
-                E_deg_bucket[level] += deg;
-                if (degree_list[level].size() < max_count) degree_list[level].push_back(vid);
-            } else {
-                V_deg_bucket[threshold+1]++;
-                E_deg_bucket[threshold+1] += deg;
-                if (degree_list[threshold+1].size() < max_count) degree_list[threshold+1].push_back(vid);
-            }
-        }
-        std::cout << V_deg_bucket[threshold+1] << std::endl;
-    }
-
-    inline void print_degree() {
-        degree_t D = (1 << threshold);
-        vid_t vnz = nverts - V_deg_bucket[0];
-        vid_t vaccumulate = 0;
-        index_t eaccumulate = 0;
-
-        if (is_out_graph) std::cout << "====================out graph====================" << std::endl;
-        else std::cout << "====================in graph====================" << std::endl;
-        std::cout << "max degree = " << max_degree << std::endl;
-
-        printf("%-20s\t%-10s\t%-10s\t%-10s\t%-10s\t%-10s\t%-10s\t%-10s\n", "degree", "N(v)", "P(v)", "PNZ(v)", "A(v)", "N(e)", "P(e)", "A(e)");
-
-        printf("%-20s\t%-10u\t%-10.2f\t%-10.2f\t%-10.2f\t%-10lu\t%-10.2f\t%-10.2f\n", 
-            "[0, 1)", 
-            V_deg_bucket[0], V_deg_bucket[0] * 100.0 / nverts, 0.0, 0.0, 
-            E_deg_bucket[0], E_deg_bucket[0] * 100.0 / nedges, eaccumulate * 100.0 / nedges);
-
-        for (degree_t i = 1; i < threshold+1; ++i) {
-            vaccumulate += V_deg_bucket[i];
-            eaccumulate += E_deg_bucket[i];
-            printf("%-20s\t%-10u\t%-10.2f\t%-10.2f\t%-10.2f\t%-10lu\t%-10.2f\t%-10.2f\n", 
-                ("[" + std::to_string(1 << (i-1)) + ", " + std::to_string(1 << i) + ")").c_str(), 
-                V_deg_bucket[i], V_deg_bucket[i] * 100.0 / nverts, V_deg_bucket[i] * 100.0 / vnz, vaccumulate * 100.0 / vnz, 
-                E_deg_bucket[i], E_deg_bucket[i] * 100.0 / nedges, eaccumulate * 100.0 / nedges);
-        }
-        vaccumulate += V_deg_bucket[threshold+1];
-        eaccumulate += E_deg_bucket[threshold+1];
-        printf("%-20s\t%-10u\t%-10.2f\t%-10.2f\t%-10.2f\t%-10lu\t%-10.2f\t%-10.2f\n", 
-            ("[" + std::to_string(D) + ", inf)").c_str(), 
-            V_deg_bucket[threshold+1], V_deg_bucket[threshold+1] * 100.0 / nverts, V_deg_bucket[threshold+1] * 100.0 / vnz, vaccumulate * 100.0 / vnz, 
-            E_deg_bucket[threshold+1], E_deg_bucket[threshold+1] * 100.0 / nedges, eaccumulate * 100.0 / nedges);
-        printf("%-20s\t%-10u\t%-10.2f\t%-10.2f\t%-10.2f\t%-10lu\t%-10.2f\t%-10.2f\n", 
-            "total", nverts, 100.0, 100.0, 100.0, nedges, 100.0, 100.0);
-        std::cout << nverts << " " << nedges << std::endl;
-        std::cout << vaccumulate << " " << eaccumulate << std::endl;
-
-        std::cout << "====================top 10====================" << std::endl;
-        printf("%-20s\n", "degree");
-        printf("%-20s\t", "[0, 1):");
-        for (vid_t i = 0; i < degree_list[0].size(); ++i) {
-            printf("%d ", degree_list[0][i]);
-        }
-        printf("\n");
-        for (degree_t i = 1; i < threshold+1; ++i) {
-            printf("%-20s\t", ("[" + std::to_string(1 << (i-1)) + ", " + std::to_string(1 << i) + "):").c_str());
-            for (vid_t j = 0; j < degree_list[i].size(); ++j) {
-                printf("%d ", degree_list[i][j]);
-            }
-            printf("\n");
-        }
-        printf("%-20s\t", ("[" + std::to_string(D) + ", inf):").c_str());
-        for (vid_t i = 0; i < degree_list[threshold+1].size(); ++i) {
-            printf("%d ", degree_list[threshold+1][i]);
-        }
-        printf("\n");
-        std::cout << "====================end====================" << std::endl;
-    }
-
     inline degree_t get_out_degree(vid_t vid) { 
         if (vertices[vid] == NULL) return 0;
         return vertices[vid]->get_out_degree(); 
@@ -1345,7 +1240,7 @@ public:
         size_t iteration = 0;
         std::cout << "threshold = " << threshold << std::endl;
         std::cout << "vid_list.size() = " << vid_list.size() << std::endl;
-        if (source != -1) {
+        if (source != (uint32_t)-1) {
             vid_t root = source;
             reorder_list[head] = root;
             visited[root] = 1;
@@ -1643,7 +1538,7 @@ public:
         size_t iteration = 0;
         std::cout << "threshold = " << threshold << std::endl;
         std::cout << "vid_list.size() = " << vid_list.size() << std::endl;
-        if (source != -1) {
+        if (source != (uint32_t)-1) {
             vid_t root = source;
             reorder_list[head] = root;
             visited[root] = 1;
@@ -1926,7 +1821,7 @@ public:
         size_t iteration = 0;
         std::cout << "threshold = " << threshold << std::endl;
         std::cout << "vid_list.size() = " << vid_list.size() << std::endl;
-        if (source != -1) {
+        if (source != (uint32_t)-1) {
             vid_t root = source;
             reorder_list[head] = root;
             visited[root] = 1;

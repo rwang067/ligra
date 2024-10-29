@@ -100,7 +100,7 @@ void PBFS(ChunkGraph* snaph, vid_t source, pvector<vid_t> &path_counts,
 
         for (index_t j = 0; j < local_degree; ++j) {
           sid = local_adjlist[j];
-          if ((depths[sid] == -1) &&
+          if ((depths[sid] == (uint32_t)-1) &&
               (compare_and_swap(depths[sid], static_cast<vid_t>(-1), depth))) {
             lqueue.push_back(sid);
           }

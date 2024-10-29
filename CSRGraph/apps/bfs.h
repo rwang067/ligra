@@ -258,7 +258,7 @@ pvector<vid_t> run_bfs(ChunkGraph* snaph, index_t _edge_count, sid_t root, int a
   }
 #pragma omp parallel for
   for (vid_t n = 0; n < snaph->get_vcount(); n++)
-    if (parent[n] < -1)
+    if (parent[n] < (uint32_t)-1)
       parent[n] = -1;
   return parent;
 //  double start, end;

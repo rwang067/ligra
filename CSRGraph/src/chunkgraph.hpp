@@ -438,7 +438,7 @@ public:
         std::cout << "convert graph time = " << end - start << std::endl;
 
         // test
-        if (source != -1) {
+        if (source != (uint32_t)-1) {
             std::cout << "source = " << source << ", reorder source = " << origin2reorder[source] << std::endl;
         }
         vid_t origin_list[5] = {12, 300, 1024, 65535, 1023512};
@@ -506,7 +506,7 @@ public:
         std::cout << "convert graph time = " << end - start << std::endl;
 
         // test
-        if (source != -1) {
+        if (source != (uint32_t)-1) {
             std::cout << "source = " << source << ", reorder source = " << origin2reorder[source] << std::endl;
         }
         vid_t origin_list[5] = {12, 300, 1024, 65535, 1023512};
