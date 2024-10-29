@@ -566,3 +566,47 @@ private:
     reorderidgraph_t* out_graph;
     reorderidgraph_t* in_graph;
 };
+
+
+class MultiLevelGraph : public ConvertGraph {
+public:
+    MultiLevelGraph() {
+        this->out_graph = new multilevelgraph_t(nverts, nedges, true);
+        this->in_graph = new multilevelgraph_t(nverts, nedges, false);
+    }
+    ~MultiLevelGraph() {
+        delete out_graph;
+        delete in_graph;
+    }
+
+    void convert_graph() {
+        double start = mywtime();
+        load_csr(true);
+        load_csr(false);
+        out_graph->init_chunk_allocator();
+        out_graph->convert_graph(csr_idx, csr_adj, csr_idx_in);
+        
+        in_graph->init_chunk_allocator();
+        in_graph->convert_graph(csr_idx_in, csr_adj_in, csr_idx);
+        free_csr(true);
+        free_csr(false);
+        double end = mywtime();
+        ofs << "convert graph time = " << end - start << std::endl;
+        std::cout << "convert graph time = " << end - start << std::endl;
+    }
+
+    void save_graph() {
+        out_graph->save_graph();
+        in_graph->save_graph();
+    }
+
+    vid_t get_vcount() { return out_graph->get_vcount(); }
+    index_t get_ecount() { return out_graph->get_ecount(); }
+    degree_t get_out_degree(vid_t vid) { return out_graph->get_out_degree(vid); }
+    degree_t get_out_nebrs(vid_t vid, vid_t* nebrs) { return out_graph->get_out_nebrs(vid, nebrs); }
+    degree_t get_in_degree(vid_t vid) { return in_graph->get_out_degree(vid); }
+    degree_t get_in_nebrs(vid_t vid, vid_t* nebrs) { return in_graph->get_out_nebrs(vid, nebrs); }
+private:
+    multilevelgraph_t* out_graph;
+    multilevelgraph_t* in_graph;
+};

@@ -171,4 +171,8 @@ void Compute(graph<vertex>& GA, commandLine P) {
 #ifdef VERTEXCUT_PROFILE_EN
   vertexcut_profiler.print_vertexcut_rate();
 #endif
+
+#ifdef CHUNK_PROFILE_EN
+  chunk_profiler.summary_chunk_access();
+#endif
 }

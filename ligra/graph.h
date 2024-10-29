@@ -366,6 +366,15 @@ struct graph {
     vertexcut_profiler.vertex_accessed[thread_id] += 1;
     vertexcut_profiler.check_vertexcut(neighbors, d, inGraph, thread_id);
     #endif
+
+    #ifdef CHUNK_PROFILE_EN
+    #ifdef CHUNK
+    if (d > 2) chunk_profiler.record_chunk_access(neighbors, d, inGraph, thread_id);
+    #else
+    chunk_profiler.record_chunk_access(neighbors, d, inGraph, thread_id);
+    #endif
+    #endif
+
     #endif
     
     return neighbors;

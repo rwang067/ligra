@@ -591,6 +591,7 @@ int parallel_main(int argc, char* argv[]) {
   long dram_2mb = P.getOptionLongValue("-d2mb",16);
   bool isReorderListEnabled = P.getOptionValue("-reorder");
   global_threshold = P.getOptionLongValue("-threshold", 20);
+  bool onlyout = P.getOptionValue("-onlyout");
 
   pid_t pid = getpid();
 #ifdef PAGECACHE
@@ -603,6 +604,7 @@ int parallel_main(int argc, char* argv[]) {
 
   reportInit();
   reportTitle(argv[0], iFile, buffer);
+  std::cout << "threshold: " << global_threshold << std::endl;
 
   size_t vm, rss;
 
@@ -667,7 +669,7 @@ int parallel_main(int argc, char* argv[]) {
 #ifndef HYPER
       startTime();
       graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer,isReorderListEnabled); //asymmetric graph
+        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer,isReorderListEnabled,onlyout); //asymmetric graph
       double time = nextTime("Preload time");
       reportTimeToFile(time);
     

@@ -11,9 +11,10 @@
 #include <vector>
 
 // #define PROFILE_EN
-#define DEBUG_EN
+// #define DEBUG_EN
 // #define ITER_PROFILE_EN
 // #define VERTEXCUT_PROFILE_EN
+// #define CHUNK_PROFILE_EN
 
 class profiler_t {
 public:
@@ -255,6 +256,56 @@ struct vertexcut_profiler_t {
 
 };
 
+struct chunk_profiler_t {
+   #define MAX_THREAD_NUM 96
+   
+   // MAX_THREAD_NUM hashmap, key is the chunk id, value is the number of access.
+   std::unordered_map<uint64_t, uint64_t> chunk_access[MAX_THREAD_NUM];
+   uint64_t total_chunk_access = 0;
+   std::vector<uint64_t>  level_chunk_access;
+
+   uint64_t cross_chunk_access[MAX_THREAD_NUM] = {0};
+   uint64_t _total_cross_chunk_access = 0;
+
+   uintE* out_graph_base_addr = NULL;
+   uintE* in_graph_base_addr = NULL;
+
+   void record_chunk_access(uintE* neighbors, uintE degree, bool inGraph, int thread_id) {
+      uintE* base_addr = inGraph ? in_graph_base_addr : out_graph_base_addr;
+      uint64_t offset = (uint64_t)neighbors - (uint64_t)base_addr;
+      uint64_t start_page = offset / PAGE_SIZE;
+      uint64_t end_page = (offset + degree * sizeof(uintE)) / PAGE_SIZE;
+      for (uint64_t i = start_page; i <= end_page; ++i) {
+         if (chunk_access[thread_id].find(i) == chunk_access[thread_id].end()) {
+            chunk_access[thread_id][i] = 1;
+         } else {
+            chunk_access[thread_id][i]++;
+         }
+      }
+      if (start_page != end_page) {
+         cross_chunk_access[thread_id]++;
+      }
+   }
+
+   void summary_chunk_access() {
+      std::unordered_map<uint64_t, uint64_t> all_chunk_access;
+      for (int i = 0; i < MAX_THREAD_NUM; ++i) {
+         for (auto it = chunk_access[i].begin(); it != chunk_access[i].end(); ++it) {
+            total_chunk_access += it->second;
+            if (all_chunk_access.find(it->first) == all_chunk_access.end()) {
+               all_chunk_access[it->first] = it->second;
+            } else {
+               all_chunk_access[it->first] += it->second;
+            }
+         }
+         _total_cross_chunk_access += cross_chunk_access[i];
+      }
+      printf("Total chunk access times = %lu\n", total_chunk_access);
+      printf("Total number of accessed chunks = %lu\n", all_chunk_access.size());
+      printf("Total cross chunk access times = %lu\n", _total_cross_chunk_access);
+   }
+};
+
 #ifdef PROFILE_EN
 profiler_t profiler = profiler_t(96);
 #endif
@@ -271,4 +322,8 @@ iteration_profiler_t iteration_profiler;
 
 #ifdef VERTEXCUT_PROFILE_EN
 vertexcut_profiler_t vertexcut_profiler;
+#endif
+
+#ifdef CHUNK_PROFILE_EN
+chunk_profiler_t chunk_profiler;
 #endif

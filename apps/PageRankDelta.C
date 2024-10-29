@@ -156,7 +156,7 @@ void Compute(graph<vertex>& GA, commandLine P) {
     size_t vm, rss;
     pid_t pid = getpid();
     process_mem_usage(pid, vm, rss);
-    std::cout << "iteration = " << round << ", L1_norm_prev = " << L1_norm
+    std::cout << "iteration = " << round << ", L1_norm_prev = " << L1_norm << ", number of activated vertices = " << Frontier.numNonzeros()
               << "; memory usage: VM = " << B2GB(vm) << ", RSS = " << B2GB(rss);
     size = Frontier.getMemorySize();
     if (size > max_size) max_size = size;
@@ -188,9 +188,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
   edge_profiler.print_in_edge_access();
 
   stat_profiler.print_total_accessed_edges();
-#endif
 
 #ifdef VERTEXCUT_PROFILE_EN
   vertexcut_profiler.print_vertexcut_rate();
+#endif
+
+#ifdef CHUNK_PROFILE_EN
+  chunk_profiler.summary_chunk_access();
+#endif
 #endif
 }

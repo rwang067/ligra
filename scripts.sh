@@ -6,15 +6,17 @@ USE_CHUNK=1
 debug=false
 cgroup_swap=false
 ligra_mmap=false
-chunkgraph=false
+chunkgraph=true
 minivertex=false # change #define CHUNK_MMAP in graph.h
 minivertex2=false
 minivertex3=false
 minipluxchunk=false
 minipluxchunkreorder=false
-minipluxchunkreorderenable=true
+minipluxchunkreorderenable=false
 multithread=false
 chunkreorderid=false
+debug_thresh=false
+ligra_origin=false
 
 [ $USE_CHUNK -eq 1 ] && export CHUNK=1
 
@@ -23,9 +25,10 @@ CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
 # CPU:use NUMA 0 node, with id 0-23 and 48-71, with taskset command
 # TEST_CPU_SET="taskset --cpu-list 0-95:1"
 TEST_CPU_SET="taskset -c 0-23,48-71:1"
+# TEST_CPU_SET="taskset -c 24-47,72-95:1"
 
-PERF_CACHE_MISS=1
-PERF_PAGECACHE=1
+PERF_CACHE_MISS=0
+PERF_PAGECACHE=0
 [ $PERF_CACHE_MISS -eq 1 ] && export CACHEMISS=1
 [ $PERF_PAGECACHE -eq 1 ] && export PAGECACHE=1
 
@@ -59,6 +62,7 @@ function set_schedule {
 }
 
 set_schedule "dynamic"
+# set_schedule "static"
 
 clear_pagecaches() { 
     echo "zwx.1005" | sudo -S sysctl -w vm.drop_caches=3;
@@ -148,17 +152,25 @@ profile_memory() {
 
     wait $pid
 
-    res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
-    # echo total bytes read in KB and convert to GB
-    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
-    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
+    # if ${log_dir}/${filename}.diskio exists, then profile diskio
+    if [ -f ${log_dir}/${filename}.diskio ]; then
+        res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
+        # echo total bytes read in KB and convert to GB
+        echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+        echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
+    fi
 
     sleep 1s
     echo >> ${log_dir}/${filename}.txt
-    cat ${log_dir}/${filename}.cachemiss >> ${log_dir}/${filename}.txt
+    if [ $PERF_CACHE_MISS -eq 1 ]; then
+        cat ${log_dir}/${filename}.cachemiss >> ${log_dir}/${filename}.txt
+    fi
 
     if $not_save_detail_log; then
-        rm -f ${log_dir}/${filename}.cachemiss ${log_dir}/${filename}.memory ${log_dir}/${filename}.diskio ${log_dir}/${filename}.iostat
+        if [ $PERF_CACHE_MISS -eq 1 ]; then
+            rm -f ${log_dir}/${filename}.cachemiss
+        fi
+        rm -f ${log_dir}/${filename}.memory ${log_dir}/${filename}.diskio ${log_dir}/${filename}.iostat
     fi
 }
 
@@ -183,18 +195,25 @@ profile_performance() {
     echo "pid: " $pid >> ../results/command.log
 
     wait $pid
-
-    res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
-    # echo total bytes read in KB and convert to GB
-    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
-    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
+    
+    if [ -f ${log_dir}/${filename}.diskio ]; then
+        res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
+        # echo total bytes read in KB and convert to GB
+        echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+        echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
+    fi
 
     sleep 1s
     echo >> ${log_dir}/${filename}.txt
-    cat ${log_dir}/${filename}.cachemiss >> ${log_dir}/${filename}.txt
+    if [ $PERF_CACHE_MISS -eq 1 ]; then
+        cat ${log_dir}/${filename}.cachemiss >> ${log_dir}/${filename}.txt
+    fi
 
     if $not_save_detail_log; then
-        rm -f ${log_dir}/${filename}.cachemiss ${log_dir}/${filename}.diskio ${log_dir}/${filename}.iostat
+        if [ $PERF_CACHE_MISS -eq 1 ]; then
+            rm -f ${log_dir}/${filename}.cachemiss
+        fi
+        rm -f ${log_dir}/${filename}.diskio ${log_dir}/${filename}.iostat
     fi
 }
 
@@ -406,8 +425,9 @@ if $ligra_mmap; then
             '256'   # kron30
             '256')  # yahoo
 
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in 0;
+    for idx in {0,1,2,4,6,5};
+    # for idx in {5,6};
+    # for idx in 6;
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -427,18 +447,6 @@ if $ligra_mmap; then
         echo -n "Memory Bound: "
         echo ${memory_bound[@]}
 
-        make PageRankDelta
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./PageRankDelta -b -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_mmap_prd_${base_bound[$mem]}"
-            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
-
         # make BFS
         # for ((mem=0;mem<$len;mem++))
         # do
@@ -447,9 +455,11 @@ if $ligra_mmap; then
         #     filename="${name[${idx}]}_mmap_bfs_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
+
 
         # make BC
         # for ((mem=0;mem<$len;mem++))
@@ -459,19 +469,21 @@ if $ligra_mmap; then
         #     filename="${name[${idx}]}_mmap_bc_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
 
-        # make PageRank
+        # make PageRankDelta
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./PageRank -b -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_mmap_pr_${base_bound[$mem]}"
+        #     commandargs="./PageRankDelta -b -onlyout -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_mmap_prd_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
 
@@ -495,21 +507,27 @@ if $ligra_mmap; then
         #     filename="${name[${idx}]}_mmap_kc_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
 
-        # make Radii
-        # for ((mem=0;mem<$len;mem++))
-        # do
-        #     clear_pagecaches
-        #     commandargs="./Radii -b -buffer ${base_bound[$mem]} ${data[${idx}]} "
-        #     filename="${name[${idx}]}_mmap_radii_${base_bound[$mem]}"
-        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+        make Radii
+        # gdb --args ./Radii -b -threshold 5 -onlyout -buffer ${base_bound[$mem]} ${data[${idx}]}
+        # exit
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./Radii -b -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+            filename="${name[${idx}]}_mmap_radii_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-        #     wait
-        # done
+            # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        # exit
 
         # make MIS
         # for ((mem=0;mem<$len;mem++))
@@ -520,6 +538,19 @@ if $ligra_mmap; then
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
         #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     wait
+        # done
+
+        # make BellmanFord
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BellmanFord -b -r ${rts[$idx]} -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_mmap_bf_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
     done
@@ -548,19 +579,22 @@ if $chunkgraph; then
             '6 8 16 20 256'  # ukdomain
             '12 16 24 32 40 256'    # kron28
             '32 48 56 64 80 256'    # kron29
-            '64 80 96 256'  # kron30
-            '48 56 64 72 80 96 256')    # yahoo
+            '64 72 80 88 96 256'  # kron30
+            '88 96 256')    # yahoo
 
-    bounds=('256'
-            '256'
-            '256'
-            '256'
-            '256'
-            '256'
-            '256')
+    # bounds=('256'
+    #         '256'
+    #         '256'
+    #         '256'
+    #         '256'
+    #         '256'
+    #         '256')
 
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in 6;
+    data[5]=/mnt/nvme1/zorax/debug/kron30/kron30
+
+    # for idx in {0,1,2,4,5,6};
+    # for idx in {5,6};
+    for idx in 5;
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -579,23 +613,11 @@ if $chunkgraph; then
         echo -n "Memory Bound: "
         echo ${memory_bound[@]}
 
-        make PageRankDelta
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./PageRankDelta -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_prd_${base_bound[$mem]}"
-            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
-
         # make BFS
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
         #     filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -603,49 +625,48 @@ if $chunkgraph; then
         #     wait
         # done
 
-        # exit
+        make BC
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        # make BC
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
+
+        # make PageRankDelta
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+        #     commandargs="./PageRankDelta -b -chunk -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_prd_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
+        #     # profile_performance "\${commandargs}" "\${filename}"
         #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
         #     wait
         # done
 
-        # make PageRank
-        # for ((mem=0;mem<$len;mem++))
-        # do
-        #     clear_pagecaches
-        #     commandargs="./PageRank -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}"
-        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+        # # make Components
+        # # for ((mem=0;mem<$len;mem++))
+        # # do
+        # #     clear_pagecaches
+        # #     commandargs="./Components -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        # #     filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
+        # #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-        #     wait
-        # done
-
-        # make Components
-        # for ((mem=0;mem<$len;mem++))
-        # do
-        #     clear_pagecaches
-        #     commandargs="./Components -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
-        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-        #     wait
-        # done
+        # #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        # #     wait
+        # # done
         
         # make KCore
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./KCore -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     commandargs="./KCore -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
         #     filename="${name[${idx}]}_chunk_kc_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -657,7 +678,7 @@ if $chunkgraph; then
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./Radii -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+        #     commandargs="./Radii -b -chunk -threshold 10 -buffer ${base_bound[$mem]} ${data[${idx}]} "
         #     filename="${name[${idx}]}_chunk_radii_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
@@ -665,17 +686,31 @@ if $chunkgraph; then
         #     wait
         # done
 
-        # make MIS
+        # # make MIS
+        # # for ((mem=0;mem<$len;mem++))
+        # # do
+        # #     clear_pagecaches
+        # #     commandargs="./MIS -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+        # #     filename="${name[${idx}]}_chunk_mis_${base_bound[$mem]}"
+        # #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        # #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        # #     wait
+        # # done
+
+        # make BellmanFord
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./MIS -b -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]} "
-        #     filename="${name[${idx}]}_chunk_mis_${base_bound[$mem]}"
+        #     commandargs="./BellmanFord -b -r ${rts[$idx]} -chunk -threshold 20 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_bf_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     # profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
+
     done
 fi
 
@@ -685,7 +720,7 @@ if $minivertex; then
 
     cd apps && make clean
 
-    DATA_PATH=/mnt/nvme1/zorax/minivertex/
+    DATA_PATH=/mnt/nvme2/zorax/minivertex/
     data[0]=${DATA_PATH}${name[0]}/${name[0]}
     data[1]=${DATA_PATH}${name[1]}/${name[1]}
     data[2]=${DATA_PATH}${name[2]}/${name[2]}
@@ -694,14 +729,14 @@ if $minivertex; then
     data[5]=${DATA_PATH}${name[5]}/${name[5]}
     data[6]=${DATA_PATH}${name[6]}/${name[6]}
 
-    # outputFile="../results/ligra_mmap_query_time.csv"
-    outputFile="../results/hierg_query_time.csv"
+    outputFile="../results/ligra_mmap_query_time.csv"
+    # outputFile="../results/hierg_query_time.csv"
     title="Minivertex"
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
 
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in 6;
+    # for idx in {0,1,2,3,4,5,6};
+    for idx in {5,6};
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -795,7 +830,7 @@ if $minipluxchunk; then
 
     cd apps && make clean
 
-    DATA_PATH=/mnt/nvme1/zorax/minipluschunk/
+    DATA_PATH=/mnt/nvme2/zorax/minipluschunk/
     data[0]=${DATA_PATH}${name[0]}/${name[0]}
     data[1]=${DATA_PATH}${name[1]}/${name[1]}
     data[2]=${DATA_PATH}${name[2]}/${name[2]}
@@ -809,8 +844,9 @@ if $minipluxchunk; then
     cur_time=$(date "+%Y-%m-%d %H:%M:%S")
     echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
 
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in 6;
+    # for idx in {0,1,2,4,5,6};
+    # for idx in {5,6};
+    for idx in 6;
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -823,78 +859,89 @@ if $minipluxchunk; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./BFS -b -r ${rts[$idx]} -chunk ${data[${idx}]}"
+            commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 20 ${data[${idx}]}"
             filename="${name[${idx}]}_minipluschunk_bfs"
 
             profile_performance "\${commandargs}" "\${filename}"
             wait
         done
 
-        make BC
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./BC -b -r ${rts[$idx]} -chunk ${data[${idx}]}"
-            filename="${name[${idx}]}_minipluschunk_bc"
+        # make BC
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 20 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minipluschunk_bc"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make PageRank
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./PageRank -b -chunk ${data[${idx}]}"
-            filename="${name[${idx}]}_minipluschunk_pr"
+        # make PageRankDelta
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./PageRankDelta -b -chunk -onlyout -threshold 20 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minipluschunk_prd"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make Components
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./Components -b -chunk ${data[${idx}]}"
-            filename="${name[${idx}]}_minipluschunk_cc"
+        # make Components
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./Components -b -chunk -threshold 20 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minipluschunk_cc"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
         
-        make KCore
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./KCore -b -chunk -maxk ${kcore_iter[$idx]} ${data[${idx}]}"
-            filename="${name[${idx}]}_minipluschunk_kc"
+        # make KCore
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./KCore -b -chunk -threshold 20 -maxk ${kcore_iter[$idx]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minipluschunk_kc"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make Radii
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./Radii -b -chunk ${data[${idx}]} "
-            filename="${name[${idx}]}_minipluschunk_radii"
+        # make Radii
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./Radii -b -chunk -threshold 20 ${data[${idx}]} "
+        #     filename="${name[${idx}]}_minipluschunk_radii"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make MIS
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./MIS -b -chunk ${data[${idx}]} "
-            filename="${name[${idx}]}_minipluschunk_mis"
+        # make MIS
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./MIS -b -chunk -threshold 20 ${data[${idx}]} "
+        #     filename="${name[${idx}]}_minipluschunk_mis"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+
+        # make BellmanFord
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BellmanFord -b -r ${rts[$idx]} -chunk -threshold 20 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minipluschunk_bf"
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
     done
 fi
 
@@ -1291,6 +1338,7 @@ if $minivertex3; then
     echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
 
     # for idx in {0,1,2,3,4,5,6};
+    # for idx in {5,6};
     for idx in 6;
     do
         echo -n "Data: "
@@ -1300,82 +1348,93 @@ if $minivertex3; then
 
         len=1
 
-        make BFS
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./BFS -b -r ${rts[$idx]} -chunk -j 4 ${data[${idx}]}"
-            filename="${name[${idx}]}_minivertex_bfs"
+        # make BFS
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BFS -b -r ${rts[$idx]} -chunk -j 4 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minivertex_bfs"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make BC
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./BC -b -r ${rts[$idx]} -chunk -j 4 ${data[${idx}]}"
-            filename="${name[${idx}]}_minivertex_bc"
+        # make BC
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BC -b -r ${rts[$idx]} -chunk -j 4 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minivertex_bc"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make PageRank
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./PageRank -b -chunk -j 4 ${data[${idx}]}"
-            filename="${name[${idx}]}_minivertex_pr"
+        # make PageRankDelta
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./PageRankDelta -b -chunk -onlyout -j 4 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minivertex_pr"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
-        make Components
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./Components -b -chunk -j 4 ${data[${idx}]}"
-            filename="${name[${idx}]}_minivertex_cc"
+        # make Components
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./Components -b -chunk -j 4 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minivertex_cc"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
         
-        make KCore
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./KCore -b -maxk ${kcore_iter[$idx]} -chunk -j 4 ${data[${idx}]}"
-            filename="${name[${idx}]}_minivertex_kc"
+        # make KCore
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./KCore -b -maxk ${kcore_iter[$idx]} -chunk -j 4 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minivertex_kc"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
         make Radii
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./Radii -b -chunk -j 4 ${data[${idx}]} "
+            commandargs="./Radii -b -threshold 5 -chunk -j 4 ${data[${idx}]} "
             filename="${name[${idx}]}_minivertex_radii"
 
             profile_performance "\${commandargs}" "\${filename}"
             wait
         done
 
-        make MIS
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./MIS -b -chunk -j 4 ${data[${idx}]} "
-            filename="${name[${idx}]}_minivertex_mis"
+        # make MIS
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./MIS -b -chunk -j 4 ${data[${idx}]} "
+        #     filename="${name[${idx}]}_minivertex_mis"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+
+        # make BellmanFord
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BellmanFord -b -r ${rts[$idx]} -chunk -j 4 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_minivertex_bf"
+        
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
     done
 fi
 
@@ -1609,6 +1668,18 @@ if $chunkreorderid; then
         done
         echo -n "Memory Bound: "
         echo ${memory_bound[@]}
+        
+        make PageRankDelta
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./PageRankDelta -b -chunk -onlyout -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_prd_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
 
         # make BFS
         # for ((mem=0;mem<$len;mem++))
@@ -1634,41 +1705,198 @@ if $chunkreorderid; then
         #     wait
         # done
 
-        make PageRank
-        for ((mem=0;mem<$len;mem++))
+        # make PageRank
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./PageRank -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     wait
+        # done
+
+        # exit
+
+        # make Components
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./Components -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     wait
+        # done
+        
+        # make KCore
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./KCore -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_kc_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     wait
+        # done
+
+        # make Radii
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./Radii -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+        #     filename="${name[${idx}]}_chunk_radii_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     wait
+        # done
+
+        # make MIS
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./MIS -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+        #     filename="${name[${idx}]}_chunk_mis_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     wait
+        # done
+    done
+fi
+
+if $debug_thresh; then
+    log_time=$(date "+%Y%m%d_%H%M%S")
+    mkdir -p results/logs/${log_time}
+    cd apps && make clean
+
+    # data[0]=/mnt/nvme1/zorax/debug/kron30_0/kron30
+    # data[1]=/mnt/nvme1/zorax/debug/kron30_25/kron30
+    # data[2]=/mnt/nvme1/zorax/chunks/kron30/kron30
+    # data[3]=/mnt/nvme1/zorax/debug/yahoo_10/yahoo
+    # data[4]=/mnt/nvme1/zorax/debug/yahoo_25/yahoo
+    # data[5]=/mnt/nvme1/zorax/debug/yahoo_50/yahoo
+
+    # name[0]=kron30_0
+    # name[1]=kron30_25
+    # name[2]=kron30_95
+    # name[3]=yahoo_10
+    # name[4]=yahoo_25
+    # name[5]=yahoo_50
+
+    # rts[0]=233665123
+    # rts[1]=233665123
+    # rts[2]=233665123
+    # rts[3]=35005211
+    # rts[4]=35005211
+    # rts[5]=35005211
+
+    data[0]=/mnt/nvme1/zorax/debug/twitter_10/twitter
+    data[1]=/mnt/nvme1/zorax/debug/friendster_10/friendster
+    data[2]=/mnt/nvme1/zorax/debug/ukdomain_10/ukdomain
+    data[3]=/mnt/nvme1/zorax/debug/kron29_10/kron29
+    data[4]=/mnt/nvme1/zorax/debug/yahoo_10/yahoo
+    data[5]=/mnt/nvme1/zorax/debug/kron30_10/kron30
+
+    # roots:        TT   FS     UK     K29       YW       K30
+    declare -a rts=(12 801109 5699262  310059974 35005211 233665123)
+
+    declare -a kcore_iter=(10 10 10 3 3 3)
+    
+    outputFile="../results/hierg_query_time.csv"
+    title="ChunkGraph-Debug"
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
+
+    bounds=('256'
+            '256'
+            '256'
+            '256'
+            '256'
+            '256'
+            '256'
+            '256')
+
+    # for idx in 5;
+    for idx in {3,4,5};
+    do
+        base_bound=${bounds[$idx]}
+        base_bound=($base_bound)
+        echo -n "Base Bound: "
+        echo ${base_bound[@]}
+        len=${#base_bound[@]}
+        for ((i=0;i<$len;i++))
         do
-            clear_pagecaches
-            commandargs="./PageRank -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_pr_${base_bound[$mem]}"
-            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-
-            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-            wait
+            memory_bound[$i]=$((${base_bound[$i]}*1024*1024*1024))
         done
+        echo -n "Memory Bound: "
+        echo ${memory_bound[@]}
 
-        exit
+        # make BFS
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+
+        # make BC
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_bc_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+
+        # exit
+
+        # make PageRankDelta
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./PageRankDelta -b -chunk -buffer -onlyout ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_prd_${base_bound[$mem]}"
+        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
         make Components
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./Components -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./Components -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            profile_performance "\${commandargs}" "\${filename}"
             wait
         done
+
+        continue
         
         make KCore
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./KCore -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            commandargs="./KCore -maxk ${kcore_iter[$idx]} -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_kc_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            profile_performance "\${commandargs}" "\${filename}"
             wait
         done
 
@@ -1676,11 +1904,11 @@ if $chunkreorderid; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./Radii -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+            commandargs="./Radii -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
             filename="${name[${idx}]}_chunk_radii_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            profile_performance "\${commandargs}" "\${filename}"
             wait
         done
 
@@ -1688,11 +1916,121 @@ if $chunkreorderid; then
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./MIS -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+            commandargs="./MIS -b -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
             filename="${name[${idx}]}_chunk_mis_${base_bound[$mem]}"
             echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+    done
+fi
+
+if $ligra_origin; then
+    log_time=$(date "+%Y%m%d_%H%M%S")
+    mkdir -p results/logs/${log_time}
+    cd apps && make clean
+
+    DATA_PATH=/mnt/nvme1/zorax/datasets/
+    data[0]=${DATA_PATH}csr_bin/Twitter/${name[0]}
+    data[1]=${DATA_PATH}csr_bin/Friendster/${name[1]}
+    data[2]=${DATA_PATH}csr_bin/Ukdomain/${name[2]}
+    data[3]=${DATA_PATH}csr_bin/Kron28/${name[3]}
+    data[4]=${DATA_PATH}csr_bin/Kron29/${name[4]}
+    data[5]=${DATA_PATH}csr_bin/Kron30/${name[5]}
+    data[6]=${DATA_PATH}csr_bin/Yahoo/${name[6]}
+
+    outputFile="../results/ligra_mmap_query_time.csv"
+    # outputFile="../results/hierg_query_time.csv"
+    title="Ligra-Original"
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
+
+    # for idx in {0,1,2,3,4,5,6}; 
+    for idx in {1,2,4}
+    # for idx in 6;
+    do
+        echo -n "Data: "
+        echo ${data[$idx]}
+        echo -n "Root: "
+        echo ${rts[$idx]}
+
+        len=1
+
+        make BFS
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./BFS -b -r ${rts[$idx]} -j 5 -threshold 20 ${data[${idx}]}"
+            filename="${name[${idx}]}_ligra_bfs"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make BC
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./BC -b -r ${rts[$idx]} -j 5 -threshold 20 ${data[${idx}]}"
+            filename="${name[${idx}]}_ligra_bc"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make PageRankDelta
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./PageRankDelta -b -j 5 -threshold 20 ${data[${idx}]}"
+            filename="${name[${idx}]}_ligra_prd"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make Components
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./Components -b -j 5 -threshold 20 ${data[${idx}]}"
+            filename="${name[${idx}]}_ligra_cc"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make KCore
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./KCore -b -maxk ${kcore_iter[$idx]} -j 5 -threshold 20 ${data[${idx}]}"
+            filename="${name[${idx}]}_ligra_kc"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make Radii
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./Radii -b -j 5 -threshold 20 ${data[${idx}]} "
+            filename="${name[${idx}]}_ligra_radii"
+
+            profile_performance "\${commandargs}" "\${filename}"
+            wait
+        done
+
+        make MIS
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./MIS -b -j 5 -threshold 20 ${data[${idx}]} "
+            filename="${name[${idx}]}_ligra_mis"
+
+            profile_performance "\${commandargs}" "\${filename}"
             wait
         done
     done

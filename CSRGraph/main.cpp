@@ -11,8 +11,8 @@ int main(int argc, const char ** argv)
     case 1: {
         CSRGraph *csrgraph = new CSRGraph();
         // csrgraph->import_graph();
-        // csrgraph->count_degree();
-        csrgraph->convert_blaze();
+        csrgraph->count_degree();
+        // csrgraph->convert_blaze();
         test_out_neighbors(csrgraph);
         test_in_neighbors(csrgraph);
         test_graph_benchmarks(csrgraph);
@@ -120,6 +120,29 @@ int main(int argc, const char ** argv)
         test_in_neighbors(reorderidgraph);
         test_graph_benchmarks(reorderidgraph);
         delete reorderidgraph;
+        break;
+    }
+    case 12: {
+        MAX_LEVEL = 3;
+        MultiLevelGraph *multigraph = new MultiLevelGraph();
+        multigraph->convert_graph();
+        multigraph->save_graph();
+        test_out_neighbors(multigraph);
+        test_in_neighbors(multigraph);
+        test_graph_benchmarks(multigraph);
+        delete multigraph;
+        break;
+    }
+
+    case 13: {
+        MAX_LEVEL = 5;
+        MultiLevelGraph *multigraph = new MultiLevelGraph();
+        multigraph->convert_graph();
+        multigraph->save_graph();
+        test_out_neighbors(multigraph);
+        test_in_neighbors(multigraph);
+        test_graph_benchmarks(multigraph);
+        delete multigraph;
         break;
     }
     

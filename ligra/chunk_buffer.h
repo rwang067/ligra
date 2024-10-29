@@ -58,6 +58,7 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0, bool i
     in.read(addr,size);
     in.close();
   } else {
+    if (size == 0) return NULL;
     int fd = open(filename, O_RDWR|O_CREAT, 00777);
     if(fd == -1){
       std::cout << "Could not open file for :" << filename << " error: " << strerror(errno) << std::endl;
@@ -82,6 +83,34 @@ char* getFileData(const char* filename, size_t size = 0, bool isMmap = 0, bool i
     //   preada(fd, addr, size, 0);
     // }
   }
+  return addr;
+}
+
+char* getFileDataHuge(const char* filename, size_t size = 0, bool isProfile = 0) {
+  char* addr = 0;
+  if (size == 0) return NULL;
+  int fd = open(filename, O_RDWR|O_CREAT, 00777);
+  if(fd == -1){
+    std::cout << "Could not open file for :" << filename << " error: " << strerror(errno) << std::endl;
+    exit(1);
+  }
+  if(ftruncate(fd, size) == -1){
+    std::cout << "Could not ftruncate file for :" << filename << " error: " << strerror(errno) << std::endl;
+    close(fd);
+    exit(1);
+  }
+  addr = (char*)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED|MAP_HUGETLB|MAP_HUGE_2MB, fd, 0);
+  if(addr == MAP_FAILED) {	
+    std::cout << "Could not mmap file for :" << filename << " error: " << strerror(errno) << std::endl;
+    close(fd);
+    exit(1);
+  } else {
+    std::cout << "mmap succeeded, size = " << B2GB(size) << "GB, filename = " << filename << std::endl;
+    std::cout << "size = " << size << ", addr = " << (void*)addr << std::endl;
+  }
+  // if (isProfile) {
+  //   preada(fd, addr, size, 0);
+  // }
   return addr;
 }
 
@@ -465,7 +494,9 @@ public:
     addr = (char*)getFileData(chunkFile.c_str(), chunk_sz * nchunks, 1);
   }
   inline uintE* getWithmmap(cid_t cid, uint32_t coff) {
-    return (uintE*)((char*)addr + cid * chunk_sz + coff);
+    #define HUGE_PAGE_SIZE 2097152 // 2MB
+    if (chunk_sz >= HUGE_PAGE_SIZE) return (uintE*)((char*)addr + cid * chunk_sz + coff);
+    else return (uintE*)((char*)addr + cid * chunk_sz + coff);
   }
 
   inline void loadWithDIO() {
@@ -559,6 +590,7 @@ private:
   SuperVertexManager* svManager[DIRECT_GRAPH];
   // reorder list
   bool reorderListEnable = 1;
+  bool onlyout = 0;
   uintE* reorderList[DIRECT_GRAPH];
 
 public:
@@ -595,18 +627,19 @@ public:
     svManager[0] = new SuperVertexManager(reader->svFile, reader->sv_size);
     svManager[0]->readGraph();
 
-    // read InGraph
-    chunkManager[1] = (ChunkManager**)calloc(reader->level, sizeof(ChunkManager*));
-    for (long i = 0; i < reader->level; i++) {
-      std::string chunkFile = reader->rchunkFile + std::to_string(i);
-      std::cout << "chunkFile = " << chunkFile << std::endl;
-      chunkManager[1][i] = new ChunkManager(chunkFile, reader->rchunk_sz[i], reader->rnchunks[i], i);
-      chunkManager[1][i]->readGraph();
+    if (!onlyout) {
+      // read InGraph
+      chunkManager[1] = (ChunkManager**)calloc(reader->level, sizeof(ChunkManager*));
+      for (long i = 0; i < reader->level; i++) {
+        std::string chunkFile = reader->rchunkFile + std::to_string(i);
+        std::cout << "chunkFile = " << chunkFile << std::endl;
+        chunkManager[1][i] = new ChunkManager(chunkFile, reader->rchunk_sz[i], reader->rnchunks[i], i);
+        chunkManager[1][i]->readGraph();
+      }
+
+      svManager[1] = new SuperVertexManager(reader->rsvFile, reader->rsv_size);
+      svManager[1]->readGraph();
     }
-
-    svManager[1] = new SuperVertexManager(reader->rsvFile, reader->rsv_size);
-    svManager[1]->readGraph();
-
     // read reorder list
     if (reorderListEnable) {
       uintE* addr = (uintE*)getFileData(reader->reorderListFile.c_str(), reader->n * sizeof(uintE) * 2, 0, 1);
@@ -630,6 +663,8 @@ public:
 
   inline void setReorderListEnable(bool enable) { reorderListEnable = enable; }
   inline bool getReorderListEnable() { return reorderListEnable; }
+  inline void setOnlyOut(bool onlyout) { this->onlyout = onlyout; }
+  inline bool getOnlyOut() { return onlyout; }
   inline uintE* getReorderList(bool inGraph) { return reorderList[inGraph]; }
   inline uintE getReorderListElement(bool inGraph, uintE i) { return reorderList[inGraph][i]; }
   

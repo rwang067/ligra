@@ -159,9 +159,13 @@ void Compute(graph<vertex>& GA, commandLine P) {
   edge_profiler.print_in_edge_access();
 
   stat_profiler.print_total_accessed_edges();
-#endif 
 
 #ifdef VERTEXCUT_PROFILE_EN
   vertexcut_profiler.print_vertexcut_rate();
 #endif
+
+#ifdef CHUNK_PROFILE_EN
+  chunk_profiler.summary_chunk_access();
+#endif
+#endif 
 }

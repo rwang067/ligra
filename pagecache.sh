@@ -19,4 +19,4 @@ result_dir=$(ls -td ${result_dir}/*/ | head -1)
 filename=$(ls -t ${result_dir} | head -1 | cut -d'.' -f1)
 
 # Get the cache miss performance for pid
-sudo python3 /usr/share/bcc/tools/cachetop -p $pid 1 > ${result_dir}/${filename}.pagecache &
+echo "zwx.1005" | sudo -S python3 /usr/share/bcc/tools/cachetop -p $pid 1 > ${result_dir}/${filename}.pagecache &

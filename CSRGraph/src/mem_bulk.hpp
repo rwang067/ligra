@@ -320,3 +320,185 @@ private:
     hub_bulk_t* hub_bulk;
     size_t max_csize;
 };
+
+class multilevel_t : public chunk_t {
+private:
+
+    struct sblk_bulk_t {
+        char* addr;
+        size_t size;
+        char* chunk;
+        size_t current_csize;
+
+        inline void init() {
+            addr = NULL;
+            size = 0;
+            chunk = NULL;
+            current_csize = 0;
+        }
+    };
+
+    struct hub_bulk_t {
+        char* addr;
+        size_t size;
+
+        inline void init() {
+            addr = NULL;
+            size = 0;
+        }
+    };
+
+public:
+    multilevel_t();
+    multilevel_t(mempool_t** _sblk_pools, uint32_t LEVEL) : chunk_t(_sblk_pools) {
+        MAX_LEVEL = LEVEL;
+        sblk_bulk = (sblk_bulk_t**)calloc(sizeof(sblk_bulk_t*), MAX_LEVEL-1);
+        for (uint32_t level = 0; level < MAX_LEVEL-1; ++level) {
+            sblk_bulk[level] = (sblk_bulk_t*)calloc(sizeof(sblk_bulk_t), THD_COUNT);
+        }
+        
+        hub_bulk = (hub_bulk_t*)calloc(sizeof(hub_bulk_t), THD_COUNT);
+
+        max_csize = (size_t*)calloc(sizeof(size_t), MAX_LEVEL-1);
+
+        max_csize[0] = 4 * KB;
+        max_csize[1] = 32 * KB;
+        max_csize[2] = 256 * KB;
+        max_csize[3] = 2 * MB;
+
+        fragment_chunks = (size_t*)calloc(sizeof(size_t), MAX_LEVEL-1);
+        fragment_size = (size_t*)calloc(sizeof(size_t), MAX_LEVEL-1);
+
+        for(tid_t tid = 0; tid < THD_COUNT; ++tid) {
+            for (uint32_t level = 0; level < MAX_LEVEL-1; ++level) {
+                sblk_bulk[level][tid].init();
+            }
+            hub_bulk[tid].init();
+        }
+    }
+
+    void allocate_new_bulk(uint32_t level) {
+        sblk_bulk_t* bulk = sblk_bulk[level] + omp_get_thread_num();
+        size_t remain_size = sblk_pools[level]->get_remained(); 
+        if (remain_size < MEM_BULK_SIZE) {
+            logstream(LOG_DEBUG) << "No remaining space in sblk pool!" << std::endl;
+            sblk_pools[level]->print_usage();
+            exit(0);
+        }
+        bulk->addr = (char*)sblk_pools[level]->alloc(MEM_BULK_SIZE);
+        if (bulk->addr == NULL) {
+            logstream(LOG_DEBUG) << "Fail to allocate space in sblk pool!" << std::endl;
+            sblk_pools[level]->print_usage();
+            exit(0);
+        }
+        bulk->size = MEM_BULK_SIZE;
+    }
+
+    void allocate_new_chunk(size_t size, uint32_t level) {
+        sblk_bulk_t* bulk = sblk_bulk[level] + omp_get_thread_num();
+        if (bulk->size < size) {
+            // logstream(LOG_DEBUG) << "No remaining space in the current sblk bulk!" << std::endl;
+            // if (size > MEM_BULK_SIZE) {
+            //     logstream(LOG_DEBUG) << "The chunk size is too large!" << std::endl;
+            //     exit(0);
+            // }
+            allocate_new_bulk(level);
+        }
+        // assert(bulk->addr != NULL);
+        bulk->chunk = bulk->addr;
+        bulk->current_csize = 0;
+        bulk->addr += size;
+        bulk->size -= size;
+    }
+
+    inline void allocate_hub(size_t size) {
+        size_t remain_size = sblk_pools[MAX_LEVEL-1]->get_remained();
+        if (remain_size < size) {
+            logstream(LOG_DEBUG) << "No remaining space in hub pool!" << std::endl;
+            sblk_pools[MAX_LEVEL-1]->print_usage();
+            exit(0);
+        }
+        hub_bulk_t* hub = hub_bulk + omp_get_thread_num();
+        hub->addr = (char*)sblk_pools[MAX_LEVEL-1]->alloc(size);
+        if (hub->addr == NULL) {
+            logstream(LOG_DEBUG) << "Fail to allocate space in hub pool!" << std::endl;
+            sblk_pools[MAX_LEVEL-1]->print_usage();
+            exit(0);
+        }
+        hub->size = size;
+    }
+
+    inline cpos_t allocate_super(size_t vsize, vid_t** adjlist) {
+        hub_bulk_t* hub = hub_bulk + omp_get_thread_num();
+        if (hub->addr == NULL || hub->size < vsize) {
+            allocate_hub(vsize);
+        }
+        *adjlist = (vid_t*)(hub->addr);
+        hub->size -= vsize;
+        cpos_t offset = hub->addr - sblk_pools[MAX_LEVEL-1]->get_base();
+        hub->addr += vsize;
+        return offset;
+    }
+
+    inline cpos_t allocate_medium(size_t vsize, vid_t** adjlist, uint32_t level) {
+        sblk_bulk_t* bulk = sblk_bulk[level] + omp_get_thread_num();
+        
+        if (bulk->chunk == NULL || bulk->current_csize + vsize > max_csize[level]) {
+            if (bulk->current_csize != max_csize[level]) {
+                fragment_chunks[level]++;
+                fragment_size[level] += (max_csize[level] - bulk->current_csize);
+            }
+            allocate_new_chunk(max_csize[level], level);
+        }
+
+        cpos_t chunk_id = (bulk->chunk - sblk_pools[level]->get_base()) / max_csize[level];
+        cpos_t offset = bulk->current_csize;
+        *adjlist = (vid_t*)((char*)bulk->chunk + offset);
+
+        bulk->current_csize += vsize;
+        return (chunk_id << 32) | offset;
+    }
+
+    size_t get_chunk_size(uint32_t level) {
+        return max_csize[level];
+    }
+
+    cpos_t get_max_chunkID(uint32_t level) {
+        cpos_t max_chunkID = 0;
+        for(tid_t tid = 0; tid < THD_COUNT; ++tid) {
+            sblk_bulk_t* bulk = sblk_bulk[level] + tid;
+            if (bulk->chunk == NULL) continue;
+            cpos_t chunkID = (bulk->chunk - sblk_pools[level]->get_base()) / max_csize[level];
+            if (chunkID > max_chunkID) max_chunkID = chunkID;
+            // std::cout << "tid = " << tid << ", chunkID = " << chunkID << std::endl;
+        }
+        return max_chunkID;
+    }
+
+    cpos_t get_max_offset() {
+        cpos_t max_offset = 0;
+        for(tid_t tid = 0; tid < THD_COUNT; ++tid) {
+            hub_bulk_t* bulk = hub_bulk + tid;
+            if (bulk->addr == NULL) continue;
+            cpos_t offset = bulk->addr - sblk_pools[MAX_LEVEL-1]->get_base();
+            if (offset > max_offset) max_offset = offset;
+            // std::cout << "tid = " << tid << ", offset = " << offset << std::endl;
+        }
+        return max_offset;
+    }
+
+    void print_fragment() {
+        for (uint32_t level = 0; level < MAX_LEVEL-1; ++level) {
+            std::cout << "level = " << level << ", fragment_chunks = " << fragment_chunks[level] << ", fragment_size = " << fragment_size[level] << std::endl;
+        }
+    }
+
+private:
+    sblk_bulk_t** sblk_bulk;
+    hub_bulk_t* hub_bulk;
+    uint32_t MAX_LEVEL;
+    size_t* max_csize;
+
+    size_t* fragment_chunks;
+    size_t* fragment_size;
+};
