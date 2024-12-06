@@ -5,18 +5,28 @@ USE_CHUNK=1
 
 [ $USE_CHUNK -eq 1 ] && export CHUNK=1
 
-[ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme1/zorax/chunks/ || DATA_PATH=/mnt/nvme1/zorax/datasets/
+[ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme2/zorax/chunkL3/ || DATA_PATH=/mnt/nvme2/zorax/datasets/
 CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
 # CPU:use NUMA 0 node, with id 0-23 and 48-71, with taskset command
 # TEST_CPU_SET="taskset --cpu-list 0-95:1"
 TEST_CPU_SET="taskset -c 0-23,48-71:1"
 
+FLAMEGRAPH_PATH=/home/zorax/ChunkExtra/FlameGraph/
+
 PERF_CACHE_MISS=0
 PERF_PAGECACHE=0
+SPDK=1
 [ $PERF_CACHE_MISS -eq 1 ] && export CACHEMISS=1
 [ $PERF_PAGECACHE -eq 1 ] && export PAGECACHE=1
+if [ $SPDK -eq 1 ]; then
+    export SPDK=1
+    export SPDK_DIR=/home/zorax/ChunkExtra/chunk/spdk/
+    export C_INCLUDE_PATH=$SPDK_DIR/include:$SPDK_DIR/dpdk/build/include:$C_INCLUDE_PATH
+    export LD_LIBRARY_PATH=$SPDK_DIR/build/lib:$SPDK_DIR/dpdk/build/lib:$LD_LIBRARY_PATH
+fi
 
 export OMP_PROC_BIND=true
+# export OMP_PLACES=cores
 
 name[0]=twitter
 name[1]=friendster
@@ -26,12 +36,12 @@ name[4]=kron29
 name[5]=kron30
 name[6]=yahoo
 
-debug=false
+debug=true
 chunkgraph=false
 ligra_mmap=false
 multithread=false
 threshold=false
-multilevel=true
+multilevel=false
 
 [ $USE_CHUNK -eq 1 ] && data[0]=${DATA_PATH}twitter/${name[0]} || data[0]=${DATA_PATH}csr_bin/Twitter/${name[0]}
 [ $USE_CHUNK -eq 1 ] && data[1]=${DATA_PATH}friendster/${name[1]} || data[1]=${DATA_PATH}csr_bin/Friendster/${name[1]}
@@ -87,6 +97,47 @@ profile_diskio() {
     iostat -d ${time_slot} ${DEVICE} > ../results/${filename}.iostat & 
 }
 
+profile_perf() {
+    eval commandargs="$1"
+    eval filename="$2"
+
+    commandname=$(echo $commandargs | awk '{print $1}')
+
+    commandargs="sudo ${TEST_CPU_SET} perf record -F 99 -a -g ${commandargs}"
+
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+
+    log_dir="../results/logs/${log_time}"
+
+    echo $cur_time "profile run with command: " $commandargs >> ../results/command.log
+    echo $cur_time "profile run with command: " $commandargs > ${log_dir}/${filename}.txt
+
+    nohup $commandargs &>> ${log_dir}/${filename}.txt &
+    pid=$(ps -ef | grep $commandname | grep -v grep | awk '{print $2}')
+
+    echo "pid: " $pid >> ../results/command.log
+
+    wait $pid
+
+    res=$(awk 'NR>5 {sum+=$5} END {printf "%.0f\n", sum}' ${log_dir}/${filename}.diskio)
+    # echo total bytes read in KB and convert to GB
+    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.txt
+    echo "total bytes read during compute: " $res "KB ("$(echo "scale=2; $res/1024/1024" | bc) "GB)" >> ${log_dir}/${filename}.diskio
+
+    sleep 1s
+    echo >> ${log_dir}/${filename}.txt
+    if [ $PERF_CACHE_MISS -eq 1 ]; then
+        cat ${log_dir}/${filename}.cachemiss >> ${log_dir}/${filename}.txt
+    fi
+
+    if $not_save_detail_log; then
+        if [ $PERF_CACHE_MISS -eq 1 ]; then
+            rm -f ${log_dir}/${filename}.cachemiss
+        fi
+        rm -f ${log_dir}/${filename}.diskio ${log_dir}/${filename}.iostat
+    fi
+}
+
 profile_performance() {
     eval commandargs="$1"
     eval filename="$2"
@@ -128,6 +179,27 @@ profile_performance() {
     fi
 }
 
+profile_flamegraph() {
+    eval commandargs="$1"
+    eval filename="$2"
+
+    perf record -F 99 -a -g -- $commandargs
+    
+    echo "Generating perf script output..."
+    perf script > out.perf
+
+    # 折叠堆栈
+    echo "Collapsing stacks..."
+    ${FLAMEGRAPH_PATH}/stackcollapse-perf.pl out.perf > out.folded
+
+    # 生成火焰图
+    echo "Generating flamegraph..."
+    ${FLAMEGRAPH_PATH}/flamegraph.pl out.folded > ${filename}_flamegraph.svg
+
+    echo "Flamegraph generated: ${filename}_flamegraph.svg"
+
+}
+
 if $debug; then
     log_time=$(date "+%Y%m%d_%H%M%S")
     mkdir -p results/logs/${log_time}
@@ -146,20 +218,52 @@ if $debug; then
         '256'
         '256')
 
-    for idx in 0;
+    # for idx in 0;
+    # for idx in {0,1,2,3,4,5};
+    # for idx in {0,1,2,4,5,6};
+    for idx in {0,1,2,3,4};
     do
         len=1
 
-        make PageRankDelta
+        make BFS
+        # make testNebrs
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./PageRankDelta -b -chunk -threshold 20 ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_pr"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
+            # ./BFS -b -t 1 -j 0 -r ${rts[$idx]} -chunk -threshold 5 -buffer 256 ${data[${idx}]} > ${idx}_${name[${idx}]}_0
+            # ./BFS -b -t 1 -j 5 -r ${rts[$idx]} -chunk -threshold 5 -buffer 256 ${data[${idx}]}
+        
+            # ./testNebrs -b -t 1 -j 5 -r ${rts[$idx]} -chunk -threshold 5 -buffer 256 ${data[${idx}]}
+
+            commandargs="./BFS -b -t 1 -j 5 -r ${rts[$idx]} -chunk -threshold 5 -buffer 256 ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_bfs"
+            # profile_performance "\${commandargs}" "\${filename}"
+            profile_flamegraph "\${commandargs}" "\${filename}"
+            # wait
         done
+
+        # make PageRankDelta
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./PageRankDelta -b -j 5 -chunk -threshold 20 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_pr"
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+
+        # make Components
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./Components -b -j 5 -chunk -threshold 10 ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_cc"
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
 
         # make PageRankDelta
         # for ((mem=0;mem<$len;mem++))
@@ -188,12 +292,12 @@ if $chunkgraph; then
     # roots:        TT   FS     UK     K29       YW       K30
     declare -a rts=(12 801109 5699262  310059974 35005211 233665123)
 
-    data[0]=/mnt/nvme1/zorax/debug/twitter/twitter
-    data[1]=/mnt/nvme1/zorax/debug/friendster/friendster
-    data[2]=/mnt/nvme1/zorax/debug/ukdomain/ukdomain
-    data[3]=/mnt/nvme1/zorax/debug/kron29/kron29
-    data[4]=/mnt/nvme1/zorax/debug/yahoo/yahoo
-    data[5]=/mnt/nvme1/zorax/debug/kron30/kron30
+    # data[0]=/mnt/nvme1/zorax/debug/twitter/twitter
+    # data[1]=/mnt/nvme1/zorax/debug/friendster/friendster
+    # data[2]=/mnt/nvme1/zorax/debug/ukdomain/ukdomain
+    # data[3]=/mnt/nvme1/zorax/debug/kron29/kron29
+    # data[4]=/mnt/nvme1/zorax/debug/yahoo/yahoo
+    # data[5]=/mnt/nvme1/zorax/debug/kron30/kron30
 
     name[0]=twitter
     name[1]=friendster
@@ -211,8 +315,7 @@ if $chunkgraph; then
 
     declare -a kcore_iter=(10 10 10 10 3 10)
 
-    for idx in {0,1,2,3,4,5};
-    # for idx in 4;
+    for idx in {0,1,2,3,4};
     do
         echo -n "Data: "
         echo ${data[$idx]}
@@ -238,18 +341,30 @@ if $chunkgraph; then
             commandargs="./BFS -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
             filename="${name[${idx}]}_chunk_bfs"
 
-            profile_performance "\${commandargs}" "\${filename}"
+            profile_perf "\${commandargs}" "\${filename}"
+            # profile_performance "\${commandargs}" "\${filename}"
             wait
         done
 
-        make BC
+        # make BC
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_bc"
+
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
+
+        make Components
         for ((mem=0;mem<$len;mem++))
         do
             clear_pagecaches
-            commandargs="./BC -b -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_bc"
-
-            profile_performance "\${commandargs}" "\${filename}"
+            commandargs="./Components -b -chunk -threshold 10 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_cc"
+            profile_perf "\${commandargs}" "\${filename}"
+            # profile_performance "\${commandargs}" "\${filename}"
             wait
         done
 
@@ -263,17 +378,6 @@ if $chunkgraph; then
             profile_performance "\${commandargs}" "\${filename}"
             wait
         done
-
-        # make Components
-        # for ((mem=0;mem<$len;mem++))
-        # do
-        #     clear_pagecaches
-        #     commandargs="./Components -b -chunk -threshold 10 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_cc"
-
-        #     profile_performance "\${commandargs}" "\${filename}"
-        #     wait
-        # done
         
         # make KCore
         # for ((mem=0;mem<$len;mem++))
@@ -308,16 +412,16 @@ if $chunkgraph; then
         #     wait
         # done
 
-        make BellmanFord
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./BellmanFord -b  -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
-            filename="${name[${idx}]}_chunk_bf"
+        # make BellmanFord
+        # for ((mem=0;mem<$len;mem++))
+        # do
+        #     clear_pagecaches
+        #     commandargs="./BellmanFord -b  -r ${rts[$idx]} -chunk -threshold 5 -buffer ${base_bound[$mem]} ${data[${idx}]} "
+        #     filename="${name[${idx}]}_chunk_bf"
 
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
+        #     profile_performance "\${commandargs}" "\${filename}"
+        #     wait
+        # done
     done
 fi
 
@@ -464,7 +568,6 @@ if $multithread; then
     done
 fi
 
-
 if $threshold; then
     log_time=$(date "+%Y%m%d_%H%M%S")
     mkdir -p results/logs/${log_time}
@@ -599,7 +702,6 @@ if $threshold; then
         # done
     done
 fi
-
 
 if $multilevel; then
     log_time=$(date "+%Y%m%d_%H%M%S")
@@ -754,5 +856,76 @@ if $multilevel; then
             wait
             clear_hugepage
         done
+    done
+fi
+
+if $ligra_mmap; then
+    log_time=$(date "+%Y%m%d_%H%M%S")
+    mkdir -p results/logs/${log_time}
+
+    cd apps && make clean
+
+    outputFile="../results/ligra_mmap_query_time.csv"
+    title="Ligra-mmap"
+    cur_time=$(date "+%Y-%m-%d %H:%M:%S")
+    echo $cur_time "Test ${title} Query Performace" >> ${outputFile}
+
+    # roots:        TT   FS     UK     K29       YW       K30
+    declare -a rts=(12 801109 5699262  310059974 35005211 233665123)
+
+    data[0]=/mnt/nvme2/zorax/datasets/csr_bin/Twitter/twitter
+    data[1]=/mnt/nvme2/zorax/datasets/csr_bin/Friendster/friendster
+    data[2]=/mnt/nvme2/zorax/datasets/csr_bin/Ukdomain/ukdomain
+    data[3]=/mnt/nvme2/zorax/datasets/csr_bin/Kron29/kron29
+    data[4]=/mnt/nvme2/zorax/datasets/csr_bin/Yahoo/yahoo
+    data[5]=/mnt/nvme2/zorax/datasets/csr_bin/Kron30/kron30
+
+    name[0]=twitter
+    name[1]=friendster
+    name[2]=ukdomain
+    name[3]=kron29
+    name[4]=yahoo
+    name[5]=kron30
+
+    bounds=('256'
+        '256'
+        '256'
+        '256'
+        '256'
+        '256')
+
+    declare -a kcore_iter=(10 10 10 10 3 10)
+
+    for idx in {0,1,2,3,4,5};
+    do
+        echo -n "Data: "
+        echo ${data[$idx]}
+        echo -n "Root: "
+        echo ${rts[$idx]}
+
+        make BFS
+        clear_pagecaches
+        commandargs="./BFS -b -r ${rts[$idx]} -buffer 256 ${data[${idx}]}"
+        filename="${name[${idx}]}_mmap_bfs"
+
+        profile_performance "\${commandargs}" "\${filename}"
+        wait
+
+        make Components
+        clear_pagecaches
+        commandargs="./Components -b -buffer 256 ${data[${idx}]}"
+        filename="${name[${idx}]}_mmap_cc"
+
+        profile_performance "\${commandargs}" "\${filename}"
+        wait
+
+        make PageRankDelta
+        clear_pagecaches
+        commandargs="./PageRankDelta -b -buffer 256 ${data[${idx}]}"
+        filename="${name[${idx}]}_mmap_cc"
+
+        profile_performance "\${commandargs}" "\${filename}"
+        wait 
+
     done
 fi

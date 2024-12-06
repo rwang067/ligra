@@ -72,27 +72,29 @@ swap=false
 cgroup_limit=false
 debug=false
 convert_chunk=false
-count_degree=true
+count_degree=false
 convert_blaze=false
 convert_minivertex_graph=false
 convert_minipluschunk_graph=false
 convert_reorderid=false
-convert_multilevel=false
+convert_multilevel=true
 
 
 if $convert_multilevel; then
     declare -a thresholds=(0 10 25 50 75 100)
     declare -a sblk_size=(128 128 256 512 768 768 768)
 
-    for threshold in 1;
+    SAVE_PATH=/mnt/nvme2/zorax/chunkL3/
+    mkdir -p ${SAVE_PATH}
+
+    for threshold in 0;
     do
         # for idx in {5,6};
-        for idx in {0,1,2};
+        # for idx in {0,1,2};
+        for idx in 5;
         do
-            SAVE_PATH=/mnt/nvme1/zorax/multi/${name[${idx}]}_l5_${thresholds[${threshold}]}/
-            for job in 13;
+            for job in 12;
             do
-                mkdir -p ${SSD_PATH}
                 mkdir -p ${SAVE_PATH}${name[${idx}]}
 
                 nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
@@ -101,7 +103,7 @@ if $convert_multilevel; then
                 # gdb --args 
                 # gdb --args ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} --global_threshold ${thresholds[${threshold}]} -t 1 -q 0 -j ${job} -v ${nverts}
                 ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} --global_threshold ${thresholds[${threshold}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_multilevel_${thresholds[${threshold}]}.out
-                mv ${SSD_PATH}/* ${SAVE_PATH}
+                mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
             done
         done
     done
@@ -109,10 +111,12 @@ fi
 
 if $convert_reorderid; then
     declare -a sblk_size=(128 128 256 512 768 768 768)
-    SAVE_PATH=/mnt/nvme1/zorax/reorderidchunks/
-    for idx in {0,1,2,3,4,5,6};
+    SAVE_PATH=/mnt/nvme2/zorax/chunkL3/
+    mkdir -p ${SAVE_PATH}
+    # for idx in {0,1,2,3,4,5,6};
     # for idx in {1,2,3,4};
-    # for idx in 1;   
+    # for idx in {0,1};
+    for idx in 0;   
     do
         for job in 10;
         do
@@ -122,28 +126,29 @@ if $convert_reorderid; then
             nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
             echo $nverts
             clear_ssd
-            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_reorderid.out
+            # ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_reorderid.out
+            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts}
             mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
         done
     done
 
-    SAVE_PATH=/mnt/nvme1/zorax/reorderidchunks_in/
-    for idx in {0,1,2,3,4,5,6};
-    # for idx in {1,2,3,4};
-    # for idx in 1;   
-    do
-        for job in 11;
-        do
-            mkdir -p ${SSD_PATH}
-            mkdir -p ${SAVE_PATH}${name[${idx}]}
+    # SAVE_PATH=/mnt/nvme2/zorax/reorderidchunks_in/
+    # for idx in {0,1,2,3,4,5,6};
+    # # for idx in {1,2,3,4};
+    # # for idx in 1;   
+    # do
+    #     for job in 11;
+    #     do
+    #         mkdir -p ${SSD_PATH}
+    #         mkdir -p ${SAVE_PATH}${name[${idx}]}
 
-            nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
-            echo $nverts
-            clear_ssd
-            ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_reorderid_in.out
-            mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
-        done
-    done
+    #         nverts=$(cat ${data[${idx}]}/${name[${idx}]}.config)
+    #         echo $nverts
+    #         clear_ssd
+    #         ./bin/main -f ${data[${idx}]} --prefix ${name[${idx}]} --ssd ${SSD_PATH} --source ${rts[${idx}]} --sblk_pool_size ${sblk_size[${idx}]} -t 1 -q 0 -j ${job} -v ${nverts} &> ${name[${idx}]}_reorderid_in.out
+    #         mv ${SSD_PATH}/* ${SAVE_PATH}${name[${idx}]}
+    #     done
+    # done
 fi
 
 if $convert_minivertex_graph; then

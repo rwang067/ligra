@@ -6,6 +6,7 @@ void printNebrs(graph<vertex>& G, int i, bool InGraph){
   uint d; uintE* nebrs;
   if(InGraph == 0){
     d = G.V[i].getOutDegree();
+    if (d > 1024 || d == 0) return;  
     // uintE* nebrs = G.V[i].getOutNeighbors();
     nebrs = G.getChunkNeighbors(&(G.V[i]),0);
     uint threshold = d <= 100 ? d : 100;
@@ -15,6 +16,7 @@ void printNebrs(graph<vertex>& G, int i, bool InGraph){
     cout << "\n" << endl;
   } else {
     d = G.V[i].getInDegree();
+    if (d > 1024 || d == 0) return;
     // nebrs = G.V[i].getInNeighbors();
     nebrs = G.getChunkNeighbors(&(G.V[i]),1);
     uint threshold = d <= 100 ? d : 100;
@@ -23,6 +25,41 @@ void printNebrs(graph<vertex>& G, int i, bool InGraph){
       cout << nebrs[j] << ", ";
     cout  << "\n" << endl;
   }
+}
+
+template <class vertex>
+void printNebrsToFile(graph<vertex>& G, int i, bool InGraph){
+  std::ofstream outFile("k29_5", std::ios::app); // 打开文件并追加写入
+  if (!outFile.is_open()) {
+    std::cerr << "Error: Could not open file k29_0 for writing." << std::endl;
+    return;
+  }
+  
+  uint d; 
+  uintE* nebrs;
+  if(InGraph == 0){
+    d = G.V[i].getOutDegree();
+    if (d > 524288 || d == 0) return; 
+    nebrs = G.getChunkNeighbors(&(G.V[i]),0);
+    // uint threshold = d <= 1000 ? d : 1000;
+    uint threshold = d;
+    outFile << "i = " << i << ", outd = " << d << ", top " << threshold << " Nebrs = ";
+    for(int j = 0; j < threshold; j++)
+      outFile << nebrs[j] << ", ";
+    outFile << std::endl;
+  } else {
+    d = G.V[i].getInDegree();
+    if (d > 524288 || d == 0) return;
+    nebrs = G.getChunkNeighbors(&(G.V[i]),1);
+    // uint threshold = d <= 1000 ? d : 1000;
+    uint threshold = d;
+    outFile << "i = " << i << ", ind = " << d << ", top " << threshold << " Nebrs = ";
+    for(int j = 0; j < threshold; j++)
+      outFile << nebrs[j] << ", ";
+    outFile << std::endl;
+  }
+
+  outFile.close(); // 关闭文件
 }
 
 template <class vertex>
@@ -40,8 +77,12 @@ void Compute(graph<vertex>& GA, commandLine P) {
   // printNebrs(GA, 338093904, 0); // expect 6: 2805010, 510407612, 1349255, 223596394, 468811973, 31853317 for K29
   // printNebrs(GA, 493455215, 0); // expect 30388: 86302919~419861469~346750783 for K29
 
-  printNebrs(GA, 12, 0);
-  printNebrs(GA, 12, 1);
+  for (int i = 0; i < (1 << 16); i++) {
+    // printNebrs(GA, i, 0);
+    // printNebrs(GA, i, 1);
+    printNebrsToFile(GA, i, 0);
+    printNebrsToFile(GA, i, 1);
+  }
 }
 
 template <class vertex>

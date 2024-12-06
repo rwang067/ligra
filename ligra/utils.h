@@ -25,8 +25,20 @@
 #define UTIL_H
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <stdlib.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <mutex>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <asm/mman.h>
+#include <cassert>
+#include <omp.h>
+#include <thread>
+#include <pthread.h>
+
 #include <unistd.h>
 #include "parallel.h"
 using namespace std;
@@ -563,6 +575,15 @@ inline double B2GB(size_t x){
     return (double)(x * 1.0 / GB);
 }
 
+#define CHUNK_MASK    0x8000000000000000
+#define CID_MASK      0x7FFFFFFFFFFFFFFF
+#define IS_CHUNK(cid) (cid & CHUNK_MASK)
+#define SET_CHUNK(cid) (cid | CHUNK_MASK)
+#define UNSET_CHUNK(cid) (cid & CID_MASK)
+#define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)
+#define HUGE_PAGE_SIZE 2097152 // 2MB
+#define DIRECT_GRAPH 2
+
 void process_mem_usage(pid_t proc_id, size_t& vm_usage, size_t& resident_set)
 {
    using std::ios_base;
@@ -631,5 +652,25 @@ struct vm_reporter {
     print(str);
   }
 };
+
+
+inline void bind_thread_to_cpu(int cpu_id){
+    cpu_set_t cpu_mask;
+    CPU_ZERO(&cpu_mask);
+    CPU_SET(cpu_id, &cpu_mask);
+    // sched_setaffinity(gettid(), sizeof(cpu_mask), &cpu_mask);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_mask), &cpu_mask);
+}
+
+inline void cancel_thread_bind(){
+    uint8_t cpu_num = std::thread::hardware_concurrency();
+    // std::cout << "In cancel_thread_bind(), cpu_num = " << (uint32_t)cpu_num << std::endl; // 96
+    cpu_set_t cpu_mask;
+    CPU_ZERO(&cpu_mask);
+    for(uint8_t cpu_id = 0; cpu_id < cpu_num; cpu_id++)
+        CPU_SET(cpu_id, &cpu_mask);
+    // sched_setaffinity(gettid(), sizeof(cpu_mask), &cpu_mask);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_mask), &cpu_mask);
+}
 
 #endif

@@ -3,8 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
+#include "graph.h"
 #include "vertex.h"
-#include "compressedVertex.h"
 #include "parallel.h"
 #include "chunk_buffer.h"
 using namespace std;
@@ -242,8 +242,8 @@ hypergraph(vertex* _V, vertex* _H, long _nv, long _mv, long _nh, long _mh,  Dele
   }
   
   void transpose() {
-    if ((sizeof(vertex) == sizeof(asymmetricVertex)) ||
-        (sizeof(vertex) == sizeof(compressedAsymmetricVertex))) {
+    if ((sizeof(vertex) == sizeof(asymmetricVertex))) {
+        // || (sizeof(vertex) == sizeof(compressedAsymmetricVertex))) {
       parallel_for(long i=0;i<nv;i++) {
         V[i].flipEdges();
       }
@@ -278,18 +278,24 @@ struct graph {
   bool transposed;
   uintE* flags;
   Deletable *D;
-  TriLevelManager* manager;
+  TriLevelManager* manager = NULL;
+  SPDKChunkGraphManager* spdk_manager = NULL;
+  bool is_spdk = 0;
 
-  graph() : V(NULL), n(0), m(0), D(NULL), flags(NULL), transposed(0), manager(NULL) {}
+  graph() : V(NULL), n(0), m(0), 
+    D(NULL), flags(NULL), transposed(0), manager(NULL), is_spdk(0) {}
 
   graph(vertex* _V, long _n, long _m, Deletable* _D) : V(_V), n(_n), m(_m),
-    D(_D), flags(NULL), transposed(0), manager(NULL) {}
+    D(_D), flags(NULL), transposed(0), manager(NULL), is_spdk(0) {}
 
   graph(vertex* _V, long _n, long _m, Deletable* _D, uintE* _flags) : V(_V), n(_n), m(_m), 
-    D(_D), flags(_flags), transposed(0), manager(NULL) {}
+    D(_D), flags(_flags), transposed(0), manager(NULL), is_spdk(0) {}
 
   graph(vertex* _V, long _n, long _m, Deletable* _D, TriLevelManager* _manager) : V(_V), n(_n), m(_m),
-    D(_D), flags(NULL), transposed(0), manager(_manager) {}
+    D(_D), flags(NULL), transposed(0), manager(_manager), is_spdk(0) {}
+  
+  graph(vertex* _V, long _n, long _m, Deletable* _D, SPDKChunkGraphManager* _spdk_manager) : V(_V), n(_n), m(_m),
+    D(_D), flags(NULL), transposed(0), manager(NULL), spdk_manager(_spdk_manager), is_spdk(1) {}
 
   void del() {
     if (flags != NULL) free(flags);
@@ -298,90 +304,133 @@ struct graph {
   }
 
   void transpose() {
-    if ((sizeof(vertex) == sizeof(asymmetricVertex)) ||
-        (sizeof(vertex) == sizeof(compressedAsymmetricVertex))) {
+    if ((sizeof(vertex) == sizeof(asymmetricVertex))) {
+        // || (sizeof(vertex) == sizeof(compressedAsymmetricVertex))) {
       parallel_for(long i=0;i<n;i++) {
         V[i].flipEdges();
       }
       transposed = !transposed;
-
-      if (manager != NULL) {
-        manager->transpose();
+      if (is_spdk) {
+        spdk_manager->transpose();
+      } else {
+        if (manager != NULL) {
+          manager->transpose();
+        }
       }
     }
   }
 
   inline uintE* getChunkNeighbors(vertex* v, bool inGraph) {
-    uintE d;
-    uintE* neighbors;
-    long threshold;
-    if(!inGraph) {
-      d = v->getOutDegree();
-      neighbors = (uintE*) v->getOutNeighbors(); // if d <=2 return (uintE*)(&outNeighbors); in vertex.h
+    if (!is_spdk) {
+      uintE d;
+      uintE* neighbors;
+
+      if(!inGraph) {
+        d = v->getOutDegree();
+        neighbors = (uintE*) v->getOutNeighbors(); // if d <=2 return (uintE*)(&outNeighbors); in vertex.h
+        
+      } else {
+        d = v->getInDegree();
+        neighbors = (uintE*) v->getInNeighbors();
+      }
+
+      #if defined(CHUNK) && !defined(CHUNK_MMAP)
+      if (!inGraph) {
+        long* end_deg = manager->getReader()->end_deg;
+        long level = manager->getReader()->level;
+        if(d > 2 && d <= end_deg[level-1]) {
+          uint64_t r = (uint64_t)neighbors;
+          uint32_t cid = r >> 32;
+          uint32_t coff = r & 0xFFFFFFFF;
+          for (int i = 0; i < level; ++i) {
+            if (d <= end_deg[i]) return manager->getChunkNeighbors(cid, coff, i, d, inGraph);
+          }
+        }
+      } else {
+        long* end_deg = manager->getReader()->rend_deg;
+        long level = manager->getReader()->level;
+        if(d > 2 && d <= end_deg[level-1]) {
+          uint64_t r = (uint64_t)neighbors;
+          uint32_t cid = r >> 32;
+          uint32_t coff = r & 0xFFFFFFFF;
+          for (int i = 0; i < level; ++i) {
+            if (d <= end_deg[i]) return manager->getChunkNeighbors(cid, coff, i, d, inGraph);
+          }
+        }
+      }
+      #endif
+
+      #ifdef DEBUG_EN
       
+      int thread_id = getWorkersID();
+      #ifdef CHUNK
+      if (d > 2) memory_profiler.edge_memory_usage[thread_id] += d * sizeof(uintE);
+      #else
+      memory_profiler.edge_memory_usage[thread_id] += d * sizeof(uintE);
+      #endif
+      edge_profiler.edge_access[thread_id] += d;
+      if (!inGraph) edge_profiler.out_edge_access[thread_id] += d;
+      else edge_profiler.in_edge_access[thread_id] += d;
+
+      #ifdef VERTEXCUT_PROFILE_EN
+      vertexcut_profiler.vertex_accessed[thread_id] += 1;
+      vertexcut_profiler.check_vertexcut(neighbors, d, inGraph, thread_id);
+      #endif
+
+      #ifdef CHUNK_PROFILE_EN
+      #ifdef CHUNK
+      if (d > 2) chunk_profiler.record_chunk_access(neighbors, d, inGraph, thread_id);
+      #else
+      chunk_profiler.record_chunk_access(neighbors, d, inGraph, thread_id);
+      #endif
+      #endif
+
+      #endif
+      
+      return neighbors;
     } else {
-      d = v->getInDegree();
-      neighbors = (uintE*) v->getInNeighbors();
-    }
-    #ifdef CHUNK
-    #ifndef CHUNK_MMAP
-    if (!inGraph) {
-      long* end_deg = manager->getReader()->end_deg;
-      long level = manager->getReader()->level;
-      if(d > 2 && d <= end_deg[level-1]) {
-        uint64_t r = (uint64_t)neighbors;
-        uint32_t cid = r >> 32;
-        uint32_t coff = r & 0xFFFFFFFF;
+      uintE d;
+      uintE* neighbors;
+
+      if (!inGraph) {
+        d = v->getOutDegree();
+        neighbors = (uintE*) v->getOutNeighbors(); // if d <=2 return (uintE*)(&outNeighbors); in vertex.h
+        
+      } else {
+        d = v->getInDegree();
+        neighbors = (uintE*) v->getInNeighbors();
+      }
+
+      long* end_deg = inGraph ? spdk_manager->getReader()->rend_deg : spdk_manager->getReader()->end_deg;
+      long level = spdk_manager->getReader()->level;
+      if (d > 2 && d <= end_deg[level-1]) {
         for (int i = 0; i < level; ++i) {
-          if (d <= end_deg[i]) return manager->getChunkNeighbors(cid, coff, i, d, inGraph);
+          if (d <= end_deg[i]) {
+            // try to bind the thread according to chunk id
+            // uint64_t r = UNSET_CHUNK((uint64_t)neighbors);
+            // cid_t cid = r >> 32;
+            // int before_omp_tid = getWorkersID();
+            // int before_tid = sched_getcpu();
+            // int real_tid = cid % getWorkers();
+            // bind_thread_to_cpu(real_tid);
+            // printf("before_tid = %d, before_omp_tid = %d, real_tid = %d\n", before_tid, before_omp_tid, real_tid);
+            uintE *res = spdk_manager->getChunkNeighbors((uint64_t)neighbors, i, d, inGraph);
+            // uint64_t r = (uint64_t)res;
+            // if (!inGraph) v->setOutNeighbors((uintE*)r);
+            // else v->setInNeighbors((uintE*)r);
+            return res;
+          }
         }
       }
-    } else {
-      long* end_deg = manager->getReader()->rend_deg;
-      long level = manager->getReader()->level;
-      if(d > 2 && d <= end_deg[level-1]) {
-        uint64_t r = (uint64_t)neighbors;
-        uint32_t cid = r >> 32;
-        uint32_t coff = r & 0xFFFFFFFF;
-        for (int i = 0; i < level; ++i) {
-          if (d <= end_deg[i]) return manager->getChunkNeighbors(cid, coff, i, d, inGraph);
-        }
-      }
+      return neighbors;
     }
-    #endif
-    #endif
-
-    #ifdef DEBUG_EN
-    int thread_id = getWorkersID();
-    #ifdef CHUNK
-    if (d > 2) memory_profiler.edge_memory_usage[thread_id] += d * sizeof(uintE);
-    #else
-    memory_profiler.edge_memory_usage[thread_id] += d * sizeof(uintE);
-    #endif
-    edge_profiler.edge_access[thread_id] += d;
-    if (!inGraph) edge_profiler.out_edge_access[thread_id] += d;
-    else edge_profiler.in_edge_access[thread_id] += d;
-
-    #ifdef VERTEXCUT_PROFILE_EN
-    vertexcut_profiler.vertex_accessed[thread_id] += 1;
-    vertexcut_profiler.check_vertexcut(neighbors, d, inGraph, thread_id);
-    #endif
-
-    #ifdef CHUNK_PROFILE_EN
-    #ifdef CHUNK
-    if (d > 2) chunk_profiler.record_chunk_access(neighbors, d, inGraph, thread_id);
-    #else
-    chunk_profiler.record_chunk_access(neighbors, d, inGraph, thread_id);
-    #endif
-    #endif
-
-    #endif
-    
-    return neighbors;
   }
+
+
 
   inline bool isReorderListEnabled() {
     #ifdef CHUNK
+    if (is_spdk) return spdk_manager->getReorderListEnable();
     if (manager == NULL) return false;
     return manager->getReorderListEnable();
     #else
@@ -391,6 +440,7 @@ struct graph {
 
   inline uintE* getReorderList(bool inGraph) {
     #ifdef CHUNK
+    if (is_spdk) return spdk_manager->getReorderList(inGraph);
     return manager->getReorderList(inGraph);
     #else
     return NULL;
@@ -399,6 +449,7 @@ struct graph {
 
   inline uintE getReorderID(bool inGraph, uintE i) {
     #ifdef CHUNK
+    if (is_spdk) return spdk_manager->getReorderListElement(inGraph, i);
     return manager->getReorderListElement(inGraph, i);
     #else
     return i;

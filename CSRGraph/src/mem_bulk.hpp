@@ -361,10 +361,15 @@ public:
 
         max_csize = (size_t*)calloc(sizeof(size_t), MAX_LEVEL-1);
 
-        max_csize[0] = 4 * KB;
-        max_csize[1] = 32 * KB;
-        max_csize[2] = 256 * KB;
-        max_csize[3] = 2 * MB;
+        if (MAX_LEVEL == 3) {
+            max_csize[0] = 4 * KB;
+            max_csize[1] = 2 * MB;
+        } else if (MAX_LEVEL == 5) {    
+            max_csize[0] = 4 * KB;
+            max_csize[1] = 32 * KB;
+            max_csize[2] = 256 * KB;
+            max_csize[3] = 2 * MB;
+        }
 
         fragment_chunks = (size_t*)calloc(sizeof(size_t), MAX_LEVEL-1);
         fragment_size = (size_t*)calloc(sizeof(size_t), MAX_LEVEL-1);

@@ -19,6 +19,8 @@ apps/perf.*
 
 *.perf
 *.perf.old
+perf.data
+out.folded
 *.snoop
 scripts/*
 apps/hierg_query_time.csv
@@ -26,3 +28,4 @@ results/*
 
 CSRGraph/bin/main
 *.out
+*.svg

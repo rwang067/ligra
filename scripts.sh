@@ -6,7 +6,7 @@ USE_CHUNK=1
 debug=false
 cgroup_swap=false
 ligra_mmap=false
-chunkgraph=true
+chunkgraph=false
 minivertex=false # change #define CHUNK_MMAP in graph.h
 minivertex2=false
 minivertex3=false
@@ -14,13 +14,13 @@ minipluxchunk=false
 minipluxchunkreorder=false
 minipluxchunkreorderenable=false
 multithread=false
-chunkreorderid=false
+chunkreorderid=true
 debug_thresh=false
 ligra_origin=false
 
 [ $USE_CHUNK -eq 1 ] && export CHUNK=1
 
-[ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme1/zorax/chunks/ || DATA_PATH=/mnt/nvme1/zorax/datasets/
+[ $USE_CHUNK -eq 1 ] && DATA_PATH=/mnt/nvme2/zorax/chunks/ || DATA_PATH=/mnt/nvme2/zorax/datasets/
 CGROUP_PATH=/sys/fs/cgroup/memory/chunkgraph/
 # CPU:use NUMA 0 node, with id 0-23 and 48-71, with taskset command
 # TEST_CPU_SET="taskset --cpu-list 0-95:1"
@@ -1669,29 +1669,29 @@ if $chunkreorderid; then
         echo -n "Memory Bound: "
         echo ${memory_bound[@]}
         
-        make PageRankDelta
-        for ((mem=0;mem<$len;mem++))
-        do
-            clear_pagecaches
-            commandargs="./PageRankDelta -b -chunk -onlyout -buffer ${base_bound[$mem]} ${data[${idx}]}"
-            filename="${name[${idx}]}_chunk_prd_${base_bound[$mem]}"
-            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
-
-            profile_performance "\${commandargs}" "\${filename}"
-            wait
-        done
-
-        # make BFS
+        # make PageRankDelta
         # for ((mem=0;mem<$len;mem++))
         # do
         #     clear_pagecaches
-        #     commandargs="./BFS -b -r ${reorder_rts[$idx]} -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
+        #     commandargs="./PageRankDelta -b -chunk -onlyout -buffer ${base_bound[$mem]} ${data[${idx}]}"
+        #     filename="${name[${idx}]}_chunk_prd_${base_bound[$mem]}"
         #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+        #     profile_performance "\${commandargs}" "\${filename}"
         #     wait
         # done
+
+        make BFS
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./BFS -b -r ${reorder_rts[$idx]} -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_bfs_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
 
         # make BC
         # for ((mem=0;mem<$len;mem++))
@@ -1719,17 +1719,17 @@ if $chunkreorderid; then
 
         # exit
 
-        # make Components
-        # for ((mem=0;mem<$len;mem++))
-        # do
-        #     clear_pagecaches
-        #     commandargs="./Components -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
-        #     filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
-        #     echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
+        make Components
+        for ((mem=0;mem<$len;mem++))
+        do
+            clear_pagecaches
+            commandargs="./Components -b -chunk -threshold 1 -buffer ${base_bound[$mem]} ${data[${idx}]}"
+            filename="${name[${idx}]}_chunk_cc_${base_bound[$mem]}"
+            echo ${memory_bound[$mem]} > ${CGROUP_PATH}/memory.limit_in_bytes
 
-        #     profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
-        #     wait
-        # done
+            profile_memory "\${commandargs}" "\${filename}" "\${base_bound[$mem]}"
+            wait
+        done
         
         # make KCore
         # for ((mem=0;mem<$len;mem++))

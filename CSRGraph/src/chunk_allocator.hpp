@@ -206,9 +206,16 @@ class chunk_allocator_multilevel_t : public chunk_allocator_t {
         chunk_level = MAX_LEVEL - 1;
         threshold = new degree_t[chunk_level];
         // size_t chunk_sizes[2] = {4096, 2097152};
-        size_t chunk_sizes[4] = {4*KB, 32*KB, 256*KB, 2*MB};
-        for (uint32_t i = 0; i < chunk_level; ++i) {
-            threshold[i] = chunk_sizes[i] / sizeof(vid_t);
+        if (MAX_LEVEL == 3) {
+            size_t chunk_sizes[2] = {4*KB, 2*MB};
+            for (uint32_t i = 0; i < chunk_level; ++i) {
+                threshold[i] = chunk_sizes[i] / sizeof(vid_t);
+            }
+        } else if (MAX_LEVEL == 5) {
+            size_t chunk_sizes[4] = {4*KB, 32*KB, 256*KB, 2*MB};
+            for (uint32_t i = 0; i < chunk_level; ++i) {
+                threshold[i] = chunk_sizes[i] / sizeof(vid_t);
+            }
         }
     }
 

@@ -69,15 +69,18 @@ vertexSubsetData<data> edgeMapDense(graph<vertex> GA, VS& vertexSubset, F &f, co
     if (GA.isReorderListEnabled()) {
       // std::cout << "reorder list enabled" << std::endl;
       uintE* reorderList = GA.getReorderList(1);
-      parallel_for (long i=0; i<n; i++) {
-        long v = reorderList[i];
-        std::get<0>(next[v]) = 0;
-        if (f.cond(v)) {
-          // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
-          uintE d = G[v].getInDegree();
-          uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
-          G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
-        }
+      #pragma omp parallel
+      {
+          parallel_for (long i=0; i<n; i++) {
+            long v = reorderList[i];
+            std::get<0>(next[v]) = 0;
+            if (f.cond(v)) {
+              // G[v].decodeInNghBreakEarly(v, vertexSubset, f, g, fl & dense_parallel);
+              uintE d = G[v].getInDegree();
+              uintE* nebrs = GA.getChunkNeighbors(&G[v],1);
+              G[v].decodeInNghBreakEarlyChunk(d,nebrs,v,vertexSubset, f, g, fl & dense_parallel);
+          }
+      }
       }
     } else {
       parallel_for (long v=0; v<n; v++) {
@@ -595,11 +598,11 @@ int parallel_main(int argc, char* argv[]) {
 
   pid_t pid = getpid();
 #ifdef PAGECACHE
-      std::string pcache_command = "bash ../pagecache.sh " + std::to_string(pid);
-      int pcache_res = std::system(pcache_command.c_str());
-      if (pcache_res == -1) {
-        std::cout << "pagecache.sh failed" << std::endl;
-      }
+  std::string pcache_command = "bash ../pagecache.sh " + std::to_string(pid);
+  int pcache_res = std::system(pcache_command.c_str());
+  if (pcache_res == -1) {
+    std::cout << "pagecache.sh failed" << std::endl;
+  }
 #endif
 
   reportInit();
@@ -608,123 +611,90 @@ int parallel_main(int argc, char* argv[]) {
 
   size_t vm, rss;
 
-  #ifdef DEBUG_EN
-  stat_profiler.record_read_KB(0);
-  #endif
-
-  if (compressed) {
-    if (symmetric) {
-#ifndef HYPER
-      graph<compressedSymmetricVertex> G =
-        readCompressedGraph<compressedSymmetricVertex>(iFile,symmetric,mmap); //symmetric graph
-#else
-      hypergraph<compressedSymmetricVertex> G =
-        readCompressedHypergraph<compressedSymmetricVertex>(iFile,symmetric,mmap); //symmetric graph
-#endif
-      Compute(G,P);
-      for(int r=0;r<rounds;r++) {
-        startTime();
-        Compute(G,P);
-        double time = nextTime("Running time");
-        reportTimeToFile(time);
-      }
-      G.del();
-    } else {
-#ifndef HYPER
-      graph<compressedAsymmetricVertex> G =
-        readCompressedGraph<compressedAsymmetricVertex>(iFile,symmetric,mmap); //asymmetric graph
-#else
-      hypergraph<compressedAsymmetricVertex> G =
-        readCompressedHypergraph<compressedAsymmetricVertex>(iFile,symmetric,mmap); //asymmetric graph
-#endif
-      Compute(G,P);
-      if(G.transposed) G.transpose();
-      for(int r=0;r<rounds;r++) {
-        startTime();
-        Compute(G,P);
-        double time = nextTime("Running time");
-        reportTimeToFile(time);
-        if(G.transposed) G.transpose();
-      }
-      G.del();
-    }
-  } else {
-    if (symmetric) {
-#ifndef HYPER
-      graph<symmetricVertex> G =
-        readGraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); //symmetric graph
-#else
-      hypergraph<symmetricVertex> G =
-        readHypergraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); //symmetric graph
-#endif
-      Compute(G,P);
-      for(int r=0;r<rounds;r++) {
-        startTime();
-        Compute(G,P);
-        double time = nextTime("Running time");
-        reportTimeToFile(time);
-      }
-      G.del();
-    } else {
-#ifndef HYPER
-      startTime();
-      graph<asymmetricVertex> G =
-        readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer,isReorderListEnabled,onlyout); //asymmetric graph
-      double time = nextTime("Preload time");
-      reportTimeToFile(time);
-    
-      // graph<asymmetricVertex> G1 =
-      //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case4kb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
-      // graph<asymmetricVertex> G2 =
-      //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case2mb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
-#else
-      hypergraph<asymmetricVertex> G =
-        readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
-#endif
-      // Compute(G,P);
-      // if(G.transposed) G.transpose();
 #ifdef DEBUG_EN
-      std::string command = "bash ../perf_diskio.sh " + std::to_string(pid);
-      int res = std::system(command.c_str());
-      if (res == -1) {
-        std::cout << "perf_diskio.sh failed" << std::endl;
-      }
-      command = "bash ../perf_iostat.sh " + std::to_string(pid);
-      res = std::system(command.c_str());
-      if (res == -1) {
-        std::cout << "perf_iostat.sh failed" << std::endl;
-      }
+  setbuf(stdout, NULL);
+  stat_profiler.record_read_KB(0);
+#endif
+
+  setWorkers(nthreads);
+
+  if (symmetric) {
+#ifndef HYPER
+    graph<symmetricVertex> G =
+      readGraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); //symmetric graph
+#else
+    hypergraph<symmetricVertex> G =
+      readHypergraph<symmetricVertex>(iFile,compressed,symmetric,binary,mmap); //symmetric graph
+#endif
+    Compute(G,P);
+    for(int r=0;r<rounds;r++) {
+      startTime();
+      Compute(G,P);
+      double time = nextTime("Running time");
+      reportTimeToFile(time);
+    }
+    G.del();
+  } else {
+#ifndef HYPER
+    startTime();
+    graph<asymmetricVertex> G =
+      readGraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap,job,update,chunk,debug,buffer,isReorderListEnabled,onlyout); //asymmetric graph
+    double time = nextTime("Preload time");
+    reportTimeToFile(time);
+  
+    // graph<asymmetricVertex> G1 =
+    //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case4kb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
+    // graph<asymmetricVertex> G2 =
+    //   readGraph<asymmetricVertex>("/mnt/nvme2/zorax/case2mb/Kron29/kron29",compressed,symmetric,binary,mmap,chunk,debug); //asymmetric graph
+#else
+    hypergraph<asymmetricVertex> G =
+      readHypergraph<asymmetricVertex>(iFile,compressed,symmetric,binary,mmap); //asymmetric graph
+#endif
+    // Compute(G,P);
+    // if(G.transposed) G.transpose();
+
+#ifdef DISKIO
+    std::string command = "bash ../perf_diskio.sh " + std::to_string(pid);
+    int res = std::system(command.c_str());
+    if (res == -1) {
+      std::cout << "perf_diskio.sh failed" << std::endl;
+    }
+    command = "bash ../perf_iostat.sh " + std::to_string(pid);
+    res = std::system(command.c_str());
+    if (res == -1) {
+      std::cout << "perf_iostat.sh failed" << std::endl;
+    }
 #endif
 
 #ifdef CACHEMISS
-      std::string cache_command = "bash ../perf_cachemiss.sh " + std::to_string(pid);
-      int cache_res = std::system(cache_command.c_str());
-      if (cache_res == -1) {
-        std::cout << "perf_cachemiss.sh failed" << std::endl;
-      }
+    std::string cache_command = "bash ../perf_cachemiss.sh " + std::to_string(pid);
+    int cache_res = std::system(cache_command.c_str());
+    if (cache_res == -1) {
+      std::cout << "perf_cachemiss.sh failed" << std::endl;
+    }
 #endif
 
 #ifdef DEBUG_EN
       stat_profiler.record_read_KB(1);
 #endif
 
-      setWorkers(nthreads);
-      for(int r=0;r<rounds;r++) {
-        process_mem_usage(pid, vm, rss);
-        std::cout << "before compute: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
-        startTime();
-        Compute(G,P);
-        double time = nextTime("Running time");
-        reportTimeToFile(time);
-        process_mem_usage(pid, vm, rss);
-        std::cout << "after compute: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
+    setWorkers(nthreads);
+    for(int r=0;r<rounds;r++) {
+      process_mem_usage(pid, vm, rss);
+      std::cout << "before compute: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
+      startTime();
+      Compute(G,P);
+      double time = nextTime("Running time");
+      reportTimeToFile(time);
+      process_mem_usage(pid, vm, rss);
+      std::cout << "after compute: " << B2GB(vm) << "," << B2GB(rss) << std::endl;
 
-        if(G.transposed) G.transpose();
-      }
-      G.del();
+      if(G.transposed) G.transpose();
     }
+    G.del();
   }
   reportEnd();
+
 #ifdef PROFILE_EN
   profiler.print_page_miss_ratio();
 #endif
@@ -733,5 +703,6 @@ int parallel_main(int argc, char* argv[]) {
   stat_profiler.record_read_KB(2);
   stat_profiler.print_read_KB();
 #endif
-}
+
 #endif
+}

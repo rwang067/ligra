@@ -985,6 +985,17 @@ graph<vertex> readGraphFromChunk(char* iFile, bool isSymmetric, bool isMmap, boo
 
   free(offsets);  // doesn't change rss
 
+#ifdef DEBUG_EN
+  cout << v[1024].getOutDegree() << endl;
+  cout << v[1024].getInDegree() << endl;
+  uint64_t r = (uint64_t)v[1024].getOutNeighbors();
+  uint32_t cid = r >> 32, coff = r & 0xFFFFFFFF;
+  cout << "cid = " << cid << ", coff = " << coff << endl;
+  uint64_t r2 = (uint64_t)v[1024].getInNeighbors();
+  uint32_t cid2 = r2 >> 32, coff2 = r2 & 0xFFFFFFFF;
+  cout << "cid2 = " << cid2 << ", coff2 = " << coff2 << endl;
+#endif
+
   Uncompressed_ChunkMem<vertex>* mem = new Uncompressed_ChunkMem<vertex>(v,n,m);
   t.stop();
   t.reportTotal("Read Graph Time");
@@ -1499,6 +1510,112 @@ graph<vertex> readGraphMinivertex3(char* iFile, bool isSymmetric, bool onlyout) 
 }
 
 template <class vertex>
+graph<vertex> readGraphFromChunkSPDK(char* iFile, bool isSymmetric = false, long buffer = 0, bool isReorderListEnabled = false) {
+  timer t;
+  pid_t pid = getpid();
+  vm_reporter reporter(pid);
+
+  SPDKChunkGraphManager* manager = new SPDKChunkGraphManager();
+  TriLevelReader* reader = manager->getReader();
+
+  manager->setReorderListEnable(isReorderListEnabled);
+#ifdef DEBUG_EN
+  std::cout << "isReorderListEnabled = " << manager->getReorderListEnable() << std::endl;
+#endif
+
+  t.start();
+  reporter.reportNext("Start Read Graph Space");
+  reader->readConfig(iFile);
+  long m = reader->m, n = reader->n, level = reader->level;
+  t.reportNext("Load Config Time");
+
+#ifdef DEBUG_EN
+  std::cout << "n = " << n << ", m = " << m << ", level = " << level << std::endl;
+#endif
+  
+  manager->init();
+  t.reportNext("Load ChunkManager Time");
+
+  std::string vertFile = reader->vertFile;
+  pvertex_t* offsets = (pvertex_t*)getFileData(vertFile.c_str(), sizeof(pvertex_t) * n * 2, 0);
+  t.reportNext("Load MetaData Time");
+  reporter.reportNext("Finish Loading File Offsets");
+
+  vertex* v = newA(vertex,n); // doesn't change rss
+#ifdef DEBUG_EN
+  std::string item = "Vertex MetaData";
+  size_t size = sizeof(vertex) * n;
+  memory_profiler.memory_usage[item] = size;
+  std::cout << "Allocate vertex size: " << B2GB(size) << "GB" << std::endl;
+  std::cout << "Allocate offset size: " << B2GB(sizeof(pvertex_t) * n * 2)  << "GB" << std::endl;
+#endif
+  t.reportNext("Allocate Vertex Time");
+
+  char* edges_sv = manager->getSVAddr(0);
+  char* redges_sv = manager->getSVAddr(1);
+
+  printf("edges_sv = %p, redges_sv = %p\n", edges_sv, redges_sv);
+  
+  {parallel_for(long i=0;i<n;i++) {
+    uintE d = offsets[i].out_deg;
+    uint64_t r = offsets[i].residue;
+    // cout << i << " " << d << " " << r << endl; // correct
+    v[i].setOutDegree(d);
+    if (d == 0) {
+      v[i].setOutNeighbors(0);
+    } else if (d <= 2) {
+      v[i].setOutNeighbors((uintE*)r);
+    } else if (d <= reader->end_deg[level-1]) {
+      v[i].setOutNeighbors((uintE*)SET_CHUNK(r));
+    } else {
+      uintE* nebrs = (uintE*)(edges_sv+r);
+      v[i].setOutNeighbors(nebrs);
+    }
+  }}
+  t.reportNext("Load OutNeighbors Time");
+
+  if(!isSymmetric) {
+    {parallel_for(long i=0;i<n;i++) {
+      uintE d = offsets[n+i].out_deg;
+      uint64_t r = offsets[n+i].residue;
+      v[i].setInDegree(d);
+      if (d==0) {
+        v[i].setInNeighbors(0);
+      } else if (d <= 2) {
+        v[i].setInNeighbors((uintE*)r);
+      } else if (d <= reader->rend_deg[level-1]) {
+        v[i].setInNeighbors((uintE*)SET_CHUNK(r));
+      } else {
+        uintE* nebrs = (uintE*)(redges_sv+r);
+        v[i].setInNeighbors(nebrs);
+      }
+    }}
+    t.reportNext("Load InNeighbors Time");
+    reporter.reportNext("Finish Loading Vertex Metadata");
+  }
+
+  free(offsets);  // doesn't change rss
+
+#ifdef DEBUG_EN
+  cout << v[1024].getOutDegree() << endl;
+  cout << v[1024].getInDegree() << endl;
+  uint64_t outR = (uint64_t)v[1024].getOutNeighbors();
+  uint32_t cid = outR >> 32, coff = outR & 0xFFFFFFFF;
+  cout << "cid = " << cid << ", coff = " << coff << endl;
+  uint64_t inR = (uint64_t)v[1024].getInNeighbors();
+  cid = inR >> 32, coff = inR & 0xFFFFFFFF;
+  cout << "cid = " << cid << ", coff = " << coff << endl;
+#endif
+
+  Uncompressed_ChunkMem<vertex>* mem = new Uncompressed_ChunkMem<vertex>(v,n,m);
+  t.stop();
+  t.reportTotal("Read Graph Time");
+  cout << "readGraphFromChunk end.\n" << endl;
+
+  return graph<vertex>(v,n,m,mem,manager);
+}
+
+template <class vertex>
 graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binary, bool mmap, 
                         long job=0, bool update=0, bool chunk=0, bool debug=0, long buffer=0,
                         bool isReorderListEnabled=false, bool onlyout=false) {
@@ -1515,6 +1632,8 @@ graph<vertex> readGraph(char* iFile, bool compressed, bool symmetric, bool binar
         return readGraphMinivertex2<vertex>(iFile,symmetric,mmap);
       } else if (job == 4) {
         return readGraphMinivertex3<vertex>(iFile,symmetric,onlyout);
+      } else if (job == 5) {
+        return readGraphFromChunkSPDK<vertex>(iFile, symmetric, buffer, isReorderListEnabled);
       } else {
         cout << "job = " << job << " is not supported." << endl;
         exit(-1);
@@ -1608,14 +1727,14 @@ graph<vertex> readCompressedGraph(char* fname, bool isSymmetric, bool mmap) {
     V[i].setOutNeighbors(edges+o);
   }
 
-  if(sizeof(vertex) == sizeof(compressedAsymmetricVertex)){
-    parallel_for(long i=0;i<n;i++) {
-      long o = inOffsets[i];
-      uintT d = inDegrees[i];
-      V[i].setInDegree(d);
-      V[i].setInNeighbors(inEdges+o);
-    }
-  }
+  // if(sizeof(vertex) == sizeof(compressedAsymmetricVertex)){
+  //   parallel_for(long i=0;i<n;i++) {
+  //     long o = inOffsets[i];
+  //     uintT d = inDegrees[i];
+  //     V[i].setInDegree(d);
+  //     V[i].setInNeighbors(inEdges+o);
+  //   }
+  // }
 
   cout << "creating graph..."<<endl;
   Compressed_Mem<vertex>* mem = new Compressed_Mem<vertex>(V, s);
